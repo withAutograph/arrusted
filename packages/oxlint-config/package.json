@@ -14,7 +14,7 @@
     "test": "vp test --run index.test.ts"
   },
   "dependencies": {
-    "ultracite": "7.11.1"
+    "ultracite": "8.3.1"
   },
   "devDependencies": {
     "vite-plus": "catalog:"
