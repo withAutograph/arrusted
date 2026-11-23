@@ -1,0 +1,218 @@
+amends "hk/vendor/hk-v2.0.1/Config.pkl"
+
+default_branch = "origin/main"
+
+
+local generatedContractGlob = "packages/contracts/wire.generated.ts"
+local frontendFilesGlob = "{packages/domain-libs/**/*.{js,jsx,ts,tsx,json,css,html},packages/**/*.{js,jsx,ts,tsx,json,css,html},.storybook/**/*.{js,jsx,ts,tsx,json,css,html}}"
+local frontendSourceFilesGlob = "{packages/domain-libs/**/*.{js,jsx,ts,tsx},packages/**/*.{js,jsx,ts,tsx}}"
+local storybookSourceFilesGlob = "packages/**/*.stories.{js,jsx,ts,tsx}"
+local storybookFilesGlob = "{.storybook/**/*," + storybookSourceFilesGlob + "}"
+local rustFilesGlob = "packages/**/*.rs"
+local cargoWorkspaceDiscoveryGlob = "Cargo.toml,Cargo.lock,packages/**/Cargo.toml"
+local konsistentFilesGlob = "{package.json,bun.lock,.config/{konsistent.json,hk.pkl,mise/tasks/check/konsistent},.github/workflows/{check,ci}.yml,.config/mise/scripts/repository/{konsistent.test.ts,check-konsistent-affected.sh,check-workspace-imports.{ts,test.ts}},docs/{agent-tooling,contracts,frontend-architecture}.md}"
+local rustValidationFilesGlob = "{Cargo.toml,Cargo.lock,packages/**/*,.config/mise/scripts/repository/run-affected-rust-validation.sh}"
+local konsistentAffectedFilesGlob = "packages/**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,css}"
+local githubActionsFilesGlob = "{.github/actions/**/*.{yml,yaml},.github/workflows/**/*.{yml,yaml},.config/hk.pkl,.config/mise/{config.toml,mise.lock},.config/mise/scripts/repository/check-git-hook-gates.{ts,test.ts}}"
+local miseRustCacheFilesGlob = "{mise*.toml,.mise*.toml,**/mise*.toml,**/.mise*.toml,mise/**/*.toml,**/mise/**/*.toml,.mise/**/*.toml,**/.mise/**/*.toml,.config/mise/**/*.toml,**/.config/mise/**/*.toml,.config/mise/scripts/repository/{check-mise-rust-cache-paths.ts,test-mise-rust-cache-paths.sh}}"
+local miseRustToolchainFilesGlob = "{.config/mise/{config.toml,mise.lock},.config/mise/scripts/repository/check-mise-rust-toolchain{,.test}.mjs}"
+local rustValidationOrchestrationFilesGlob = "{.config/mise/config.toml,.config/mise/tasks/kernel/{test,test-workspace},.config/mise/scripts/repository/{test-rust-validation-orchestration.sh,run-affected-rust-workspace{,.test}.py}}"
+// This check is intentionally cheap and must see a newly invented root path.
+local toolingLayoutFilesGlob = "**/*"
+local packageManifestFilesGlob = "{package.json,packages/*/package.json,packages/*/*/package.json,.config/turbo/generators/{package.json,templates/package/package.json.hbs,config.ts},.config/mise/{config.toml,scripts/repository/check-package-manifests{,.test}.ts}}"
+
+local format = new Mapping<String, Step> {
+  ["format:app"] = new Step {
+    glob = frontendFilesGlob
+    exclude = new Listing<String> {
+      generatedContractGlob
+    }
+    check = "mise exec -- vp fmt --check {{ files }}"
+    fix = "mise exec -- vp fmt {{ files }}"
+    workspace_indicator = "vite.config.ts"
+  }
+  ["format:kernel"] = new Step {
+    glob = rustFilesGlob
+    check = "cargo fmt --all -- --check"
+    fix = "cargo fmt --all"
+  }
+}
+
+local lint = new Mapping<String, Step> {
+  ["lint:app"] = new Step {
+    glob = frontendSourceFilesGlob
+    exclude = new Listing<String> {
+      generatedContractGlob
+      storybookSourceFilesGlob
+    }
+    check = "mise exec -- vp lint {{ files }}"
+    fix = "mise exec -- vp lint --fix {{ files }}"
+    workspace_indicator = "vite.config.ts"
+  }
+}
+
+local kernelLint = new Mapping<String, Step> {
+  ["lint:kernel"] = new Step {
+    glob = rustFilesGlob
+    check = "cargo clippy --workspace --all-targets --features kernel/testing -- -D warnings"
+    fix = "cargo clippy --workspace --all-targets --features kernel/testing --fix --allow-dirty --allow-staged -- -D warnings"
+  }
+}
+
+local fastCheck = new Mapping<String, Step> {
+  ["check:package-manifests"] = new Step {
+    glob = packageManifestFilesGlob
+    check = "mise run check:package-manifests"
+  }
+  ["check:tooling-layout"] = new Step {
+    glob = toolingLayoutFilesGlob
+    check = "mise run check:tooling-layout"
+  }
+  ["check:github-actions"] = new Step {
+    glob = githubActionsFilesGlob
+    check = "mise exec -- actionlint"
+  }
+  ["check:app"] = new Step {
+    glob = frontendSourceFilesGlob
+    exclude = new Listing<String> {
+      generatedContractGlob
+      storybookSourceFilesGlob
+    }
+    check = "mise exec -- vp check {{ files }}"
+    workspace_indicator = "vite.config.ts"
+  }
+  ["check:storybook"] = new Step {
+    glob = storybookFilesGlob
+    check = "mise --cd .storybook build"
+  }
+  ["check:domain-lib-turbo-configs"] = new Step {
+    glob = "{packages/domain-libs/*/package.json,packages/domain-libs/*/turbo.json,.config/turbo/generators/**/*,.config/hk.pkl}"
+    check = "mise exec -- bun .config/turbo/generators/domain-lib-turbo.ts --check"
+  }
+  ["check:konsistent"] = new Step {
+    glob = konsistentFilesGlob
+    // Konsistent fixtures synchronously spawn a checker for each temporary
+    // workspace, so share the same serialized HK lane as application
+    // validation rather than relying on narrow per-test timeouts.
+    exclusive = true
+    check = "mise run check:konsistent && mise exec -- bunx vitest run .config/mise/scripts/repository/konsistent.test.ts --silent"
+  }
+  ["check:konsistent-source"] = new Step {
+    glob = "packages/**/*.{js,jsx,ts,tsx,mjs,mts,cjs,cts}"
+    check = "bash .config/mise/scripts/repository/check-konsistent-affected.sh {{ files }}"
+  }
+  ["check:vite-config-runtime-source"] = new Step {
+    glob = "{packages/vite-config/index.{js,ts},packages/vite-config/package.json,.config/mise/scripts/repository/check-vite-config-runtime.mjs,.config/hk.pkl}"
+    check = "mise exec -- node .config/mise/scripts/repository/check-vite-config-runtime.mjs"
+  }
+  ["check:mise-rust-cache-paths"] = new Step {
+    glob = miseRustCacheFilesGlob
+    check = "mise run check:mise-rust-cache-paths && mise run test:mise-rust-cache-paths"
+  }
+  ["check:mise-rust-toolchain"] = new Step {
+    glob = miseRustToolchainFilesGlob
+    check = "mise exec --no-deps -- node .config/mise/scripts/repository/check-mise-rust-toolchain.mjs && mise exec --no-deps -- node --test .config/mise/scripts/repository/check-mise-rust-toolchain.test.mjs"
+  }
+  ["check:rust-validation-orchestration"] = new Step {
+    glob = rustValidationOrchestrationFilesGlob
+    check = "mise run check:rust-validation-orchestration"
+  }
+  ["check:git-hook-gates"] = new Step {
+    glob = "{.config/hk.pkl,.config/mise/scripts/repository/check-git-hook-gates.{ts,test.ts},.config/mise/scripts/repository/run-affected-rust-validation.sh}"
+    check = "mise exec --no-deps -- bunx vitest run .config/mise/scripts/repository/check-git-hook-gates.test.ts --silent"
+  }
+}
+
+local rustCheck = new Mapping<String, Step> {
+  ["check:rust"] = new Step {
+    glob = rustValidationFilesGlob
+    // Keep compilation-based Rust checks in one process lane. Running Cargo
+    // check, clippy, and typegen concurrently makes them contend for the same
+    // target directory; clippy already checks the workspace while covering
+    // every target and the testing-only kernel surface.
+    check = "mise //:kernel:check"
+  }
+}
+
+local affectedRustCheck = new Mapping<String, Step> {
+  ["check:rust-affected"] = new Step {
+    glob = rustValidationFilesGlob
+    check = "./.config/mise/scripts/repository/run-affected-rust-validation.sh"
+  }
+}
+
+local exhaustiveCheck = new Mapping<String, Step> {
+  ["check:generated-sql-parity-runner"] = new Step {
+    glob = "{.config/{hk.pkl,mise/config.toml},packages/schema-compiler/scripts/{run-sql-parity,test-sql-parity-runner}.sh,.github/workflows/check.yml,packages/schema-compiler/tests/{sql_parity_*,sql_runtime_*}.rs}"
+    check = "mise run schema:test-parity-runner"
+  }
+  ["check:test-quality-policy"] = new Step {
+    glob = "{packages/**/__tests__/**,packages/**/*.{test,spec}.{ts,tsx,js,jsx,mjs,cjs},.config/mise/scripts/repository/**/*.{test,spec}.{ts,tsx,js,jsx,mjs,cjs},turbo/**/*.{test,spec}.{ts,tsx,js,jsx,mjs,cjs},.config/mise/scripts/repository/check-test-quality-policy.ts,.config/hk.pkl}"
+    check = "mise exec --no-deps -- bun .config/mise/scripts/repository/check-test-quality-policy.ts"
+  }
+  ["check:boundary-rule-proof"] = new Step {
+    glob = "{.config/mise/scripts/check/ast-grep/**,.config/mise/config.toml,package.json,bun.lock}"
+    check = "mise run test:ast-grep && mise run check:ast-grep"
+  }
+  ["check:design-system-branding"] = new Step {
+    glob = "{packages/design-systems/**/*,.config/mise/scripts/repository/{check-design-system-branding{,.test}.ts,source-analysis.ts}}"
+    check = "mise exec --no-deps -- bun .config/mise/scripts/repository/check-design-system-branding.ts && mise exec --no-deps -- bunx vitest run .config/mise/scripts/repository/check-design-system-branding.test.ts --silent"
+  }
+}
+
+local affectedKonsistent = new Mapping<String, Step> {
+  ["check:konsistent-affected"] = new Step {
+    glob = konsistentAffectedFilesGlob
+    check = "mise exec -- ast-grep scan --config .config/mise/scripts/check/ast-grep/sgconfig.yml --report-style short {{ files }}"
+  }
+}
+
+local types = new Mapping<String, Step> {
+  ["check:types"] = new Step {
+    workspace_indicator = "tsconfig.json"
+    glob = List("**/*.ts", "**/*.tsx")
+    exclude = new Listing<String> {
+      storybookSourceFilesGlob
+    }
+    check = "tsc --noEmit -p {{workspace_indicator}}"
+  }
+}
+
+hooks {
+  ["fix"] {
+    steps {
+      ...format
+      ...lint
+      ...kernelLint
+    }
+  }
+  ["pre-commit"] {
+    steps {
+      ...format
+      ...lint
+      ...fastCheck
+      ...types
+    }
+  }
+  ["check"] {
+    steps {
+      ...format
+      ...lint
+      ...fastCheck
+      ...rustCheck
+      ...affectedRustCheck
+      ...exhaustiveCheck
+      ...affectedKonsistent
+      ...types
+    }
+  }
+  ["pre-push"] {
+    steps {
+      ...format
+      ...lint
+      ...fastCheck
+      ...affectedKonsistent
+      ...types
+    }
+  }
+}

@@ -1,0 +1,7 @@
+#!/bin/sh
+#MISE description="Test protected installer authority, identity, and fencing primitives"
+set -eu
+
+repo_root="${MISE_MONOREPO_ROOT:-${MISE_PROJECT_ROOT:-$PWD}}"
+cd "$repo_root"
+cargo test --locked -p protected-installer -- --test-threads=1

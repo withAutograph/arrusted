@@ -1,0 +1,94 @@
+name: Set up workspace
+description: Install pinned mise tools, restore Bun dependencies, and configure Turbo caching
+inputs:
+  install_args:
+    description: Space-separated mise tool arguments to install
+    required: false
+    default: ''
+  install_dependencies:
+    description: Restore the Bun cache and install frozen workspace dependencies
+    required: false
+    default: 'true'
+runs:
+  using: composite
+  steps:
+    - name: Install pinned focused tools
+      if: inputs.install_args != ''
+      uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+      with:
+        version: 2026.9.12
+        install_args: ${{ inputs.install_args }}
+        cache: true
+        cache_save: ${{ github.ref == 'refs/heads/main' }}
+        experimental: true
+
+    - name: Install pinned workspace tools
+      if: inputs.install_args == ''
+      uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
+      with:
+        version: 2026.9.12
+        cache: true
+        cache_save: ${{ github.ref == 'refs/heads/main' }}
+        experimental: true
+
+    - name: Restore Bun dependency cache
+      id: bun-cache
+      if: inputs.install_dependencies == 'true'
+      uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+      with:
+        path: ${{ runner.temp }}/bun-install-cache
+        key: ${{ runner.os }}-bun-v2-${{ hashFiles('.config/mise/mise.lock', 'bun.lock', '.storybook/bun.lock') }}
+
+    - name: Install frozen workspace dependencies
+      if: inputs.install_dependencies == 'true'
+      shell: bash
+      env:
+        BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/bun-install-cache
+      run: |
+        .config/mise/scripts/repository/check-ci-timing.sh "bun-install-workspace" -- bun install --frozen-lockfile
+        .config/mise/scripts/repository/check-ci-timing.sh "bun-install-storybook" -- bun install --cwd .storybook --frozen-lockfile
+
+    - name: Report workspace cache state
+      if: inputs.install_dependencies == 'true'
+      shell: bash
+      env:
+        BUN_CACHE_HIT: ${{ steps.bun-cache.outputs.cache-hit }}
+      run: |
+        cache_state="miss"
+        [[ "${BUN_CACHE_HIT}" == true ]] && cache_state="hit"
+        echo "::notice title=CI cache::Bun dependency cache ${cache_state}"
+        if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+          printf '\n### Workspace cache\n\n- Bun dependency cache: **%s**\n' "${cache_state}" >>"${GITHUB_STEP_SUMMARY}"
+        fi
+
+    - name: Save trusted Bun dependency cache
+      if: inputs.install_dependencies == 'true' && github.ref == 'refs/heads/main' && steps.bun-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+      with:
+        path: ${{ runner.temp }}/bun-install-cache
+        key: ${{ steps.bun-cache.outputs.cache-primary-key }}
+
+    - name: Configure Turbo remote cache
+      shell: bash
+      run: |
+        {
+          echo "TURBO_TEAM=${TURBO_TEAM:-}"
+          if [[ -n "${TURBO_TOKEN:-}" ]]; then
+            echo "TURBO_TOKEN=${TURBO_TOKEN}"
+          fi
+        } >>"${GITHUB_ENV}"
+
+    - name: Report Turbo remote cache state
+      shell: bash
+      run: |
+        if [[ -n "${TURBO_TOKEN:-}" && -n "${TURBO_TEAM:-}" ]]; then
+          echo "::notice title=CI cache::Turbo remote cache enabled"
+          if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+            printf '\n- Turbo remote cache: **enabled**\n' >>"${GITHUB_STEP_SUMMARY}"
+          fi
+        else
+          echo "::notice title=CI cache::Turbo remote cache disabled; configure TURBO_TOKEN and TURBO_TEAM"
+          if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+            printf '\n- Turbo remote cache: **disabled** (TURBO_TOKEN and TURBO_TEAM required)\n' >>"${GITHUB_STEP_SUMMARY}"
+          fi
+        fi

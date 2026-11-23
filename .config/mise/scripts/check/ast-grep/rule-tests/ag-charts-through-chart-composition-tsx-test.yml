@@ -1,0 +1,9 @@
+id: ag-charts-through-chart-composition-tsx
+valid:
+  - import { ChartComposition } from "@autograph/compositions"; export const view = <ChartComposition spec={spec} />;
+  - const packageName = "ag-charts-react"; export const view = <div />;
+invalid:
+  - import { AgCharts } from "ag-charts-react"; export const view = <AgCharts options={{}} />;
+  - export { LicenseManager } from "ag-charts-enterprise";
+  - const charts = require("ag-charts-community"); export const view = <div />;
+  - const charts = import("ag-charts-react"); export const view = <div />;

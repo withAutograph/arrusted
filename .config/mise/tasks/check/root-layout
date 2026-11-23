@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Reject tracked source directories outside approved repository roots"
+set -euo pipefail
+
+cd "$MISE_MONOREPO_ROOT"
+exec bash .config/mise/scripts/repository/check-root-layout.sh

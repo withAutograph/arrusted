@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Typecheck generated clients and prove data operations against isolated PostgreSQL"
+set -euo pipefail
+cd "$MISE_MONOREPO_ROOT"
+bun x tsc -p packages/generated-app-runtime/tsconfig.json --noEmit
+exec bun .config/mise/scripts/repository/test-generated-runtime.ts

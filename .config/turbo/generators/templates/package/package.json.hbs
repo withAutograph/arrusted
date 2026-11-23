@@ -1,0 +1,31 @@
+{
+  "name": "{{ packageName }}",
+{{#if isBuiltPackage}}
+  "version": "0.0.0",
+{{/if}}
+  "private": true,
+  "type": "module",
+{{#if isBuiltPackage}}
+  "files": ["dist"],
+{{/if}}
+  "exports": {
+{{#if isBuiltPackage}}
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+{{else}}
+    ".": "./index.ts"
+{{/if}}
+  },
+  "scripts": {
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "vp test --config vite.config.ts --run"{{#if isBuiltPackage}},
+    "build": "vp build --config vite.config.ts && tsc -p tsconfig.build.json"{{/if}}
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

@@ -1,0 +1,7 @@
+#!/bin/sh
+#MISE description="Build Storybook"
+set -eu
+
+NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--disable-warning=DEP0205"
+export NODE_OPTIONS
+mise exec -- bun run build

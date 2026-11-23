@@ -1,0 +1,187 @@
+/* Diff-cell visual treatment.
+ *
+ * Companion to `dirty-glyph.css` which renders the 6px upper-right dot via
+ * `.ag-cell-dirty::after`. THIS file styles the inline content the
+ * `DiffCellRenderer` (see `diff-cell-renderer.tsx`) emits inside a dirty
+ * cell: the new value as the primary line, the prior value beneath as
+ * struck-through micro-text, and the per-cell revert button that surfaces
+ * on cell hover only.
+ *
+ * Visual contract from `.scratch/mocks/A3-edit-mode.html`:
+ *   - Cell stays VISUALLY QUIET — no background highlight, no border
+ *     accent. The dot + the inline `was X` micro-text are sufficient cues.
+ *   - Revert button (↩) only on cell hover (not always-on); positioned
+ *     bottom-right corner.
+ *
+ * Lives alongside `dirty-glyph.css` so the lightweight cell-treatment rules
+ * stay co-located with the dirty glyph that triggers them.
+ */
+
+/* Vertical-centering wrapper. AG Grid's `.ag-cell` is `display: inline-block`
+ * with line-height-based centering, which our multi-line diff content would
+ * otherwise break. The flex-column + justify-content: center + min-height:
+ * 100% triplet centers content in both single-line (non-dirty) and
+ * dual-line (dirty) cases. `position: relative` anchors the absolute-
+ * positioned `.ag-cell-revert` button to the wrapper. See companion comment
+ * in `diff-cell-renderer.tsx`. */
+.ag-diff-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+  position: relative;
+}
+
+.ag-diff-current {
+  line-height: 1.3;
+}
+
+.ag-diff-was {
+  font-size: var(--text-micro);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+.ag-diff-was s {
+  color: var(--color-text-disabled);
+}
+
+/* Per-cell revert button. Hidden by default; appears on cell hover.
+ * AG Grid's `.ag-cell` carries the hover state via its own
+ * `:hover` selector; we stack on top so the button only shows when the
+ * user is actually pointing at the cell.
+ */
+.ag-cell-revert {
+  display: none;
+  position: absolute;
+  bottom: var(--space-1);
+  right: var(--space-1);
+  align-items: center;
+  padding: 0 var(--space-1-5);
+  height: 18px;
+  border-radius: var(--radius-xs);
+  font-size: 10px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  /* Sit above the dirty glyph but stay inside the cell content layer so
+   * AG Grid's own focus ring still composes on top of the cell. */
+  z-index: 1;
+}
+
+.ag-cell.ag-cell-dirty:hover .ag-cell-revert {
+  display: inline-flex;
+}
+
+/* A note with an action takes the cell's bottom line: the revert button moves
+ * up beside "was …" so it never covers the note's action. */
+.ag-diff-wrapper:has(.ag-cell-note-action) .ag-cell-revert,
+.ag-diff-wrapper:has(.ag-cell-note-action) .ag-cell-settling {
+  bottom: auto;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.ag-cell-revert:hover {
+  background: var(--color-action-primary-bg, var(--color-bg-selected));
+  border-color: var(--color-action-primary);
+  color: var(--color-action-primary);
+}
+
+/* A staged cell whose entry left the host (reverted, discarded or saved)
+ * keeps its value with a spinner where the revert button sits, shown without
+ * hover, until the host reads the value beneath. */
+.ag-cell-settling {
+  display: inline-flex;
+  position: absolute;
+  bottom: var(--space-1);
+  right: var(--space-1);
+  align-items: center;
+  color: var(--color-text-muted);
+  z-index: 1;
+}
+
+/* A pending clear names itself instead of rendering an empty line, so it
+ * cannot be mistaken for an unchanged empty cell. */
+.ag-diff-cleared {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+/* A host-supplied note under a clean cell (e.g. "in draft #4"): the same
+ * quiet micro-text as `was X`, so a cell reads the same either way. Danger
+ * notes reuse `.ag-diff-error`. */
+.ag-diff-note {
+  font-size: var(--text-micro);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+/* The agent marker sits inline before `was X`. */
+.ag-diff-was [data-agent-marker] {
+  display: inline;
+}
+
+/* A host pin (`cellPin`): a small clickable marker at the cell's right edge,
+ * vertically centred beside the value. The content keeps its own centering
+ * wrapper; the pin never covers the dirty glyph (top-right) or the revert
+ * button (bottom-right, hover only). */
+.ag-cell-pinned {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 100%;
+}
+
+.ag-cell-pinned-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  /* A long "was …" line stops at the pin instead of running under it. */
+  overflow: hidden;
+}
+
+.ag-cell-pinned-content .ag-diff-was {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ag-cell-pin {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  line-height: 1;
+  border-radius: var(--radius-pill);
+}
+
+/* A note's action (`CellNote.action`): a quiet link-style button after the text. */
+.ag-cell-note-action {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: var(--color-action-primary-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* A host mark (`cellMark`): a small quiet chip beside the value, before any
+ * pin. It is not a control: the cell keeps its own clicks and editing. */
+.ag-cell-mark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  cursor: default;
+}

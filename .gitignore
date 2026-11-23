@@ -1,0 +1,49 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+!/app/.env.migrate.example
+.env.local
+.env.*.local
+.config/fnox/local.toml
+.config/fnox/fnox.local.toml
+.config/pitchfork.local.toml
+.devin/
+.playwright-mcp/
+log/
+.codex/
+
+# Ignore most of .claude (per-user state), but check in the shared bindings
+# so hooks/agents/skills travel with the repo.
+.claude/*
+!.claude/settings.json
+!.claude/agents/
+!.claude/skills/
+.claude/scheduled_tasks.lock
+.claude/worktrees/
+
+target/
+.cargo-target/
+node_modules/
+dist/
+.next/
+.turbo/
+storybook-static/
+test-results/
+playwright-report/
+output/playwright/
+*.tsbuildinfo
+__pycache__/
+*.py[cod]
+.scratch/
+debug-*.log
+.vercel
+
+# Optional project-scoped upstream agent package; never part of the template.
+/.config/codex-marketplace/vercel/
+
+# Single-deployment starter: generated releases and local database restore points
+/app/.generated/
+/app/.local/
+/app/.next/
+/app/next-env.d.ts

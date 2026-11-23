@@ -1,0 +1,67 @@
+id: engines-no-react-ts
+language: TypeScript
+severity: error
+message: engines must remain React-free
+note: Engines are pure reusable computation and may not import React or React DOM.
+files: [packages/engines/**/*.ts, packages/engines/**/*.mts, packages/engines/**/*.cts]
+rule:
+  any:
+    - { all: [{ kind: import_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { all: [{ kind: import_statement }, { regex: '^import\b[\s\S]*?=\s*require\s*\(' }, { has: { matches: forbidden-source, stopBy: end } }] }
+    - { all: [{ kind: export_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { pattern: require($SOURCE) }
+    - { pattern: import($SOURCE) }
+constraints:
+  SOURCE: { matches: forbidden-source }
+utils:
+  forbidden-source:
+    all:
+      - { any: [{ kind: string }, { kind: template_string }] }
+      - { regex: '^[''"\x60](?:react|react-dom)(?:/[^''"\x60]+)?[''"\x60]$' }
+---
+id: engines-no-react-tsx
+language: Tsx
+severity: error
+message: engines must remain React-free
+note: Engines are pure reusable computation and may not import React or React DOM.
+files: [packages/engines/**/*.tsx]
+rule:
+  any:
+    - { all: [{ kind: import_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { all: [{ kind: import_statement }, { regex: '^import\b[\s\S]*?=\s*require\s*\(' }, { has: { matches: forbidden-source, stopBy: end } }] }
+    - { all: [{ kind: export_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { pattern: require($SOURCE) }
+    - { pattern: import($SOURCE) }
+constraints:
+  SOURCE: { matches: forbidden-source }
+utils:
+  forbidden-source:
+    all:
+      - { any: [{ kind: string }, { kind: template_string }] }
+      - { regex: '^[''"\x60](?:react|react-dom)(?:/[^''"\x60]+)?[''"\x60]$' }
+---
+id: engines-no-react-js
+language: JavaScript
+severity: error
+message: engines must remain React-free
+note: Engines are pure reusable computation and may not import React or React DOM.
+files:
+  [
+    packages/engines/**/*.js,
+    packages/engines/**/*.jsx,
+    packages/engines/**/*.mjs,
+    packages/engines/**/*.cjs,
+  ]
+rule:
+  any:
+    - { all: [{ kind: import_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { all: [{ kind: export_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { pattern: require($SOURCE) }
+    - { pattern: import($SOURCE) }
+constraints:
+  SOURCE: { matches: forbidden-source }
+utils:
+  forbidden-source:
+    all:
+      - { any: [{ kind: string }, { kind: template_string }] }
+      - { regex: '^[''"\x60](?:react|react-dom)(?:/[^''"\x60]+)?[''"\x60]$' }

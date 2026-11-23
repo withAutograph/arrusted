@@ -1,0 +1,27 @@
+{
+  "$schema": "./advisory-policy.schema.json",
+  "version": 1,
+  "remediated": [
+    {
+      "package": "brace-expansion",
+      "minimumVersion": "5.0.8",
+      "advisories": [1124334]
+    },
+    {
+      "package": "lodash",
+      "minimumVersion": "4.18.1",
+      "advisories": [1115806, 1115810, 1120370]
+    },
+    {
+      "package": "postcss",
+      "minimumVersion": "8.5.22",
+      "advisories": [1124252]
+    },
+    {
+      "package": "tar",
+      "minimumVersion": "7.5.21",
+      "advisories": [1113375, 1114200, 1114302, 1120782, 1123939, 1123940, 1123941, 1123942]
+    }
+  ],
+  "exceptions": []
+}

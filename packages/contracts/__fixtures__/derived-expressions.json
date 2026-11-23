@@ -1,0 +1,4029 @@
+{
+  "description": "Shared derived-expression cases. The compiler validator, the generated SQL runtime, and the TypeScript evaluator must agree on every validation case; the SQL runtime and the TypeScript evaluator must produce every evaluation value exactly. Values are read values: decimal strings for numbers and { amount, currency, period } for money; null is absent. `related` holds, per relation, the related record's stored values, and `parameters` a working-session rule's typed parameters. `number_inputs` lists stored decimal strings that the SQL runtime and the TypeScript evaluator must both accept or both reject. `runtime_validation` holds malformed runtime JSON, which the compiler rejects while deserializing; the SQL runtime and the TypeScript validator must return the same codes.",
+  "fields": [
+    {
+      "id": "name",
+      "type": "text"
+    },
+    {
+      "id": "title",
+      "type": "text"
+    },
+    {
+      "id": "salary",
+      "type": "number"
+    },
+    {
+      "id": "midpoint",
+      "type": "number"
+    },
+    {
+      "id": "base",
+      "type": "money_rate"
+    },
+    {
+      "id": "bonus",
+      "type": "money_rate"
+    },
+    {
+      "id": "start",
+      "type": "date"
+    },
+    {
+      "id": "active",
+      "type": "bool"
+    },
+    {
+      "id": "status",
+      "type": "enum",
+      "option_set": [
+        {
+          "id": "open",
+          "label": "Open"
+        }
+      ]
+    },
+    {
+      "id": "tags",
+      "type": "text_list"
+    },
+    {
+      "id": "manager",
+      "type": "relation",
+      "target_model": "position"
+    },
+    {
+      "id": "legacy",
+      "type": "number",
+      "lifecycle": "retired"
+    }
+  ],
+  "custom_fields": [
+    {
+      "id": "stipend",
+      "type": "number"
+    },
+    {
+      "id": "old_bonus",
+      "type": "number",
+      "lifecycle": "retired",
+      "archived_at": "2026-01-01T00:00:00Z"
+    }
+  ],
+  "validation": [
+    {
+      "name": "number field",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "field",
+            "field": "salary"
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "number arithmetic",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "divide",
+            "left": {
+              "type": "add",
+              "left": {
+                "type": "field",
+                "field": "salary"
+              },
+              "right": {
+                "type": "literal",
+                "value": {
+                  "type": "number",
+                  "value": "10"
+                }
+              }
+            },
+            "right": {
+              "type": "subtract",
+              "left": {
+                "type": "field",
+                "field": "midpoint"
+              },
+              "right": {
+                "type": "literal",
+                "value": {
+                  "type": "number",
+                  "value": "-2.5"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "money addition",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "add",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "bonus"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "money subtraction",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "subtract",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "bonus"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "money times number",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "multiply",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "1.1"
+              }
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "number times money",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "multiply",
+            "left": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "2"
+              }
+            },
+            "right": {
+              "type": "field",
+              "field": "base"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "money divided by number",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "divide",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "money divided by money",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "divide",
+            "left": {
+              "type": "field",
+              "field": "bonus"
+            },
+            "right": {
+              "type": "field",
+              "field": "base"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "money normalization",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "normalize_money_rate",
+            "expression": {
+              "type": "field",
+              "field": "base"
+            },
+            "period": "hourly"
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "coalesce with fallback",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "coalesce",
+            "expressions": [
+              {
+                "type": "field",
+                "field": "salary"
+              },
+              {
+                "type": "literal",
+                "value": {
+                  "type": "number",
+                  "value": "0"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "text concatenation",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "text",
+          "expression": {
+            "type": "concat",
+            "expressions": [
+              {
+                "type": "field",
+                "field": "name"
+              },
+              {
+                "type": "literal",
+                "value": {
+                  "type": "text",
+                  "value": " - "
+                }
+              },
+              {
+                "type": "field",
+                "field": "title"
+              }
+            ]
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "date passthrough",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "date",
+          "expression": {
+            "type": "coalesce",
+            "expressions": [
+              {
+                "type": "field",
+                "field": "start"
+              },
+              {
+                "type": "literal",
+                "value": {
+                  "type": "date",
+                  "value": "2026-01-31"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "datetime literal",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "datetime",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "datetime",
+              "value": "2026-01-31T09:30:00Z"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "bool field",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "field",
+            "field": "active"
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "derived reference chain",
+      "derived_fields": [
+        {
+          "id": "total",
+          "type": "money_rate",
+          "expression": {
+            "type": "add",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "bonus"
+            }
+          }
+        },
+        {
+          "id": "monthly",
+          "type": "money_rate",
+          "expression": {
+            "type": "normalize_money_rate",
+            "expression": {
+              "type": "field",
+              "field": "total"
+            },
+            "period": "monthly"
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "unknown field",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "field",
+            "field": "missing"
+          }
+        }
+      ],
+      "error": "unknown_field"
+    },
+    {
+      "name": "number plus money",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "add",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "base"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "number divided by money",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "divide",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "base"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "money times money",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "multiply",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "bonus"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "concat of a number",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "text",
+          "expression": {
+            "type": "concat",
+            "expressions": [
+              {
+                "type": "field",
+                "field": "name"
+              },
+              {
+                "type": "field",
+                "field": "salary"
+              }
+            ]
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "coalesce of mixed types",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "coalesce",
+            "expressions": [
+              {
+                "type": "field",
+                "field": "salary"
+              },
+              {
+                "type": "field",
+                "field": "name"
+              }
+            ]
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "empty coalesce",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "coalesce",
+            "expressions": []
+          }
+        }
+      ],
+      "error": "empty_derived_expression"
+    },
+    {
+      "name": "empty concat",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "text",
+          "expression": {
+            "type": "concat",
+            "expressions": []
+          }
+        }
+      ],
+      "error": "empty_derived_expression"
+    },
+    {
+      "name": "normalize a number",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "normalize_money_rate",
+            "expression": {
+              "type": "field",
+              "field": "salary"
+            },
+            "period": "annual"
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "declared type mismatch",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "text",
+          "expression": {
+            "type": "field",
+            "field": "salary"
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "enum result",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "text",
+          "expression": {
+            "type": "field",
+            "field": "status"
+          }
+        }
+      ],
+      "error": "unsupported_derived_type"
+    },
+    {
+      "name": "text list result",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "text",
+          "expression": {
+            "type": "coalesce",
+            "expressions": [
+              {
+                "type": "field",
+                "field": "tags"
+              }
+            ]
+          }
+        }
+      ],
+      "error": "unsupported_derived_type"
+    },
+    {
+      "name": "enum literal",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "text",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "enum",
+              "value": "open"
+            }
+          }
+        }
+      ],
+      "error": "unsupported_derived_type"
+    },
+    {
+      "name": "exponent number literal",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "number",
+              "value": "1e3"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "over-precise number literal",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "number",
+              "value": "0.12345678901234567890123456789"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "impossible date literal",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "date",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "date",
+              "value": "2026-02-31"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "relation field",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "text",
+          "expression": {
+            "type": "relation_field",
+            "relation": "manager",
+            "field": "name"
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "inverse aggregate",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "inverse_aggregate",
+            "inverse_relation": "reports",
+            "aggregate": "count"
+          }
+        }
+      ],
+      "error": "unsupported_derived_expression"
+    },
+    {
+      "name": "self reference",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "add",
+            "left": {
+              "type": "field",
+              "field": "d"
+            },
+            "right": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "1"
+              }
+            }
+          }
+        }
+      ],
+      "error": "derived_cycle"
+    },
+    {
+      "name": "mutual reference",
+      "derived_fields": [
+        {
+          "id": "a",
+          "type": "text",
+          "expression": {
+            "type": "concat",
+            "expressions": [
+              {
+                "type": "field",
+                "field": "b"
+              }
+            ]
+          }
+        },
+        {
+          "id": "b",
+          "type": "text",
+          "expression": {
+            "type": "concat",
+            "expressions": [
+              {
+                "type": "field",
+                "field": "a"
+              }
+            ]
+          }
+        }
+      ],
+      "error": "derived_cycle"
+    },
+    {
+      "name": "active custom field",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "add",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "stipend"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "retired declared field",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "field",
+            "field": "legacy"
+          }
+        }
+      ],
+      "error": "unknown_field"
+    },
+    {
+      "name": "retired custom field",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "field",
+            "field": "old_bonus"
+          }
+        }
+      ],
+      "error": "unknown_field"
+    },
+    {
+      "name": "number literal at the coefficient bound",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "number",
+              "value": "7922816251426433759354395033.5"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "number literal beyond the coefficient bound",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "number",
+              "value": "7922816251426433759354395033.55"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "relation field to a number",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "relation_field",
+            "relation": "manager",
+            "field": "salary"
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "relation field to an unknown field",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "relation_field",
+            "relation": "manager",
+            "field": "missing"
+          }
+        }
+      ],
+      "error": "unknown_field"
+    },
+    {
+      "name": "relation field to a retired field",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "relation_field",
+            "relation": "manager",
+            "field": "legacy"
+          }
+        }
+      ],
+      "error": "unknown_field"
+    },
+    {
+      "name": "relation field through a non-relation",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "text",
+          "expression": {
+            "type": "relation_field",
+            "relation": "name",
+            "field": "name"
+          }
+        }
+      ],
+      "error": "unknown_field"
+    },
+    {
+      "name": "parameter outside a rule",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "parameter",
+            "parameter": "cap"
+          }
+        }
+      ],
+      "error": "unsupported_derived_expression"
+    },
+    {
+      "name": "number comparison",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "lt",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "money comparison",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "gte",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "bonus"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "text equality",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "eq",
+            "left": {
+              "type": "field",
+              "field": "name"
+            },
+            "right": {
+              "type": "field",
+              "field": "title"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "text ordering",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "lt",
+            "left": {
+              "type": "field",
+              "field": "name"
+            },
+            "right": {
+              "type": "field",
+              "field": "title"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "comparison of mixed types",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "eq",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "base"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "conditional number",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "if",
+            "condition": {
+              "type": "compare",
+              "op": "lt",
+              "left": {
+                "type": "field",
+                "field": "salary"
+              },
+              "right": {
+                "type": "literal",
+                "value": {
+                  "type": "number",
+                  "value": "100"
+                }
+              }
+            },
+            "then": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "100"
+              }
+            },
+            "else": {
+              "type": "field",
+              "field": "salary"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "conditional with a number condition",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "if",
+            "condition": {
+              "type": "field",
+              "field": "salary"
+            },
+            "then": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "1"
+              }
+            },
+            "else": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "2"
+              }
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "conditional with mixed branches",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "if",
+            "condition": {
+              "type": "field",
+              "field": "active"
+            },
+            "then": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "1"
+              }
+            },
+            "else": {
+              "type": "field",
+              "field": "base"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "money minimum",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "min",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "bonus"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "number maximum",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "max",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "0"
+              }
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "text maximum",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "text",
+          "expression": {
+            "type": "max",
+            "left": {
+              "type": "field",
+              "field": "name"
+            },
+            "right": {
+              "type": "field",
+              "field": "title"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "number clamp",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "clamp",
+            "expression": {
+              "type": "field",
+              "field": "salary"
+            },
+            "min": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "0"
+              }
+            },
+            "max": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "clamp of mixed types",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "clamp",
+            "expression": {
+              "type": "field",
+              "field": "salary"
+            },
+            "min": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "0"
+              }
+            },
+            "max": {
+              "type": "field",
+              "field": "base"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "leap day literal",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "date",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "date",
+              "value": "2024-02-29"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "non-leap February 29",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "date",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "date",
+              "value": "2025-02-29"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "century non-leap February 29",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "date",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "date",
+              "value": "1900-02-29"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "leap datetime literal",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "datetime",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "datetime",
+              "value": "2024-02-29T23:59:59+05:30"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "impossible datetime day",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "datetime",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "datetime",
+              "value": "2026-02-30T00:00:00Z"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "impossible datetime hour",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "datetime",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "datetime",
+              "value": "2026-01-01T25:00:00Z"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "impossible datetime minute",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "datetime",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "datetime",
+              "value": "2026-01-01T10:61:00Z"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "midnight written as hour 24",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "datetime",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "datetime",
+              "value": "2026-01-01T24:00:00Z"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "leap second",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "datetime",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "datetime",
+              "value": "2026-12-31T23:59:60Z"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "largest offset",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "datetime",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "datetime",
+              "value": "2026-01-01T10:00:00+15:59"
+            }
+          }
+        }
+      ],
+      "error": null
+    },
+    {
+      "name": "offset beyond 15 hours",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "datetime",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "datetime",
+              "value": "2026-01-01T10:00:00+16:00"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "year zero date",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "date",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "date",
+              "value": "0000-01-01"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "year zero datetime",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "datetime",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "datetime",
+              "value": "0000-01-01T00:00:00Z"
+            }
+          }
+        }
+      ],
+      "error": "type_mismatch"
+    },
+    {
+      "name": "prototype key constructor",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "field",
+            "field": "constructor"
+          }
+        }
+      ],
+      "error": "unknown_field"
+    },
+    {
+      "name": "prototype key __proto__",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "field",
+            "field": "__proto__"
+          }
+        }
+      ],
+      "error": "unknown_field"
+    },
+    {
+      "name": "prototype key toString",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "text",
+          "expression": {
+            "type": "concat",
+            "expressions": [
+              {
+                "type": "field",
+                "field": "toString"
+              }
+            ]
+          }
+        }
+      ],
+      "error": "unknown_field"
+    }
+  ],
+  "evaluation": [
+    {
+      "name": "repeating division",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "divide",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "100",
+        "midpoint": "3"
+      },
+      "expected": {
+        "d": "33.33333333333333333333333333"
+      }
+    },
+    {
+      "name": "repeating division rounds half-even",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "divide",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "2",
+        "midpoint": "3"
+      },
+      "expected": {
+        "d": "0.6666666666666666666666666667"
+      }
+    },
+    {
+      "name": "negative repeating division",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "divide",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "-1",
+        "midpoint": "3"
+      },
+      "expected": {
+        "d": "-0.3333333333333333333333333333"
+      }
+    },
+    {
+      "name": "terminating division stays exact",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "divide",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "1",
+        "midpoint": "1024"
+      },
+      "expected": {
+        "d": "0.0009765625"
+      }
+    },
+    {
+      "name": "division by zero is null",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "divide",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "5",
+        "midpoint": "0"
+      },
+      "expected": {
+        "d": null
+      }
+    },
+    {
+      "name": "null operand is null",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "divide",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "5"
+      },
+      "expected": {
+        "d": null
+      }
+    },
+    {
+      "name": "coalesce falls back",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "coalesce",
+            "expressions": [
+              {
+                "type": "field",
+                "field": "midpoint"
+              },
+              {
+                "type": "literal",
+                "value": {
+                  "type": "number",
+                  "value": "1"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "values": {
+        "salary": "5"
+      },
+      "expected": {
+        "d": "1"
+      }
+    },
+    {
+      "name": "exact decimal sum",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "add",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "0.1",
+        "midpoint": "0.2"
+      },
+      "expected": {
+        "d": "0.3"
+      }
+    },
+    {
+      "name": "subtraction below zero",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "subtract",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "1",
+        "midpoint": "2.5"
+      },
+      "expected": {
+        "d": "-1.5"
+      }
+    },
+    {
+      "name": "trailing zeros are canonical",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "multiply",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "1.50",
+        "midpoint": "2"
+      },
+      "expected": {
+        "d": "3"
+      }
+    },
+    {
+      "name": "large products stay exact",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "multiply",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "79228162514264337593543950335",
+        "midpoint": "79228162514264337593543950335"
+      },
+      "expected": {
+        "d": "6277101735386680763835789423049210091073826769276946612225"
+      }
+    },
+    {
+      "name": "deep fractional products stay exact",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "multiply",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "0.0000000000000000000000000001",
+        "midpoint": "0.5"
+      },
+      "expected": {
+        "d": "0.00000000000000000000000000005"
+      }
+    },
+    {
+      "name": "stored separators and exponents",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "add",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "1_000",
+        "midpoint": "1e3"
+      },
+      "expected": {
+        "d": "2000"
+      }
+    },
+    {
+      "name": "money sums within one unit",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "add",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "bonus"
+            }
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "120000",
+          "currency": "USD",
+          "period": "annual"
+        },
+        "bonus": {
+          "amount": "12000.50",
+          "currency": "USD",
+          "period": "annual"
+        }
+      },
+      "expected": {
+        "d": {
+          "amount": "132000.5",
+          "currency": "USD",
+          "period": "annual"
+        }
+      }
+    },
+    {
+      "name": "money currencies never mix",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "add",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "bonus"
+            }
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "1",
+          "currency": "USD",
+          "period": "annual"
+        },
+        "bonus": {
+          "amount": "1",
+          "currency": "EUR",
+          "period": "annual"
+        }
+      },
+      "expected": {
+        "d": null
+      }
+    },
+    {
+      "name": "money periods never mix",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "subtract",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "bonus"
+            }
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "1",
+          "currency": "USD",
+          "period": "annual"
+        },
+        "bonus": {
+          "amount": "1",
+          "currency": "USD",
+          "period": "monthly"
+        }
+      },
+      "expected": {
+        "d": null
+      }
+    },
+    {
+      "name": "money scales by a number",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "multiply",
+            "left": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "1.1"
+              }
+            },
+            "right": {
+              "type": "field",
+              "field": "base"
+            }
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "100",
+          "currency": "USD",
+          "period": "annual"
+        }
+      },
+      "expected": {
+        "d": {
+          "amount": "110",
+          "currency": "USD",
+          "period": "annual"
+        }
+      }
+    },
+    {
+      "name": "money divides with the division rule",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "divide",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "3"
+              }
+            }
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "100",
+          "currency": "USD",
+          "period": "annual"
+        }
+      },
+      "expected": {
+        "d": {
+          "amount": "33.33333333333333333333333333",
+          "currency": "USD",
+          "period": "annual"
+        }
+      }
+    },
+    {
+      "name": "money division by zero is null",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "divide",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "salary"
+            }
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "100",
+          "currency": "USD",
+          "period": "annual"
+        },
+        "salary": "0"
+      },
+      "expected": {
+        "d": null
+      }
+    },
+    {
+      "name": "money ratio within one unit",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "divide",
+            "left": {
+              "type": "field",
+              "field": "bonus"
+            },
+            "right": {
+              "type": "field",
+              "field": "base"
+            }
+          }
+        }
+      ],
+      "values": {
+        "bonus": {
+          "amount": "30000",
+          "currency": "USD",
+          "period": "annual"
+        },
+        "base": {
+          "amount": "120000",
+          "currency": "USD",
+          "period": "annual"
+        }
+      },
+      "expected": {
+        "d": "0.25"
+      }
+    },
+    {
+      "name": "money ratio across currencies is null",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "divide",
+            "left": {
+              "type": "field",
+              "field": "bonus"
+            },
+            "right": {
+              "type": "field",
+              "field": "base"
+            }
+          }
+        }
+      ],
+      "values": {
+        "bonus": {
+          "amount": "30000",
+          "currency": "EUR",
+          "period": "annual"
+        },
+        "base": {
+          "amount": "120000",
+          "currency": "USD",
+          "period": "annual"
+        }
+      },
+      "expected": {
+        "d": null
+      }
+    },
+    {
+      "name": "hourly normalizes to annual",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "normalize_money_rate",
+            "expression": {
+              "type": "field",
+              "field": "base"
+            },
+            "period": "annual"
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "50",
+          "currency": "USD",
+          "period": "hourly"
+        }
+      },
+      "expected": {
+        "d": {
+          "amount": "104000",
+          "currency": "USD",
+          "period": "annual"
+        }
+      }
+    },
+    {
+      "name": "annual normalizes to hourly",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "normalize_money_rate",
+            "expression": {
+              "type": "field",
+              "field": "base"
+            },
+            "period": "hourly"
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "100000",
+          "currency": "USD",
+          "period": "annual"
+        }
+      },
+      "expected": {
+        "d": {
+          "amount": "48.07692307692307692307692308",
+          "currency": "USD",
+          "period": "hourly"
+        }
+      }
+    },
+    {
+      "name": "monthly normalizes to weekly",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "normalize_money_rate",
+            "expression": {
+              "type": "field",
+              "field": "base"
+            },
+            "period": "weekly"
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "1000",
+          "currency": "GBP",
+          "period": "monthly"
+        }
+      },
+      "expected": {
+        "d": {
+          "amount": "230.7692307692307692307692308",
+          "currency": "GBP",
+          "period": "weekly"
+        }
+      }
+    },
+    {
+      "name": "daily normalizes to monthly",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "normalize_money_rate",
+            "expression": {
+              "type": "field",
+              "field": "base"
+            },
+            "period": "monthly"
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "300",
+          "currency": "USD",
+          "period": "daily"
+        }
+      },
+      "expected": {
+        "d": {
+          "amount": "6500",
+          "currency": "USD",
+          "period": "monthly"
+        }
+      }
+    },
+    {
+      "name": "missing money stays null",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "normalize_money_rate",
+            "expression": {
+              "type": "field",
+              "field": "base"
+            },
+            "period": "annual"
+          }
+        }
+      ],
+      "values": {},
+      "expected": {
+        "d": null
+      }
+    },
+    {
+      "name": "text concatenation",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "text",
+          "expression": {
+            "type": "concat",
+            "expressions": [
+              {
+                "type": "field",
+                "field": "name"
+              },
+              {
+                "type": "literal",
+                "value": {
+                  "type": "text",
+                  "value": " - "
+                }
+              },
+              {
+                "type": "field",
+                "field": "title"
+              }
+            ]
+          }
+        }
+      ],
+      "values": {
+        "name": "Ada",
+        "title": "CTO"
+      },
+      "expected": {
+        "d": "Ada - CTO"
+      }
+    },
+    {
+      "name": "concatenation with a null part",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "text",
+          "expression": {
+            "type": "concat",
+            "expressions": [
+              {
+                "type": "field",
+                "field": "name"
+              },
+              {
+                "type": "literal",
+                "value": {
+                  "type": "text",
+                  "value": " - "
+                }
+              },
+              {
+                "type": "field",
+                "field": "title"
+              }
+            ]
+          }
+        }
+      ],
+      "values": {
+        "name": "Ada"
+      },
+      "expected": {
+        "d": null
+      }
+    },
+    {
+      "name": "date fallback",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "date",
+          "expression": {
+            "type": "coalesce",
+            "expressions": [
+              {
+                "type": "field",
+                "field": "start"
+              },
+              {
+                "type": "literal",
+                "value": {
+                  "type": "date",
+                  "value": "2026-01-31"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "values": {},
+      "expected": {
+        "d": "2026-01-31"
+      }
+    },
+    {
+      "name": "bool passthrough",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "field",
+            "field": "active"
+          }
+        }
+      ],
+      "values": {
+        "active": false
+      },
+      "expected": {
+        "d": false
+      }
+    },
+    {
+      "name": "derived references expand",
+      "derived_fields": [
+        {
+          "id": "total",
+          "type": "money_rate",
+          "expression": {
+            "type": "add",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "bonus"
+            }
+          }
+        },
+        {
+          "id": "monthly",
+          "type": "money_rate",
+          "expression": {
+            "type": "normalize_money_rate",
+            "expression": {
+              "type": "field",
+              "field": "total"
+            },
+            "period": "monthly"
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "120000",
+          "currency": "USD",
+          "period": "annual"
+        },
+        "bonus": {
+          "amount": "12000",
+          "currency": "USD",
+          "period": "annual"
+        }
+      },
+      "expected": {
+        "total": {
+          "amount": "132000",
+          "currency": "USD",
+          "period": "annual"
+        },
+        "monthly": {
+          "amount": "11000",
+          "currency": "USD",
+          "period": "monthly"
+        }
+      }
+    },
+    {
+      "name": "large quotients round to a negative scale",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "divide",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "70000000000000000000000000000",
+        "midpoint": "3"
+      },
+      "expected": {
+        "d": "23333333333333333333333333330"
+      }
+    },
+    {
+      "name": "chained division after a negative scale",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "divide",
+            "left": {
+              "type": "divide",
+              "left": {
+                "type": "field",
+                "field": "salary"
+              },
+              "right": {
+                "type": "field",
+                "field": "midpoint"
+              }
+            },
+            "right": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "2"
+              }
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "70000000000000000000000000000",
+        "midpoint": "3"
+      },
+      "expected": {
+        "d": "11666666666666666666666666665"
+      }
+    },
+    {
+      "name": "chained arithmetic after a negative scale",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "add",
+            "left": {
+              "type": "multiply",
+              "left": {
+                "type": "divide",
+                "left": {
+                  "type": "field",
+                  "field": "salary"
+                },
+                "right": {
+                  "type": "field",
+                  "field": "midpoint"
+                }
+              },
+              "right": {
+                "type": "literal",
+                "value": {
+                  "type": "number",
+                  "value": "1.5"
+                }
+              }
+            },
+            "right": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "0.25"
+              }
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "70000000000000000000000000000",
+        "midpoint": "3"
+      },
+      "expected": {
+        "d": "34999999999999999999999999995.25"
+      }
+    },
+    {
+      "name": "stored digit separators",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "add",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "1_000_000",
+        "midpoint": "0.000_5"
+      },
+      "expected": {
+        "d": "1000000.0005"
+      }
+    },
+    {
+      "name": "stored separators anywhere after a digit",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "add",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "1__2",
+        "midpoint": "0._5"
+      },
+      "expected": {
+        "d": "12.5"
+      }
+    },
+    {
+      "name": "stored money amounts with separators",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "add",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "bonus"
+            }
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "1__2",
+          "currency": "USD",
+          "period": "annual"
+        },
+        "bonus": {
+          "amount": "0._5",
+          "currency": "USD",
+          "period": "annual"
+        }
+      },
+      "expected": {
+        "d": {
+          "amount": "12.5",
+          "currency": "USD",
+          "period": "annual"
+        }
+      }
+    },
+    {
+      "name": "number comparison ignores scale",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "eq",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "1.10",
+        "midpoint": "1.1"
+      },
+      "expected": {
+        "d": true
+      }
+    },
+    {
+      "name": "number comparison beyond double precision",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "lt",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "99.99999999999999999999999999",
+        "midpoint": "100"
+      },
+      "expected": {
+        "d": true
+      }
+    },
+    {
+      "name": "comparison with stored separators",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "gte",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "1_000",
+        "midpoint": "1000"
+      },
+      "expected": {
+        "d": true
+      }
+    },
+    {
+      "name": "comparison with a null operand is null",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "lt",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "5"
+      },
+      "expected": {
+        "d": null
+      }
+    },
+    {
+      "name": "money comparison within one unit",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "gte",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "bonus"
+            }
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "100.50",
+          "currency": "USD",
+          "period": "annual"
+        },
+        "bonus": {
+          "amount": "100.5",
+          "currency": "USD",
+          "period": "annual"
+        }
+      },
+      "expected": {
+        "d": true
+      }
+    },
+    {
+      "name": "money comparison across currencies is null",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "lt",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "bonus"
+            }
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "1",
+          "currency": "USD",
+          "period": "annual"
+        },
+        "bonus": {
+          "amount": "2",
+          "currency": "EUR",
+          "period": "annual"
+        }
+      },
+      "expected": {
+        "d": null
+      }
+    },
+    {
+      "name": "money comparison across periods is null",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "eq",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "bonus"
+            }
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "1",
+          "currency": "USD",
+          "period": "annual"
+        },
+        "bonus": {
+          "amount": "1",
+          "currency": "USD",
+          "period": "monthly"
+        }
+      },
+      "expected": {
+        "d": null
+      }
+    },
+    {
+      "name": "text equality is exact",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "eq",
+            "left": {
+              "type": "field",
+              "field": "name"
+            },
+            "right": {
+              "type": "field",
+              "field": "title"
+            }
+          }
+        }
+      ],
+      "values": {
+        "name": "Ada",
+        "title": "ada"
+      },
+      "expected": {
+        "d": false
+      }
+    },
+    {
+      "name": "bool inequality",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "not_eq",
+            "left": {
+              "type": "field",
+              "field": "active"
+            },
+            "right": {
+              "type": "literal",
+              "value": {
+                "type": "bool",
+                "value": true
+              }
+            }
+          }
+        }
+      ],
+      "values": {
+        "active": false
+      },
+      "expected": {
+        "d": true
+      }
+    },
+    {
+      "name": "date ordering",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "lt",
+            "left": {
+              "type": "field",
+              "field": "start"
+            },
+            "right": {
+              "type": "literal",
+              "value": {
+                "type": "date",
+                "value": "2026-03-01"
+              }
+            }
+          }
+        }
+      ],
+      "values": {
+        "start": "2026-02-28"
+      },
+      "expected": {
+        "d": true
+      }
+    },
+    {
+      "name": "datetime equality across offsets",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "eq",
+            "left": {
+              "type": "literal",
+              "value": {
+                "type": "datetime",
+                "value": "2026-01-01T00:00:00Z"
+              }
+            },
+            "right": {
+              "type": "literal",
+              "value": {
+                "type": "datetime",
+                "value": "2026-01-01T01:00:00+01:00"
+              }
+            }
+          }
+        }
+      ],
+      "values": {},
+      "expected": {
+        "d": true
+      }
+    },
+    {
+      "name": "datetime ordering across offsets",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "lt",
+            "left": {
+              "type": "literal",
+              "value": {
+                "type": "datetime",
+                "value": "2026-01-01T10:00:00+05:00"
+              }
+            },
+            "right": {
+              "type": "literal",
+              "value": {
+                "type": "datetime",
+                "value": "2026-01-01T06:00:00Z"
+              }
+            }
+          }
+        }
+      ],
+      "values": {},
+      "expected": {
+        "d": true
+      }
+    },
+    {
+      "name": "datetime leap second rolls over",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "eq",
+            "left": {
+              "type": "literal",
+              "value": {
+                "type": "datetime",
+                "value": "2026-12-31T23:59:60Z"
+              }
+            },
+            "right": {
+              "type": "literal",
+              "value": {
+                "type": "datetime",
+                "value": "2027-01-01T00:00:00Z"
+              }
+            }
+          }
+        }
+      ],
+      "values": {},
+      "expected": {
+        "d": true
+      }
+    },
+    {
+      "name": "datetime fractions round to microseconds",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "eq",
+            "left": {
+              "type": "literal",
+              "value": {
+                "type": "datetime",
+                "value": "2026-01-01T00:00:00.0000005Z"
+              }
+            },
+            "right": {
+              "type": "literal",
+              "value": {
+                "type": "datetime",
+                "value": "2026-01-01T00:00:00Z"
+              }
+            }
+          }
+        }
+      ],
+      "values": {},
+      "expected": {
+        "d": true
+      }
+    },
+    {
+      "name": "datetime fractions round half-even",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "eq",
+            "left": {
+              "type": "literal",
+              "value": {
+                "type": "datetime",
+                "value": "2026-01-01T00:00:00.0000025Z"
+              }
+            },
+            "right": {
+              "type": "literal",
+              "value": {
+                "type": "datetime",
+                "value": "2026-01-01T00:00:00.000002Z"
+              }
+            }
+          }
+        }
+      ],
+      "values": {},
+      "expected": {
+        "d": true
+      }
+    },
+    {
+      "name": "conditional takes then",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "if",
+            "condition": {
+              "type": "compare",
+              "op": "lt",
+              "left": {
+                "type": "field",
+                "field": "salary"
+              },
+              "right": {
+                "type": "literal",
+                "value": {
+                  "type": "number",
+                  "value": "100"
+                }
+              }
+            },
+            "then": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "100"
+              }
+            },
+            "else": {
+              "type": "field",
+              "field": "salary"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "50"
+      },
+      "expected": {
+        "d": "100"
+      }
+    },
+    {
+      "name": "conditional takes else",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "if",
+            "condition": {
+              "type": "compare",
+              "op": "lt",
+              "left": {
+                "type": "field",
+                "field": "salary"
+              },
+              "right": {
+                "type": "literal",
+                "value": {
+                  "type": "number",
+                  "value": "100"
+                }
+              }
+            },
+            "then": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "100"
+              }
+            },
+            "else": {
+              "type": "field",
+              "field": "salary"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "150.50"
+      },
+      "expected": {
+        "d": "150.5"
+      }
+    },
+    {
+      "name": "null condition takes else",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "if",
+            "condition": {
+              "type": "compare",
+              "op": "lt",
+              "left": {
+                "type": "field",
+                "field": "salary"
+              },
+              "right": {
+                "type": "literal",
+                "value": {
+                  "type": "number",
+                  "value": "100"
+                }
+              }
+            },
+            "then": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "1"
+              }
+            },
+            "else": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "2"
+              }
+            }
+          }
+        }
+      ],
+      "values": {},
+      "expected": {
+        "d": "2"
+      }
+    },
+    {
+      "name": "number maximum",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "max",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "0"
+              }
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "-5"
+      },
+      "expected": {
+        "d": "0"
+      }
+    },
+    {
+      "name": "number minimum with a null operand is null",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "min",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "5"
+      },
+      "expected": {
+        "d": null
+      }
+    },
+    {
+      "name": "money minimum within one unit",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "min",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "bonus"
+            }
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "100",
+          "currency": "USD",
+          "period": "annual"
+        },
+        "bonus": {
+          "amount": "90.50",
+          "currency": "USD",
+          "period": "annual"
+        }
+      },
+      "expected": {
+        "d": {
+          "amount": "90.5",
+          "currency": "USD",
+          "period": "annual"
+        }
+      }
+    },
+    {
+      "name": "money maximum across currencies is null",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "max",
+            "left": {
+              "type": "field",
+              "field": "base"
+            },
+            "right": {
+              "type": "field",
+              "field": "bonus"
+            }
+          }
+        }
+      ],
+      "values": {
+        "base": {
+          "amount": "1",
+          "currency": "USD",
+          "period": "annual"
+        },
+        "bonus": {
+          "amount": "2",
+          "currency": "EUR",
+          "period": "annual"
+        }
+      },
+      "expected": {
+        "d": null
+      }
+    },
+    {
+      "name": "clamp above the bound",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "clamp",
+            "expression": {
+              "type": "field",
+              "field": "salary"
+            },
+            "min": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "0"
+              }
+            },
+            "max": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "150",
+        "midpoint": "100.00"
+      },
+      "expected": {
+        "d": "100"
+      }
+    },
+    {
+      "name": "clamp below the bound",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "clamp",
+            "expression": {
+              "type": "field",
+              "field": "salary"
+            },
+            "min": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "0"
+              }
+            },
+            "max": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "-1",
+        "midpoint": "100"
+      },
+      "expected": {
+        "d": "0"
+      }
+    },
+    {
+      "name": "clamp with inverted bounds takes the lower bound",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "clamp",
+            "expression": {
+              "type": "field",
+              "field": "salary"
+            },
+            "min": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "10"
+              }
+            },
+            "max": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "5",
+        "midpoint": "1"
+      },
+      "expected": {
+        "d": "10"
+      }
+    },
+    {
+      "name": "clamp with a null bound is null",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "clamp",
+            "expression": {
+              "type": "field",
+              "field": "salary"
+            },
+            "min": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "0"
+              }
+            },
+            "max": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "5"
+      },
+      "expected": {
+        "d": null
+      }
+    },
+    {
+      "name": "relation field reads the related record",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "subtract",
+            "left": {
+              "type": "relation_field",
+              "relation": "manager",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "salary"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "100000"
+      },
+      "related": {
+        "manager": {
+          "salary": "120_000"
+        }
+      },
+      "expected": {
+        "d": "20000"
+      }
+    },
+    {
+      "name": "relation money is canonical",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "relation_field",
+            "relation": "manager",
+            "field": "base"
+          }
+        }
+      ],
+      "values": {},
+      "related": {
+        "manager": {
+          "base": {
+            "amount": "1_000.50",
+            "currency": "USD",
+            "period": "annual"
+          }
+        }
+      },
+      "expected": {
+        "d": {
+          "amount": "1000.5",
+          "currency": "USD",
+          "period": "annual"
+        }
+      }
+    },
+    {
+      "name": "relation text comparison",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "eq",
+            "left": {
+              "type": "relation_field",
+              "relation": "manager",
+              "field": "name"
+            },
+            "right": {
+              "type": "field",
+              "field": "name"
+            }
+          }
+        }
+      ],
+      "values": {
+        "name": "Ada"
+      },
+      "related": {
+        "manager": {
+          "name": "Ada"
+        }
+      },
+      "expected": {
+        "d": true
+      }
+    },
+    {
+      "name": "empty relation is null",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "relation_field",
+            "relation": "manager",
+            "field": "salary"
+          }
+        }
+      ],
+      "values": {},
+      "expected": {
+        "d": null
+      }
+    },
+    {
+      "name": "number parameter",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "multiply",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "parameter",
+              "parameter": "rate"
+            }
+          }
+        }
+      ],
+      "values": {
+        "salary": "100"
+      },
+      "parameters": {
+        "rate": {
+          "type": "number",
+          "value": "1.05"
+        }
+      },
+      "expected": {
+        "d": "105"
+      }
+    },
+    {
+      "name": "money parameter is canonical",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "coalesce",
+            "expressions": [
+              {
+                "type": "field",
+                "field": "base"
+              },
+              {
+                "type": "parameter",
+                "parameter": "floor"
+              }
+            ]
+          }
+        }
+      ],
+      "values": {},
+      "parameters": {
+        "floor": {
+          "type": "money_rate",
+          "value": {
+            "amount": "12.50",
+            "currency": "USD",
+            "period": "annual"
+          }
+        }
+      },
+      "expected": {
+        "d": {
+          "amount": "12.5",
+          "currency": "USD",
+          "period": "annual"
+        }
+      }
+    },
+    {
+      "name": "parameter in a condition",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "gt",
+            "left": {
+              "type": "field",
+              "field": "start"
+            },
+            "right": {
+              "type": "parameter",
+              "parameter": "cutoff"
+            }
+          }
+        }
+      ],
+      "values": {
+        "start": "2026-02-01"
+      },
+      "parameters": {
+        "cutoff": {
+          "type": "date",
+          "value": "2026-01-31"
+        }
+      },
+      "expected": {
+        "d": true
+      }
+    }
+  ],
+  "number_inputs": [
+    {
+      "value": "1_000",
+      "valid": true
+    },
+    {
+      "value": "1_000.000_5",
+      "valid": true
+    },
+    {
+      "value": "-1e3",
+      "valid": true
+    },
+    {
+      "value": "12.50",
+      "valid": true
+    },
+    {
+      "value": "1__2",
+      "valid": true
+    },
+    {
+      "value": "1_",
+      "valid": true
+    },
+    {
+      "value": "1._5",
+      "valid": true
+    },
+    {
+      "value": "_1",
+      "valid": false
+    },
+    {
+      "value": "1e",
+      "valid": false
+    },
+    {
+      "value": ".5",
+      "valid": false
+    },
+    {
+      "value": "1.",
+      "valid": false
+    },
+    {
+      "value": "",
+      "valid": false
+    }
+  ],
+  "runtime_validation": [
+    {
+      "name": "unknown normalization period",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "normalize_money_rate",
+            "expression": {
+              "type": "field",
+              "field": "base"
+            },
+            "period": "fortnightly"
+          }
+        }
+      ],
+      "error": "invalid_derived_expression"
+    },
+    {
+      "name": "unknown expression type",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "power",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            },
+            "right": {
+              "type": "field",
+              "field": "midpoint"
+            }
+          }
+        }
+      ],
+      "error": "unsupported_derived_expression"
+    },
+    {
+      "name": "unexpected node property",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "field",
+            "field": "salary",
+            "scale": 2
+          }
+        }
+      ],
+      "error": "invalid_derived_expression"
+    },
+    {
+      "name": "missing operand",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "add",
+            "left": {
+              "type": "field",
+              "field": "salary"
+            }
+          }
+        }
+      ],
+      "error": "invalid_derived_expression"
+    },
+    {
+      "name": "money literal",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "money_rate",
+          "expression": {
+            "type": "literal",
+            "value": {
+              "type": "money_rate",
+              "value": "1"
+            }
+          }
+        }
+      ],
+      "error": "invalid_derived_expression"
+    },
+    {
+      "name": "non-object node",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": "salary"
+        }
+      ],
+      "error": "invalid_derived_expression"
+    },
+    {
+      "name": "unknown comparison operator",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "bool",
+          "expression": {
+            "type": "compare",
+            "op": "like",
+            "left": {
+              "type": "field",
+              "field": "name"
+            },
+            "right": {
+              "type": "field",
+              "field": "title"
+            }
+          }
+        }
+      ],
+      "error": "invalid_derived_expression"
+    },
+    {
+      "name": "conditional without else",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "if",
+            "condition": {
+              "type": "field",
+              "field": "active"
+            },
+            "then": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "1"
+              }
+            }
+          }
+        }
+      ],
+      "error": "invalid_derived_expression"
+    },
+    {
+      "name": "clamp without a maximum",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "clamp",
+            "expression": {
+              "type": "field",
+              "field": "salary"
+            },
+            "min": {
+              "type": "literal",
+              "value": {
+                "type": "number",
+                "value": "0"
+              }
+            }
+          }
+        }
+      ],
+      "error": "invalid_derived_expression"
+    },
+    {
+      "name": "relation field without a string field",
+      "derived_fields": [
+        {
+          "id": "d",
+          "type": "number",
+          "expression": {
+            "type": "relation_field",
+            "relation": "manager",
+            "field": 1
+          }
+        }
+      ],
+      "error": "invalid_derived_expression"
+    }
+  ]
+}

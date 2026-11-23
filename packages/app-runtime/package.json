@@ -1,0 +1,14 @@
+{
+  "name": "@autograph/app-runtime",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.tsx"
+  },
+  "scripts": {
+    "check": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0 <20.0.0"
+  }
+}

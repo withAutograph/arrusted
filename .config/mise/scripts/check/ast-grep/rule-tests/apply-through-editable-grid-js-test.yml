@@ -1,0 +1,14 @@
+id: apply-through-editable-grid-js
+valid:
+  - fetch("/api/schema");
+  - window.fetch("/api/schema");
+invalid:
+  - fetch("/api/apply");
+  - window.fetch("/api/apply");
+  - 'globalThis.fetch("/api/apply", { method: "POST" });'
+  - 'window["fetch"]("/api/apply");'
+  - "window[`fetch`](`/api/apply`);"
+  - 'globalThis.fetch?.("/api/apply");'
+  - 'window?.fetch("/api/apply");'
+  - postJson("/api/apply", payload);
+  - client.postJson("/api/apply", payload);

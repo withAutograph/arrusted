@@ -1,0 +1,26 @@
+id: no-runtime-remote-ui-ts
+valid:
+  - 'const module = import("./client");'
+  - 'const module = import("@autograph/integrations");'
+  - "const text = response.html;"
+  - 'const node = document.createElement("div");'
+invalid:
+  - 'const run = Function("return window")();'
+  - 'const run = new Function("return window")();'
+  - "window.eval(source);"
+  - "element.innerHTML = response.html;"
+  - "element.outerHTML = response.html;"
+  - 'element.insertAdjacentHTML("beforeend", response.html);'
+  - "document.write(response.html);"
+  - "window.document.writeln(response.html);"
+  - 'frame.setAttribute("srcdoc", response.html);'
+  - "frame.srcdoc = response.html;"
+  - 'frame["srcdoc"] = response.html;'
+  - 'frame.setAttribute("srcDoc", response.html);'
+  - 'const script = document.createElement("script");'
+  - 'const script = document.createElement("ScRiPt");'
+  - 'const script = React.createElement("script", { src: rendererUrl });'
+  - 'const stylesheet = document.createElement("link");'
+  - 'const stylesheet = document.createElement("LINK", { rel: "stylesheet" });'
+  - "const renderer = import(description.rendererUrl);"
+  - 'const renderer = import("https://apps.example.com/renderer.js");'

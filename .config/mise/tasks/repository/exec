@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+#MISE description="Run one relocated repository tooling implementation"
+set -euo pipefail
+
+script="${1:?usage: mise run repository:exec -- <script path> [arguments...]}"
+shift
+
+case "$script" in
+  *".."* | /*) echo "repository task path must be relative" >&2; exit 64 ;;
+esac
+
+root="${MISE_MONOREPO_ROOT:-${MISE_PROJECT_ROOT:-$PWD}}"
+target="$root/.config/mise/scripts/repository/$script"
+[ -f "$target" ] || { echo "unknown repository implementation: $script" >&2; exit 66; }
+
+cd "$root"
+case "$target" in
+  *.ts|*.tsx|*.mjs)
+    export BUN_OPTIONS="${BUN_OPTIONS:+$BUN_OPTIONS }--conditions=source"
+    exec mise exec -- bun "$target" "$@"
+    ;;
+  *.sh) exec bash "$target" "$@" ;;
+  *.py) exec python3 "$target" "$@" ;;
+  *) exec "$target" "$@" ;;
+esac

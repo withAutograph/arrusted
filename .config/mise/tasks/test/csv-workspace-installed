@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Prove the agent-led CSV workspace in the real HC and Vendor apps"
+set -euo pipefail
+
+cd "$MISE_MONOREPO_ROOT"
+exec bun packages/csv-workspace/__tests__/installed-app-browser-proof.ts

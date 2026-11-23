@@ -1,0 +1,9 @@
+#!/bin/sh
+#MISE description="Grant an existing local Better Auth user organization access"
+set -eu
+
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=.config/mise/scripts/auth/lib.sh
+. "$script_dir/lib.sh"
+
+auth_run bun .config/mise/scripts/repository/auth-grant-local-access.ts

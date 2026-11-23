@@ -1,0 +1,13 @@
+{
+  "name": "@autograph/turbo-generators",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "vp test --run --testTimeout=15000"
+  },
+  "devDependencies": {
+    "@turbo/gen": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

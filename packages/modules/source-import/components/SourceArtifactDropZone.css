@@ -1,0 +1,119 @@
+/* Source-artifact drop zone presentation.
+ *
+ * Lives in the module (not the design system) because the dashed-border drop
+ * surface is a substrate-shape contract for source-artifact intake — every
+ * import flow (CSV today, JSON/XLSX/pasted text later) reuses this exact
+ * surface. Moving it to the design system would surface a token that only
+ * this component consumes.
+ *
+ * Tokens only; no raw color / spacing literals. The visual-token scanner
+ * (Konsistent) enforces this for module .tsx files
+ * files but not .css; we still honor the discipline so a future theme swap
+ * recolors the drop zone without code changes.
+ */
+
+.source-artifact-drop-zone {
+  background: var(--color-bg-surface);
+  border: 2px dashed var(--color-border-strong);
+  border-radius: var(--radius-panel);
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 120ms ease;
+  appearance: none;
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  width: 100%;
+}
+
+.source-artifact-drop-zone:hover {
+  border-color: var(--color-action-primary);
+}
+
+.source-artifact-drop-zone:focus-visible {
+  outline: none;
+  border-color: var(--color-action-primary);
+  box-shadow: 0 0 0 var(--ring-focus-width)
+    color-mix(in oklab, var(--color-action-primary) 30%, transparent);
+}
+
+.source-artifact-drop-zone[data-state="drag-over"] {
+  border-color: var(--color-action-primary);
+  background: var(--color-bg-selected);
+}
+
+.source-artifact-drop-zone[data-state="loading"] {
+  cursor: progress;
+}
+
+.source-artifact-drop-zone[data-state="error"] {
+  border-color: var(--color-status-danger);
+}
+
+.source-artifact-drop-zone__icon {
+  width: var(--size-control-md);
+  height: var(--size-control-md);
+  border-radius: var(--radius-control);
+  background: var(--color-bg-selected);
+  color: var(--color-action-primary);
+  display: grid;
+  place-items: center;
+}
+
+.source-artifact-drop-zone__icon svg {
+  width: var(--size-icon-md);
+  height: var(--size-icon-md);
+}
+
+.source-artifact-drop-zone__headline {
+  font-size: var(--text-title);
+  line-height: var(--leading-title);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.source-artifact-drop-zone__subline {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--color-text-secondary);
+  margin: 0;
+  max-width: 480px;
+}
+
+.source-artifact-drop-zone__error {
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  color: var(--color-status-danger);
+  margin: 0;
+}
+
+.source-artifact-drop-zone__loading {
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.source-artifact-drop-zone__footer-note {
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.source-artifact-drop-zone__hidden-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

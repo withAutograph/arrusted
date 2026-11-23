@@ -1,0 +1,9 @@
+id: semantic-icons-only-js
+valid:
+  - const iconPackage = "@heroicons/react";
+  - '// import { PlusIcon } from "@heroicons/react/24/solid";'
+invalid:
+  - import { PlusIcon } from "@heroicons/react/24/solid";
+  - export { PlusIcon } from "@heroicons/react/24/outline";
+  - const icons = require("@heroicons/react");
+  - import("@heroicons/react/24/solid");

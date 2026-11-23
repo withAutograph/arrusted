@@ -1,0 +1,6 @@
+#!/bin/sh
+#MISE description="Validate and enforce repository structural conventions"
+set -eu
+
+konsistent validate --config-path .config/konsistent.json
+konsistent check --config-path .config/konsistent.json

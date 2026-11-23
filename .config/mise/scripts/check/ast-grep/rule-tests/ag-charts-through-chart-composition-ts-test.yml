@@ -1,0 +1,9 @@
+id: ag-charts-through-chart-composition-ts
+valid:
+  - import type { ChartConfig } from "@autograph/compositions";
+  - const packageName = "ag-charts-community";
+invalid:
+  - import type { AgChartOptions } from "ag-charts-community";
+  - export { LicenseManager } from "ag-charts-enterprise";
+  - const charts = require("ag-charts-react");
+  - const charts = import("ag-charts-community");

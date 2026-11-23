@@ -1,0 +1,8 @@
+import { describe, expect, it } from "vite-plus/test";
+import { {{ camelName }}Name } from "../index";
+
+describe("{{ packageName }}", () => {
+  it("returns its package name", () => {
+    expect({{ camelName }}Name()).toBe("{{ packageName }}");
+  });
+});

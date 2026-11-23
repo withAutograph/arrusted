@@ -1,0 +1,25 @@
+id: no-runtime-remote-ui-tsx
+valid:
+  - "export const App = () => <main>{response.html}</main>;"
+  - 'const Dialog = lazy(() => import("./Dialog"));'
+  - 'export const Icon = () => <link rel="icon" href="/icon.svg" />;'
+invalid:
+  - "export const App = () => <main dangerouslySetInnerHTML={{ __html: response.html }} />;"
+  - "export const App = () => <iframe srcDoc={response.html} />;"
+  - "export const App = () => <iframe srcdoc={response.html} />;"
+  - "export const Runtime = ({ source }: { source: string }) => <script>{source}</script>;"
+  - "export const Runtime = ({ source }: { source: string }) => <Script>{source}</Script>;"
+  - 'export const Styles = () => <link rel="stylesheet" href="https://apps.example.com/app.css" />;'
+  - 'export const Styles = () => <link rel="stylesheet" href="/vendor/api/ui.css" />;'
+  - 'export const Styles = () => <link rel="stylesheet" href="/app.css"></link>;'
+  - 'export const Styles = ({ href }: { href: string }) => <link key={href} href={href} rel="stylesheet" />;'
+  - 'export const Styles = ({ href }: { href: string }) => <link rel="stylesheet" href={href}></link>;'
+  - "export const Runtime = ({ src }: { src: string }) => <Script src={src} />;"
+  - 'export const Runtime = () => <script src="https://apps.example.com/renderer.js"></script>;'
+  - "export const Runtime = ({ src }: { src: string }) => <script src={src} />;"
+  - 'export const Runtime = () => React.createElement("script", { src: rendererUrl });'
+  - 'export const Runtime = () => React.createElement("ScRiPt", { src: rendererUrl });'
+  - 'export const Styles = () => React.createElement("link", { rel: "stylesheet", href });'
+  - 'export const Styles = () => React.createElement("LINK", { rel: "stylesheet", href });'
+  - "const renderer = import(runtimeUrl); export const App = () => <main />;"
+  - 'export const Runtime = () => <Script src="/_next/static/reviewed.js" />;'

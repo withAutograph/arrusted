@@ -1,0 +1,90 @@
+flowchart TB
+  K1[Actor key: U = user input; A = LLM work; S = system work]
+  K2[Tag key: PROTOTYPE SKILL = step owned by adapted AG2 donor workflow]
+  K3[Status key: green = built; amber = partial or manual; red = missing; blue = outcome]
+
+  U00[/U00 PARTIAL MANUAL: A facilitator installs the basic software needed to build and store app data locally/]
+  S00[(S00 BUILT MANUAL: Repository setup installs project tools, creates local databases, prepares sign-in data, and initializes storage)]
+  S00A[(S00A PARTIAL: Individual readiness checks exist, but one safe command cannot yet confirm that everything is ready)]
+
+  S01[(S01 BUILT: Codex discovers and loads skills)]
+  S02[(S02 BUILT - PROTOTYPE SKILL ADAPTATION: The agent knows what to ask, which Arrusted guidance to read, what app blueprint to create, and when to pause for approval)]
+  U01[/U01 BUILT: The user explains the outcome they are trying to achieve/]
+  U02[/U02 BUILT: The user names the screens or tools they want, such as a dashboard, table, form, or detail view/]
+  A01[A01 MISSING - PROTOTYPE SKILL: Record what the user said, what the evidence shows, what the agent guessed, what was approved, and what remains unanswered]
+  G01{G01 PARTIAL - PROTOTYPE SKILL HTML GATE: Has the user explained the result they need and the screens or tools they want to use?}
+  PS01[PS01 PARTIAL - PROTOTYPE SKILL PHASE 1: Learn how this work is done today, the language people use, proven practices, and common problems]
+  PS02[PS02 PARTIAL - PROTOTYPE SKILL PHASE 1: Clarify who uses the app, which decisions it supports, what happens first, and how failures should appear]
+  PS03[PS03 PARTIAL - PROTOTYPE SKILL PHASE 1 ADAPTED: Suggest where the data may come from and how conflicting records might be resolved, clearly marking these as assumptions]
+  PS04[PS04 PARTIAL - PROTOTYPE SKILL PHASE 1: Identify useful things the agent can surface automatically and tasks it can perform when asked]
+  PS05[PS05 PARTIAL - PROTOTYPE SKILL PHASE 2 ADAPTED: Check Arrusted's rules, reusable components, working examples, and current visual styles before designing]
+  PS06[PS06 PARTIAL - PROTOTYPE SKILL PHASE 2: Decide what can be configured, what must be extended, what needs a connector, and what must be created]
+  PS07[PS07 PARTIAL - PROTOTYPE SKILL PHASE 2: Explain what Arrusted already supports and how much new work the requested app is likely to require]
+  PS08[PS08 MISSING - PROTOTYPE SKILL PHASE 3 ADAPTED: Create a clickable prototype that opens in a browser and uses believable sample information consistently]
+  PS09[PS09 MISSING - PROTOTYPE SKILL PHASE 3: Show the requested screens, movement between them, controls, actions, loading and error states, and useful agent examples]
+  PS10[PS10 MISSING - PROTOTYPE SKILL QUALITY: Confirm that the prototype works, adapts to screen size, is accessible, stays internally consistent, and contains no unexplained filler]
+
+  U03[/U03 BUILT: User tries the HTML and gives product-language feedback/]
+  A04[A04 PARTIAL - PROTOTYPE SKILL ITERATION: Update the clickable prototype from feedback and record every decision that changes what the user sees or can do]
+  A05[A05 PARTIAL - PROTOTYPE SKILL DISCOVERY: Suggest outside data connections, imports, real-world records, their important details, and how they relate]
+  U04[/U04 BUILT: The user confirms or corrects where data comes from, what records exist, and how those records relate/]
+  A06[A06 PARTIAL - PROTOTYPE SKILL SPEC: Define the app's pages, controls, actions, time-based behavior, saved changes, access rules, and agent responsibilities]
+  S04[(S04 MISSING - PROTOTYPE SKILL COMPILER: Keep the clickable prototype, decision history, and agreed blueprint for the real app consistent with one another)]
+  G02{G02 MISSING - PROTOTYPE SKILL BUILD GATE: Has the user resolved or intentionally postponed every decision that could change the real build?}
+  U05[/U05 MISSING: User explicitly approves both the experience and the blueprint for building the real app/]
+  S05[(S05 MISSING: Give the approved blueprint to the planning step without changing any user decisions)]
+
+  A07[A07 PARTIAL: The agent turns the approved app blueprint into an ordered development plan]
+  A08[A08 PARTIAL: The agent verifies what Arrusted already provides and separates reusable platform work from work unique to this app]
+  S06[(S06 MISSING: Automatically list what can be reused, how to use it, how it is tested, and what still needs to be built)]
+  U06[/U06 BUILT: User reviews and approves the implementation plan/]
+  S06A[(S06A PARTIAL: Before editing code, check that required tools, data definitions, generated files, licenses, local services, and network ports are ready)]
+
+  S07[(S07 PARTIAL: A starter project can be created automatically, but it does not yet include a complete working data layer)]
+  S08[(S08 PARTIAL: Reusable data definitions exist, but each app must still define its records and how they relate)]
+  S09[(S09 PARTIAL: Connection tools exist, but each app must decide how outside data is imported, matched, and updated)]
+  S10[(S10 PARTIAL: Arrusted can generate safe data-access code, but each app must still connect and run it)]
+  S11[(S11 PARTIAL: Core data services exist, but there is no reusable server setup that assembles them for a new app)]
+  S12[(S12 BUILT: Reusable tables, review flows, charts, record details, controls, and visual building blocks are available)]
+  A09[A09 PARTIAL: The agent builds the real interface and app-specific rules from the approved blueprint]
+  S13[(S13 PARTIAL: Internal tools can show a working preview, but a new app cannot yet be started with one simple command)]
+
+  U07[/U07 BUILT: The user follows the agreed test scenario in a realistic preview of the app/]
+  S14[(S14 BUILT: The platform can safely read records, propose or approve changes, preserve history, and keep the database authoritative)]
+  S15[(S15 PARTIAL: Automated quality checks exist, but they must still be run and understood in several separate places)]
+  G03{G03 PARTIAL: Does the app pass automated checks and behave like the user-approved blueprint?}
+  A10[A10 PARTIAL: LLM explains failure and makes the smallest safe repair]
+  U08[/U08 BUILT: User describes a correction in product language/]
+  S16[(S16 MISSING: Automatically record how long the build took, what questions and human help were needed, what failed, how it was fixed, and what remains limited)]
+  U09[/U09 MISSING: User explicitly accepts the measured result/]
+  R([OUTCOME: A useful local first version that behaves like the user-approved blueprint])
+
+  S17[(S17 MISSING: Provide one installable Arrusted command-line tool that supplies approved building blocks and code-generation tools)]
+  S18[(S18 MISSING: Start the app and its safely separated local data services automatically)]
+  S19[(S19 MISSING: Provide production sign-in, installation, data upgrades, deployment, health checks, and recovery)]
+
+  K1 --> K2 --> K3 --> U00 --> S00 --> S00A --> S01 --> S02 --> U01 --> U02 --> A01 --> G01
+  G01 -- Missing desired outcome or interfaces --> U01
+  G01 -- Prototype-ready --> PS01 --> PS02 --> PS03 --> PS04 --> PS05 --> PS06 --> PS07 --> PS08 --> PS09 --> PS10 --> U03 --> A04 --> A05 --> U04 --> A06 --> S04 --> G02
+  G02 -- Revise experience --> PS08
+  G02 -- Clarify production contract --> U04
+  G02 -- Build-ready --> U05 --> S05 --> A07 --> A08
+  A08 -. Current manual evidence .-> U06
+  A08 -. Future generated inventory .-> S06 --> U06
+  U06 --> S06A --> S07 --> S08 --> S09 --> S10 --> S11 --> S12 --> A09 --> S13
+  S13 --> U07 --> S14 --> S15 --> G03
+  G03 -- No --> A10 --> U08 --> A09
+  G03 -- Yes --> S16 --> U09 --> R
+  R -. Later productization .-> S17 --> S18 --> S19
+
+  classDef built fill:#DCFCE7,stroke:#15803D,color:#14532D,stroke-width:2px
+  classDef partial fill:#FEF3C7,stroke:#D97706,color:#78350F,stroke-width:2px
+  classDef missing fill:#FEE2E2,stroke:#DC2626,color:#7F1D1D,stroke-width:2px
+  classDef outcome fill:#DBEAFE,stroke:#2563EB,color:#1E3A8A,stroke-width:3px
+  classDef note fill:#F8FAFC,stroke:#64748B,color:#0F172A,stroke-width:1px
+
+  class K1,K2,K3 note
+  class S00,S01,S02,U01,U02,U03,U04,U06,S12,U07,S14,U08 built
+  class U00,S00A,G01,PS01,PS02,PS03,PS04,PS05,PS06,PS07,A04,A05,A06,A07,A08,S06A,S07,S08,S09,S10,S11,A09,S13,S15,G03,A10 partial
+  class A01,PS08,PS09,PS10,S04,G02,U05,S05,S06,S16,U09,S17,S18,S19 missing
+  class R outcome

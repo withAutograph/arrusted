@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Prove guarded isolated-workspace publication without external publication"
+set -euo pipefail
+
+exec mise exec -- bunx vitest run .config/mise/scripts/repository/__tests__/isolated-workspace-publication.test.ts --silent

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Verify protected HTTP request replay on owned disposable PostgreSQL"
+set -euo pipefail
+cd "$MISE_MONOREPO_ROOT"
+exec bun .config/mise/scripts/repository/test-protected-http-replay.ts

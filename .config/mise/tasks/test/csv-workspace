@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Test the shared CSV workspace, customer composition and bounded computation"
+set -euo pipefail
+cd "$MISE_MONOREPO_ROOT"
+exec bun x vp test --config packages/csv-workspace/vite.config.ts --run "$@"

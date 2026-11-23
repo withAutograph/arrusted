@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Prove the repository root layout policy fails closed"
+set -euo pipefail
+
+cd "$MISE_MONOREPO_ROOT"
+exec bash .config/mise/scripts/repository/test-root-layout.sh

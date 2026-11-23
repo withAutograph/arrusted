@@ -1,0 +1,5 @@
+#!/bin/sh
+#MISE description="Verify enrolled Auth schema history, replay, contention, and session preservation on owned local PostgreSQL"
+set -eu
+cd "$MISE_MONOREPO_ROOT"
+exec bun x vp test --run .config/mise/scripts/repository/auth-schema-history.test.ts .config/mise/scripts/repository/auth-schema-proposal-binary.test.ts .config/mise/scripts/repository/auth-app-catalog.test.ts

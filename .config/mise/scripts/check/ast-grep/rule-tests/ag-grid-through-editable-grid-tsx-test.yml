@@ -1,0 +1,12 @@
+id: ag-grid-through-editable-grid-tsx
+valid:
+  - import { EditableRowVersionGrid } from "@modules/editable-grid"; export const view = <EditableRowVersionGrid />;
+  - 'import data from "./data.json" with { type: "ag-grid-community" }; export const view = <div />;'
+  - const gridPackage = "ag-grid-react"; export const view = <div />;
+  - '// import { AgGridReact } from "ag-grid-react"; export const view = <div />;'
+invalid:
+  - import { AgGridReact } from "ag-grid-react"; export const view = <AgGridReact />;
+  - import Grid = require("ag-grid-community"); export const view = <div />;
+  - export { ModuleRegistry } from "ag-grid-community/styles";
+  - const grid = require("ag-grid-enterprise"); export const view = <div />;
+  - const grid = import("ag-grid-community"); export const view = <div />;

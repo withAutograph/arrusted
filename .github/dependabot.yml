@@ -1,0 +1,33 @@
+version: 2
+updates:
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      monthly-batch:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 10
+    ignore:
+      - dependency-name: ag-grid-community
+      - dependency-name: ag-grid-enterprise
+      - dependency-name: ag-grid-react
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      monthly-batch:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 10
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      monthly-batch:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 10

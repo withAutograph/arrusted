@@ -1,0 +1,5 @@
+#!/bin/sh
+#MISE description="Validate shared Better Auth environment/config"
+set -eu
+
+bun .config/mise/scripts/repository/auth-check.ts "$@"

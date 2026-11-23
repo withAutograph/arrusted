@@ -1,0 +1,146 @@
+{
+  "fixture_id": "ampersand-ramp-proxy-vendors-sanitized-v0",
+  "fixture_status": "sanitized_static_example_not_live_capture",
+  "captured_at": null,
+  "source_docs": [
+    "https://docs.withampersand.com/provider-guides/ramp",
+    "https://docs.withampersand.com/proxy-actions",
+    "https://docs.ramp.com/llms-api.txt",
+    "https://docs.ramp.com/developer-api/v1/pagination"
+  ],
+  "ampersand_proxy_request": {
+    "method": "GET",
+    "url": "https://proxy.withampersand.com/developer/v1/vendors?is_active=true&page_size=2",
+    "provider": "rampDemo",
+    "provider_base_url": "https://demo-api.ramp.com",
+    "provider_path": "/developer/v1/vendors",
+    "headers": {
+      "x-amp-proxy-version": "1",
+      "x-amp-project-id": "ampersand-project-id",
+      "x-amp-integration-name": "vendor-ramp",
+      "x-amp-group-ref": "customer-sandbox"
+    },
+    "omitted_secret_headers": [
+      "x-api-key"
+    ]
+  },
+  "provider_response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "data": [
+        {
+          "id": "00000000-0000-4000-8000-000000001001",
+          "accounting_vendor_remote_id": "erp-vendor-0001",
+          "address": {
+            "address_line_1": "100 Example Street",
+            "address_line_2": "Suite 100",
+            "city": "San Francisco",
+            "country": "US",
+            "postal_code": "94105",
+            "state": "CA"
+          },
+          "addresses": [
+            {
+              "id": "00000000-0000-4000-8000-000000001101",
+              "address_line_1": "100 Example Street",
+              "address_line_2": "Suite 100",
+              "city": "San Francisco",
+              "country": "US",
+              "is_default": true,
+              "postal_code": "94105",
+              "state": "CA"
+            }
+          ],
+          "billing_frequency": "MONTHLY",
+          "contacts": [
+            "00000000-0000-4000-8000-000000001201"
+          ],
+          "country": "US",
+          "created_at": "2026-07-01T16:00:00Z",
+          "default_entity_id": "00000000-0000-4000-8000-000000000501",
+          "default_payment_method": {
+            "update_source": "MANUAL"
+          },
+          "description": "Sanitized Ramp vendor used for readiness fixture review.",
+          "external_vendor_id": "vendor-example-software",
+          "federal_tax_classification": "LLC_C_CORPORATION",
+          "is_active": true,
+          "is_deletable": false,
+          "merchant_id": "00000000-0000-4000-8000-000000000201",
+          "name": "Example Software LLC",
+          "name_legal": "Example Software LLC",
+          "parent_vendor_id": null,
+          "sk_category_id": 40,
+          "sk_category_name": "SaaS / Software",
+          "state": "CA",
+          "subsidiary": [
+            "Example US"
+          ],
+          "tax_address": {
+            "address_line_1": "100 Example Street",
+            "address_line_2": "Suite 100",
+            "city": "San Francisco",
+            "country": "US",
+            "postal_code": "94105",
+            "state": "CA"
+          },
+          "total_spend_all_time": {
+            "amount": 250000,
+            "currency_code": "USD",
+            "minor_unit_conversion_rate": 100
+          },
+          "total_spend_last_30_days": {
+            "amount": 12999,
+            "currency_code": "USD",
+            "minor_unit_conversion_rate": 100
+          },
+          "total_spend_last_365_days": {
+            "amount": 155988,
+            "currency_code": "USD",
+            "minor_unit_conversion_rate": 100
+          },
+          "total_spend_ytd": {
+            "amount": 77994,
+            "currency_code": "USD",
+            "minor_unit_conversion_rate": 100
+          },
+          "vendor_owner_id": "00000000-0000-4000-8000-000000000403",
+          "vendor_type": "BUSINESS"
+        }
+      ],
+      "page": {
+        "next": "https://demo-api.ramp.com/developer/v1/vendors?start=cursor-redacted&page_size=2"
+      }
+    }
+  },
+  "provider_error_response": {
+    "status": 403,
+    "headers": {
+      "content-type": "application/json",
+      "x-trace-id": "trace-ramp-vendors-forbidden"
+    },
+    "body": {
+      "message": "Insufficient permissions",
+      "error_v2": {
+        "error_code": "FORBIDDEN",
+        "additional_info": {
+          "required_scope": "vendors:read"
+        }
+      }
+    }
+  },
+  "live_gate": {
+    "required_before_direct_apply": true,
+    "may_compile_to_apply_change_set": false,
+    "must_replace_or_supplement_with_live_capture": true,
+    "missing_proof": [
+      "Ramp sandbox vendor fields through Ampersand proxy",
+      "actual proxy success response headers",
+      "actual proxy error response shape",
+      "first and final page pagination behavior"
+    ]
+  }
+}

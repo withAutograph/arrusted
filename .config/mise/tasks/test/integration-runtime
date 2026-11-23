@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Run integration runtime and two-app tests against owned disposable PostgreSQL"
+set -euo pipefail
+cd "$MISE_MONOREPO_ROOT"
+exec bun --no-env-file .config/mise/scripts/repository/test-postgres-suite.ts runtime

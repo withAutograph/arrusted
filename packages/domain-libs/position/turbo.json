@@ -1,0 +1,21 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/domain-libs/vite.config.ts",
+        "$TURBO_ROOT$/packages/**/*",
+        "!$TURBO_ROOT$/packages/**/.turbo/**"
+      ]
+    },
+    "build": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/**/*",
+        "!$TURBO_ROOT$/packages/**/.turbo/**"
+      ],
+      "outputs": []
+    }
+  }
+}

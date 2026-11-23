@@ -1,0 +1,6 @@
+{
+  "extends": "../../../typescript/workspace-paths.json",
+  "include": [
+    "bun-runtime.d.ts"
+  ]
+}

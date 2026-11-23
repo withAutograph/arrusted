@@ -1,0 +1,63 @@
+/* Invalid-cell affordance.
+ *
+ * `.ag-cell-invalid` is applied via `invalidCellClassRules` factored from
+ * `useEditableRowVersionGrid`'s context. The renderer (see
+ * `diff-cell-renderer.tsx`'s invalid path) emits the error message inline
+ * inside `.ag-diff-error`; this stylesheet renders the surrounding visual
+ * state — danger-tinted background, danger-colored ring, and a ⚠ glyph in
+ * the upper-right corner that REPLACES the dirty-cell blue dot when both
+ * classes co-occur (the .ag-cell-invalid::after specificity wins via
+ * declaration order — see the dirty-glyph.css adjacency).
+ *
+ * Token-clean: `--color-status-danger` and `--color-status-danger-bg`
+ * source from theme.css's danger triplet so a theme override flows
+ * through automatically.
+ */
+.ag-cell-invalid {
+  background-color: var(--color-status-danger-bg);
+  box-shadow: inset 0 0 0 1px var(--color-status-danger);
+}
+
+/* ⚠ glyph in the upper-right. Placed over the dirty-glyph dot via
+ * specificity: when both `.ag-cell-dirty` AND `.ag-cell-invalid` apply,
+ * the dot gets hidden (display: none) and the glyph rides instead. The
+ * glyph is unicode (U+26A0) so we don't need an icon font; positioned
+ * absolutely against the AG Grid cell's existing positioning context
+ * (same approach as `.ag-cell-dirty::after`).
+ */
+.ag-cell-invalid::after {
+  content: "\26A0";
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  color: var(--color-status-danger);
+  font-size: var(--text-micro);
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* When a cell is BOTH dirty and invalid, the ⚠ glyph wins; suppress the
+ * blue dot so the corner reads cleanly as a single error indicator. */
+.ag-cell.ag-cell-dirty.ag-cell-invalid::after {
+  content: "\26A0";
+  background-color: transparent;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  color: var(--color-status-danger);
+}
+
+/* Inline error message rendered by `diff-cell-renderer.tsx`'s invalid
+ * path. Sits beneath the current value (so the user can still see what
+ * the cell holds while the validation message tells them why the last
+ * commit was rejected). Wrap is intentional — long messages should
+ * stay readable rather than truncate.
+ */
+.ag-diff-error {
+  font-size: var(--text-micro);
+  color: var(--color-status-danger);
+  margin-top: var(--space-0-5);
+  line-height: 1.3;
+  white-space: normal;
+  word-break: break-word;
+}

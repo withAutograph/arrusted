@@ -1,0 +1,52 @@
+{
+  "extends": "../.config/typescript/workspace-paths.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "rootDir": "..",
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+      "@contracts": [
+        "../packages/contracts/index.ts"
+      ],
+      "@kernel-client": [
+        "../packages/kernel-client/index.ts"
+      ],
+      "@agent-foundation": [
+        "../packages/agent-foundation/index.ts"
+      ],
+      "@autograph/components": [
+        "../packages/design-systems/core/components/index.ts"
+      ],
+      "@autograph/compositions": [
+        "../packages/design-systems/core/compositions/index.ts"
+      ],
+      "@autograph/icons": [
+        "../packages/design-systems/core/icons/index.ts"
+      ],
+      "@engines/*": [
+        "../packages/engines/*"
+      ],
+      "@modules/*": [
+        "../packages/modules/*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "schema/**/*.ts",
+    ".generated/**/*.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

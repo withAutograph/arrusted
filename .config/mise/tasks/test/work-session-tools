@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#MISE description="Prove the work-session tool core, MCP adapter and agent context against isolated PostgreSQL"
+set -euo pipefail
+cd "$MISE_MONOREPO_ROOT"
+for binary in initdb pg_ctl; do
+  if ! command -v "$binary" >/dev/null 2>&1; then
+    echo "test:work-session-tools needs PostgreSQL's $binary on PATH (install PostgreSQL 17 or activate the mise toolchain)." >&2
+    exit 1
+  fi
+done
+WORK_SESSION_TOOLS_POSTGRES=1 exec bun x vp test --config packages/work-session-tools/vite.config.ts --run "$@"

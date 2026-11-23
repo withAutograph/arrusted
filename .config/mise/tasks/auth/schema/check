@@ -1,0 +1,6 @@
+#!/bin/sh
+#MISE description="Verify shared Better Auth schema exists without writing"
+set -eu
+
+cd "$MISE_MONOREPO_ROOT"
+.config/mise/scripts/auth/schema-check "$@"

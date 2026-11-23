@@ -1,0 +1,4 @@
+Source Record Ref,Source Record ID,Vendor,Department,Owner Ref,Owner,Amount,Currency,Transaction Date,Document Number
+fixture:bill:001,bill-001,ACME,Eng,EMP-001,Ada Lovelace,1250.50,USD,2026-09-06,INV-001
+fixture:bill:002,bill-002,New Analytics,Research,EMP-001,Ada Lovelace,2400.00,USD,2026-09-06,INV-002
+fixture:bill:003,bill-003,New Analytics,Research,EMP-001,Ada Lovelace,175.25,USD,2026-09-06,INV-003

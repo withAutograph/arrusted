@@ -1,0 +1,161 @@
+{
+  "fixture_id": "ampersand-ramp-proxy-transactions-sanitized-v0",
+  "fixture_status": "sanitized_static_example_not_live_capture",
+  "captured_at": null,
+  "source_docs": [
+    "https://docs.withampersand.com/provider-guides/ramp",
+    "https://docs.withampersand.com/proxy-actions",
+    "https://docs.ramp.com/llms-api.txt",
+    "https://docs.ramp.com/developer-api/v1/pagination"
+  ],
+  "ampersand_proxy_request": {
+    "method": "GET",
+    "url": "https://proxy.withampersand.com/developer/v1/transactions?sync_status=SYNC_READY&page_size=2",
+    "provider": "rampDemo",
+    "provider_base_url": "https://demo-api.ramp.com",
+    "provider_path": "/developer/v1/transactions",
+    "headers": {
+      "x-amp-proxy-version": "1",
+      "x-amp-project-id": "ampersand-project-id",
+      "x-amp-integration-name": "vendor-ramp",
+      "x-amp-group-ref": "customer-sandbox"
+    },
+    "omitted_secret_headers": [
+      "x-api-key"
+    ]
+  },
+  "provider_response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "data": [
+        {
+          "id": "00000000-0000-4000-8000-000000000101",
+          "accounting_date": "2026-07-08",
+          "accounting_field_selections": [
+            {
+              "id": "00000000-0000-4000-8000-000000000301",
+              "external_id": "gl-6000",
+              "external_code": "6000",
+              "name": "Software subscriptions",
+              "display_name": "Software subscriptions",
+              "provider_name": "Example ERP",
+              "type": "GL_ACCOUNT",
+              "source": {
+                "type": "ERP"
+              }
+            }
+          ],
+          "all_requirements_met_and_approved": true,
+          "amount": 129.99,
+          "card_holder": {
+            "department_id": "00000000-0000-4000-8000-000000000401",
+            "department_name": "Finance",
+            "employee_id": "EMP-0001",
+            "first_name": "Example",
+            "last_name": "User",
+            "location_id": "00000000-0000-4000-8000-000000000402",
+            "location_name": "Remote",
+            "user_id": "00000000-0000-4000-8000-000000000403"
+          },
+          "card_id": "00000000-0000-4000-8000-000000000404",
+          "card_present": false,
+          "currency_code": "USD",
+          "entity_id": "00000000-0000-4000-8000-000000000501",
+          "line_items": [
+            {
+              "amount": {
+                "amount": 12999,
+                "currency_code": "USD",
+                "minor_unit_conversion_rate": 100
+              },
+              "converted_amount": {
+                "amount": 12999,
+                "currency_code": "USD",
+                "minor_unit_conversion_rate": 100
+              },
+              "memo": "Monthly software subscription",
+              "accounting_field_selections": [
+                {
+                  "id": "00000000-0000-4000-8000-000000000301",
+                  "external_id": "gl-6000",
+                  "external_code": "6000",
+                  "name": "Software subscriptions",
+                  "display_name": "Software subscriptions",
+                  "provider_name": "Example ERP",
+                  "type": "GL_ACCOUNT",
+                  "source": {
+                    "type": "ERP"
+                  }
+                }
+              ]
+            }
+          ],
+          "memo": "Monthly software subscription",
+          "merchant_category_code": "5734",
+          "merchant_category_code_description": "Computer software stores",
+          "merchant_id": "00000000-0000-4000-8000-000000000201",
+          "merchant_location": {
+            "city": "San Francisco",
+            "country": "US",
+            "postal_code": "94105",
+            "state": "CA"
+          },
+          "merchant_name": "Example Software LLC",
+          "minor_unit_conversion_rate": 100,
+          "network_merchant_id": "network-merchant-0001",
+          "original_transaction_amount": {
+            "amount": 12999,
+            "currency_code": "USD",
+            "minor_unit_conversion_rate": 100
+          },
+          "original_transaction_id": "00000000-0000-4000-8000-000000000100",
+          "requires_accounting_vendor_creation_to_sync": false,
+          "settlement_date": "2026-07-09",
+          "sk_category_id": 40,
+          "sk_category_name": "SaaS / Software",
+          "state": "CLEARED",
+          "sync_status": "SYNC_READY",
+          "synced_at": "2026-07-08T18:00:00Z",
+          "trip_id": "trip-0001",
+          "trip_name": "Example Conference",
+          "updated_at": "2026-07-08T18:00:00Z",
+          "user_transaction_time": "2026-07-08T17:43:00Z"
+        }
+      ],
+      "page": {
+        "next": "https://demo-api.ramp.com/developer/v1/transactions?start=cursor-redacted&page_size=2"
+      }
+    }
+  },
+  "provider_error_response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json",
+      "x-trace-id": "trace-ramp-transactions-invalid-input"
+    },
+    "body": {
+      "message": "Invalid request format",
+      "error_v2": {
+        "error_code": "TRANSACTION_INVALID_INPUT",
+        "additional_info": {
+          "field": "page_size",
+          "reason": "Value must be between 2 and 100."
+        }
+      }
+    }
+  },
+  "live_gate": {
+    "required_before_direct_apply": true,
+    "may_compile_to_apply_change_set": false,
+    "must_replace_or_supplement_with_live_capture": true,
+    "missing_proof": [
+      "Ampersand Ramp sandbox provider routing",
+      "actual proxy success response headers",
+      "actual proxy error response shape",
+      "first and final page pagination behavior"
+    ]
+  }
+}

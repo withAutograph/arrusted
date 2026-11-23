@@ -1,0 +1,2599 @@
+{
+  "format_version": 1,
+  "tests": [
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "explicit_new_subject_mainline_uses_exact_uuid_and_resolves_reverse_order_relation",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::explicit_new_subject_mainline_matches_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "explicit_new_subject_draft_ordering_approval_and_revert_preserve_exact_uuid",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::explicit_new_subject_draft_lifecycle_matches_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "explicit_new_subject_can_be_reused_after_draft_discard",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::explicit_new_subject_reuse_after_discard_matches_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "explicit_new_subject_rejects_uuid_collision_and_cross_tenant_relation",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::explicit_new_subject_rejections_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "explicit_new_subject_planned_visibility_preserves_as_of_date",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::explicit_new_subject_planned_visibility_matches_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_is_idempotent_and_creates_row_version_tables",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_additional.rs::materialize_schema_is_idempotent_and_creates_row_version_tables_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_creates_substrate_tables_on_fresh_database",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_additional.rs::materialize_schema_creates_substrate_tables_on_fresh_database_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "guarded_materialization_advances_activation_head_and_blocks_old_activation",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_additional.rs::guarded_materialization_advances_activation_head_and_blocks_old_activation_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "activation_head_trigger_drift_fails_validation_and_guarded_materialization_repairs_it",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::activation_head_trigger_drift_fails_validation_and_guarded_materialization_repairs_it_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "activation_head_trigger_respects_forced_rls_without_mutating_tenant_scope",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::activation_head_trigger_respects_forced_rls_without_mutating_tenant_scope_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "activation_head_rejects_competing_before_row_revision_triggers",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::activation_head_rejects_competing_before_row_revision_triggers_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "activation_head_is_tenant_scoped_and_does_not_fence_unselected_tenants",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_additional.rs::activation_head_is_tenant_scoped_and_does_not_fence_unselected_tenants_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_repairs_missing_contracts_before_fresh_validation",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_drift.rs::materialize_schema_repairs_missing_contracts_before_fresh_validation_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "policy_reconciliation_repairs_legacy_preview_state_before_strict_validation",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::policy_reconciliation_repairs_legacy_preview_state_before_strict_validation_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "policy_reconciliation_replaces_additional_legacy_policies",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::policy_reconciliation_replaces_additional_legacy_policies_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "policy_reconciliation_reports_missing_kernel_tables_as_schema_drift",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::policy_reconciliation_reports_missing_kernel_tables_as_schema_drift_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_replaces_legacy_version_uniqueness_atomically",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_drift.rs::materialize_schema_replaces_legacy_version_uniqueness_atomically_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialized_contract_validation_rejects_legacy_version_index",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_drift.rs::materialized_contract_validation_rejects_legacy_version_index_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_custom_fields_default_drift",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_drift.rs::materialize_schema_rejects_custom_fields_default_drift_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_missing_model_table_after_revision_exists",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_drift.rs::materialize_schema_rejects_missing_model_table_after_revision_exists_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_missing_lifecycle_sequence_after_revision_exists",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_drift.rs::materialize_schema_rejects_missing_lifecycle_sequence_after_revision_exists_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_accepts_appended_agent_run_status_column",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_drift.rs::materialize_schema_accepts_appended_agent_run_status_column_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_drops_removed_version_field_column",
+      "classification": "retirement_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_migrations.rs::materialize_schema_drops_removed_version_field_column_replaced_by_non_destructive_retirement"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_allows_renamed_field_when_old_field_had_different_type",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_migrations.rs::materialize_schema_allows_renamed_field_when_old_field_had_different_type_via_immutable_ids"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_allows_multiple_renamed_status_fields_with_old_relation_columns",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_migrations.rs::materialize_schema_allows_multiple_renamed_status_fields_with_old_relation_columns_via_immutable_ids"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_preserves_columns_declared_by_sibling_active_schema",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_migrations.rs::materialize_schema_preserves_columns_declared_by_sibling_active_schema_via_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_required_columns_declared_only_by_sibling_schema",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_migrations.rs::materialize_schema_rejects_required_columns_declared_only_by_sibling_schema_via_generated_preflight"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_local_required_or_unique_columns_not_shared_by_sibling_schema",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_migrations.rs::materialize_schema_rejects_local_required_or_unique_columns_not_shared_by_sibling_schema_via_generated_preflight"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialization_preflight_rejects_coordinated_contract_changes_without_writing",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_migrations.rs::materialization_preflight_rejects_coordinated_contract_changes_without_writing_via_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_drops_stale_required_and_unique_artifacts_for_retained_sibling_column",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_migrations.rs::materialize_schema_drops_stale_required_and_unique_artifacts_for_retained_sibling_column_via_generated_reconciliation"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "custom_fields_round_trip_all_supported_types_and_resolve_relations",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::custom_fields_all_supported_types_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "custom_field_enum_orphan_options_render_null_by_omission",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::custom_field_enum_orphans_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "custom_fields_reject_missing_and_cross_tenant_relation_targets",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::custom_field_relation_rejections_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "custom_fields_follow_draft_approval_discard_and_revert_lifecycle",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::custom_field_draft_and_revert_lifecycle_matches_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "change_set_diff_covers_custom_field_create_update_projection_and_revert",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::custom_field_change_set_diff_matches_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "custom_fields_omit_inherit_and_archived_definitions_stop_carrying_forward",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::custom_field_inheritance_and_archival_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "unique_field_indexes_enforce_live_mainline_values",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_final.rs::unique_field_indexes_enforce_live_mainline_values_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "numeric_unique_field_precheck_uses_typed_comparison",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_final.rs::numeric_unique_field_precheck_uses_typed_comparison_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "unique_field_value_is_reusable_after_tombstone",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_final.rs::unique_field_value_is_reusable_after_tombstone_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "draft_approval_rejects_unique_field_conflicts",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_final.rs::draft_approval_rejects_unique_field_conflicts_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "draft_approval_validates_internal_live_unique_conflicts_before_ordering",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_final.rs::draft_approval_validates_internal_live_unique_conflicts_before_ordering_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "revert_same_day_reopen_rejects_unique_field_conflicts",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_revert_additional.rs::revert_same_day_reopen_rejects_unique_field_conflicts_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_unique_index_drift",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::materialize_schema_rejects_unique_index_drift_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_removed_change_set_reason_column",
+      "classification": "retirement_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_migrations.rs::materialize_schema_rejects_removed_change_set_reason_column_replaced_by_column_retirement"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "agent_runs_are_recorded_and_required_for_agent_writes",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_agent_runs.rs::agent_runs_are_recorded_and_required_for_agent_writes_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "agent_run_status_updates_are_terminal_and_idempotent",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_agent_runs.rs::agent_run_status_updates_are_terminal_and_idempotent_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_upgrades_agent_run_status_check_for_budget_exhausted",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_agent_runs.rs::materialize_schema_upgrades_agent_run_status_check_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "agent_run_replay_survives_later_schema_activation",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_agent_runs.rs::agent_run_replay_survives_later_schema_activation_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "concurrent_agent_run_records_are_idempotent_or_conflicting",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_agent_runs.rs::concurrent_agent_run_records_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "agent_run_provenance_fails_closed_when_schema_is_stale",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_agent_runs.rs::agent_run_provenance_fails_closed_when_schema_is_stale_matches_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_removed_reverted_change_set_status_rows",
+      "classification": "retirement_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_migrations.rs::materialize_schema_rejects_removed_reverted_change_set_status_rows_replaced_by_historical_retirement"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_removed_reverted_change_set_status_check",
+      "classification": "retirement_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_migrations.rs::materialize_schema_rejects_removed_reverted_change_set_status_check_replaced_by_non_destructive_retirement"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_same_revision_with_different_schema_json",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_additional.rs::materialize_schema_rejects_same_revision_with_different_schema_json_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "schema_revision_validation_returns_false_for_new_base_version",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_additional.rs::schema_revision_validation_returns_false_for_new_base_version_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_accepts_new_base_version_with_legacy_active_schema_json",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_drift.rs::materialize_schema_accepts_new_base_version_with_legacy_active_schema_json_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_repairs_same_revision_legacy_model_kind_json",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_drift.rs::materialize_schema_repairs_same_revision_legacy_model_kind_json_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "schema_revision_validation_rejects_missing_metadata_columns",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_drift.rs::schema_revision_validation_rejects_missing_metadata_columns_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "schema_revision_validation_rejects_drifted_effective_schema_json",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_drift.rs::schema_revision_validation_rejects_drifted_effective_schema_json_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "schema_revision_validation_rejects_drifted_model_table_contracts",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_drift.rs::schema_revision_validation_rejects_drifted_model_table_contracts_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "schema_revision_validation_rejects_missing_relation_fk_and_version_check",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_drift.rs::schema_revision_validation_rejects_missing_relation_fk_and_version_check_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_records_revision_hash_and_provenance",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_additional.rs::materialize_schema_records_revision_hash_and_provenance_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_without_provenance_preserves_existing_revision_provenance",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_additional.rs::materialize_schema_without_provenance_preserves_existing_revision_provenance_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_after_runtime_overlay_preserves_runtime_revision_hash",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_additional.rs::materialize_schema_after_runtime_overlay_preserves_runtime_revision_hash_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_sets_tenant_scope_before_forced_rls_writes",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::materialize_schema_sets_tenant_scope_before_forced_rls_writes_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "concurrent_materialize_schema_serializes_shared_substrate_ddl",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::concurrent_materialize_schema_serializes_shared_substrate_ddl_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "concurrent_materialization_acquires_query_role_before_catalog_relations",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::concurrent_materialization_acquires_query_role_before_catalog_relations_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "concurrent_apply_acquires_activation_lock_before_schema_relations",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_same_day_concurrency.rs::concurrent_apply_acquires_activation_lock_before_schema_relations"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "caller_owned_apply_rejects_autocommit_client_before_relation_work",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_same_day_concurrency.rs::caller_owned_apply_rejects_autocommit_client_before_relation_work"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "caller_owned_apply_holds_activation_reader_until_outer_transaction_ends",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_same_day_concurrency.rs::caller_owned_apply_holds_activation_reader_until_outer_transaction_ends"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "independent_postgres_schemas_materialize_while_peer_is_guarded",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::independent_postgres_schemas_materialize_while_peer_is_guarded_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "concurrent_materialize_schema_serializes_same_tenant_activation",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_additional.rs::concurrent_materialize_schema_serializes_same_tenant_activation_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "mainline_apply_creates_updates_backdates_and_reads_visible_snapshots",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_reads_audit.rs::mainline_apply_creates_updates_backdates_and_reads_visible_snapshots_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "known_aliases_materializes_and_round_trips_as_text_list",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_types.rs::known_aliases_materializes_and_round_trips_as_text_list_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "iso_fields_materialize_and_round_trip_as_text",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_types.rs::iso_fields_materialize_and_round_trip_as_text_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "enum_field_materializes_round_trips_and_orphan_options_render_null",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_enums.rs::declared_enum_value_round_trips_orphans_by_omission_and_lookup_kind_is_preserved"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "enum_option_set_revision_declared_overlay_normalizes_and_accepts_new_option",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_enums.rs::declared_enum_create_accepts_new_values_through_tenant_schema_revision"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "enum_option_set_revision_tolerates_only_existing_custom_field_collisions",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_runtime_derived_fields.rs::custom_field_collisions_are_rejected_when_new_and_recoverable_when_existing"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "enum_option_set_revision_does_not_repair_unrelated_stale_version_columns",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_enums.rs::generated_materialization_validation_fails_closed_on_unrelated_storage_drift"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "enum_option_set_revision_custom_overlay_normalizes_and_accepts_new_option",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_enums.rs::custom_enum_create_accepts_new_values_through_tenant_schema_revision"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "enum_option_set_revision_customer_removal_renders_declared_addition_and_custom_values_null",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_enums.rs::retiring_tenant_options_preserves_existing_values_and_rejects_new_selection"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "enum_option_set_revision_declared_overlay_keeps_later_base_options",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_enums.rs::declared_overlay_is_composed_after_later_base_options"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_same_base_version_preserves_active_runtime_overlay",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_enums.rs::same_base_probe_preserves_the_active_runtime_overlay_revision"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "enum_option_set_revision_rejects_declared_base_removal_and_alias_collisions",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_enums.rs::declared_enum_operations_reject_fixed_changes_reserved_ids_and_alias_collisions"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "enum_option_set_revision_rejects_custom_alias_collisions",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_enums.rs::custom_enum_operations_reject_alias_collisions"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "enum_option_set_revision_rejects_stale_baseline_and_invalid_targets",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_enums.rs::enum_operations_enforce_revision_and_hash_cas_invalid_targets_and_idempotency"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "mainline_apply_replays_idempotent_requests_and_rejects_conflicts",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_additional.rs::mainline_apply_replays_idempotent_requests_and_rejects_conflicts_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "mainline_apply_stores_change_set_notes",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_additional.rs::mainline_apply_stores_change_set_notes_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "draft_apply_isolated_from_mainline_reads_and_explicitly_readable",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_additional.rs::draft_apply_isolated_from_mainline_reads_and_explicitly_readable_via_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "draft_approval_flips_to_mainline_and_normalizes_timeline",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_additional.rs::draft_approval_flips_to_mainline_and_normalizes_timeline_via_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "draft_save_rechecks_its_locked_baseline_and_approval_promotes_same_day_history",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_final.rs::draft_save_rechecks_its_locked_baseline_and_approval_promotes_same_day_history_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "draft_approval_locks_inherited_relation_targets_before_allocating_order",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_final.rs::draft_approval_locks_inherited_relation_targets_before_allocating_order_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "draft_rows_compose_with_prior_rows_in_the_same_draft",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_additional.rs::draft_rows_compose_with_prior_rows_in_the_same_draft_via_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "draft_relation_writes_can_target_records_created_in_the_same_draft",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_additional.rs::draft_relation_writes_can_target_records_created_in_the_same_draft_via_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "draft_relation_writes_respect_same_draft_target_tombstones",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_additional.rs::draft_relation_writes_respect_same_draft_target_tombstones_via_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "draft_apply_rejects_unapprovalable_same_day_and_tombstone_timelines",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_final.rs::draft_apply_rejects_unapprovalable_same_day_and_tombstone_timelines_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "draft_discard_hides_draft_and_is_idempotent",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_additional.rs::draft_discard_hides_draft_and_is_idempotent_via_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "dry_runs_use_local_orders_and_discard_does_not_create_causal_residue",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_final.rs::dry_runs_use_local_orders_and_discard_does_not_create_causal_residue_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "draft_approval_rejects_if_mainline_changed_after_draft_creation",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_additional.rs::draft_approval_rejects_if_mainline_changed_after_draft_creation_via_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "draft_approval_rejects_if_an_older_draft_was_approved_after_this_draft_was_created",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_final.rs::draft_approval_rejects_if_an_older_draft_was_approved_after_this_draft_was_created_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "approving_an_ordinary_mainline_change_set_is_not_treated_as_idempotent_draft_approval",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_additional.rs::approving_an_ordinary_mainline_change_set_is_not_treated_as_idempotent_draft_approval_via_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "draft_discard_releases_external_key_on_orphan_records",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_additional.rs::draft_discard_releases_external_key_on_orphan_records_via_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "draft_discard_preserves_external_key_when_record_was_already_mainlined",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_additional.rs::draft_discard_preserves_external_key_when_record_was_already_mainlined_via_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "draft_notes_update_only_while_draft_and_drafts_are_listed",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_drafts_additional.rs::draft_notes_update_only_while_draft_and_drafts_are_listed_via_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "mainline_apply_retains_distinct_same_day_values_in_applied_order",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_final.rs::mainline_apply_retains_distinct_same_day_values_in_applied_order_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "same_day_values_follow_application_order_shared_parity",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::same_day_values_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "same_day_read_history_and_diff_shared_parity",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::same_day_read_history_and_diff_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "same_day_inverted_timestamps_shared_parity",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::same_day_inverted_timestamps_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "same_day_partial_snapshot_shared_parity",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::same_day_partial_snapshot_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "same_day_successor_boundary_shared_parity",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::same_day_successor_boundary_matches_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "same_day_lifecycle_precedence_shared_parity",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::same_day_lifecycle_precedence_matches_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "same_day_dry_run_shared_parity",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::same_day_dry_run_matches_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "same_day_draft_rejection_and_promotion_shared_parity",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::same_day_draft_rejection_and_promotion_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "same_day_revert_predecessor_walk_shared_parity",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::same_day_revert_predecessor_walk_matches_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "same_day_relation_restoration_shared_parity",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::same_day_relation_restoration_matches_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "same_day_atomic_rollback_shared_parity",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_materialization.rs::same_day_atomic_rollback_matches_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "same_day_read_query_history_and_diff_share_applied_order",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_query_additional.rs::same_day_read_query_history_and_diff_share_applied_order"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "internal_kernel_transactions_drop_persisted_workbench_views",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_query_additional.rs::generated_runtime_boundaries_drop_persisted_workbench_views"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "visible_reader_rejects_mainline_version_without_applied_order_owner",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_reads_audit.rs::visible_reader_rejects_mainline_version_without_applied_order_owner_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "later_date_write_closes_applied_order_winner_when_timestamps_are_inverted",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_final.rs::later_date_write_closes_applied_order_winner_when_timestamps_are_inverted_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "same_day_partial_write_inherits_declared_and_custom_snapshot_fields",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_final.rs::same_day_partial_write_inherits_declared_and_custom_snapshot_fields_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "later_write_in_one_change_set_inherits_the_earlier_planned_snapshot",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_final.rs::later_write_in_one_change_set_inherits_the_earlier_planned_snapshot_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "same_day_successor_inherits_the_next_effective_date_boundary",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_final.rs::same_day_successor_inherits_the_next_effective_date_boundary_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "mainline_apply_rejects_same_change_set_uuid_external_aliases_atomically",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_additional.rs::mainline_apply_rejects_same_change_set_uuid_external_aliases_atomically_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "mainline_apply_rejects_duplicate_lifecycle_rows_in_one_change_set",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_additional.rs::mainline_apply_rejects_duplicate_lifecycle_rows_in_one_change_set_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "direct_mainline_planned_relation_is_input_order_independent",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_additional.rs::direct_mainline_planned_relation_is_input_order_independent_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "invalid_planned_relation_rolls_back_all_reservations",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_additional.rs::invalid_planned_relation_rolls_back_all_reservations_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "overlapping_mainline_requests_lock_records_canonically_before_ordering",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_same_day_concurrency.rs::overlapping_mainline_requests_lock_records_canonically_before_ordering"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "applied_order_is_allocated_after_the_subject_lock_is_acquired",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_same_day_concurrency.rs::applied_order_is_allocated_after_the_subject_lock_is_acquired"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "caller_owned_apply_aborts_the_outer_transaction_on_dependency_drift",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_same_day_concurrency.rs::caller_owned_apply_aborts_the_outer_transaction_on_dependency_drift"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "mainline_apply_requires_visible_version_and_replays_before_preconditions",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_types.rs::version_preconditions_use_the_locked_visible_baseline_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "mainline_apply_allows_value_and_tombstone_at_same_effective_start",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_final.rs::mainline_apply_allows_value_and_tombstone_at_same_effective_start_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "mainline_apply_replays_idempotent_request_after_schema_activation_changes",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_final.rs::mainline_apply_replays_idempotent_request_after_schema_activation_changes_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "mainline_apply_rejects_missing_and_cross_tenant_relation_targets",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_final.rs::mainline_apply_rejects_missing_and_cross_tenant_relation_targets_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "mainline_apply_tombstones_hide_records_from_visible_reads",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_reads_audit.rs::mainline_apply_tombstones_hide_records_from_visible_reads_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "query_visible_sql_filters_projects_joins_aggregates_and_windows",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_query_additional.rs::query_visible_sql_filters_projects_joins_aggregates_and_windows"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "query_visible_sql_allows_model_tables_with_pg_prefix",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_query_additional.rs::query_visible_sql_allows_model_tables_with_pg_prefix"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "query_visible_sql_reads_drafts_change_sets_and_respects_rls",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_rls.rs::query_visible_sql_reads_drafts_change_sets_and_respects_rls"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "query_visible_sql_sets_tenant_scope_before_schema_resolution_for_non_bypass_roles",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_rls.rs::query_visible_sql_sets_tenant_scope_before_schema_resolution_for_non_bypass_roles"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "query_visible_sql_drops_stale_temp_views_before_preparing_request_views",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_query_additional.rs::query_visible_sql_drops_stale_temp_views_before_preparing_request_views"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "query_visible_sql_rejects_unsafe_sql_and_read_role_has_no_write_grants",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_rls.rs::query_visible_sql_rejects_unsafe_sql_and_read_role_has_no_write_grants"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "change_set_diff_covers_mainline_draft_and_projection",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_reads_audit.rs::change_set_diff_covers_mainline_draft_and_projection_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "change_set_diff_allows_backdated_draft_before_first_visible_version",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_reads_audit.rs::change_set_diff_allows_backdated_draft_before_first_visible_version_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "change_set_diff_allows_backdated_draft_sandwiched_between_mainline_versions",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_reads_audit.rs::change_set_diff_allows_backdated_draft_sandwiched_between_mainline_versions_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "history_and_diff_annotate_reverted_rows_and_revert_audit_effect",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_revert_audit_final.rs::history_and_diff_annotate_reverted_rows_and_revert_audit_effect_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "field_history_limit_returns_newest_snapshots_in_chronological_order",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_reads_audit.rs::field_history_limit_returns_newest_snapshots_in_chronological_order_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "field_history_limit_counts_logical_snapshots_not_physical_rows",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_reads_audit.rs::field_history_limit_counts_logical_snapshots_not_physical_rows_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "field_history_limit_breaks_same_effective_date_ties_by_applied_order",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_reads_audit.rs::field_history_limit_breaks_same_effective_date_ties_by_applied_order_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "recent_activity_filters_and_counts_touched_records",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_reads_audit.rs::recent_activity_filters_and_counts_touched_records_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "revert_mainline_update_marks_target_rows_and_restores_previous_snapshot",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_revert_additional.rs::revert_mainline_update_marks_target_rows_and_restores_previous_snapshot_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "revert_same_day_tips_walk_immediate_predecessors_and_retain_audit_rows",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_revert_audit_final.rs::revert_same_day_tips_walk_immediate_predecessors_and_retain_audit_rows_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "revert_multi_date_multi_record_target_normalizes_as_one_group",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_revert_additional.rs::revert_multi_date_multi_record_target_normalizes_as_one_group_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "revert_same_day_restores_declared_and_custom_relations",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_revert_audit_final.rs::revert_same_day_restores_declared_and_custom_relations_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "revert_relation_validation_rolls_back_the_complete_group",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_revert_additional.rs::revert_relation_validation_rolls_back_the_complete_group_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "revert_tombstone_reopens_previous_mainline_row",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_revert_additional.rs::revert_tombstone_reopens_previous_mainline_row_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "revert_allows_multi_write_targets_from_the_same_change_set",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_revert_additional.rs::revert_allows_multi_write_targets_from_the_same_change_set_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "revert_record_creation_hides_the_created_record",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_revert_additional.rs::revert_record_creation_hides_the_created_record_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "revert_rejects_tip_conflicts_and_revert_change_sets",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_revert_additional.rs::revert_rejects_tip_conflicts_and_revert_change_sets_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "revert_rejects_same_day_tip_conflicts_and_key_reuse_after_revert",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_revert_additional.rs::revert_rejects_same_day_tip_conflicts_and_key_reuse_after_revert_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "ordinary_apply_rejects_reserved_revert_source_kind",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_additional.rs::ordinary_apply_rejects_reserved_revert_source_kind_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "stale_draft_approval_rejects_when_mainline_base_was_reverted",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_revert_additional.rs::stale_draft_approval_rejects_when_mainline_base_was_reverted_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "mainline_apply_rejects_backdated_tombstone_before_later_mainline",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_additional.rs::mainline_apply_rejects_backdated_tombstone_before_later_mainline_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "mainline_apply_rejects_min_effective_start_without_panicking",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_additional.rs::mainline_apply_rejects_min_effective_start_without_panicking_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_semantic_check_drift",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::materialize_schema_rejects_semantic_check_drift_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_wrong_index_order",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::materialize_schema_rejects_wrong_index_order_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_static_index_drift",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::materialize_schema_rejects_static_index_drift_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_index_on_wrong_table",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::materialize_schema_rejects_index_on_wrong_table_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_core_unique_constraint_drift",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::materialize_schema_rejects_core_unique_constraint_drift_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_core_foreign_key_drift",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::materialize_schema_rejects_core_foreign_key_drift_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_core_unique_deferrability_drift",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::materialize_schema_rejects_core_unique_deferrability_drift_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_core_foreign_key_schema_drift",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::materialize_schema_rejects_core_foreign_key_schema_drift_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_core_foreign_key_action_drift",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::materialize_schema_rejects_core_foreign_key_action_drift_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_default_drift",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::materialize_schema_rejects_default_drift_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rejects_sequence_default_drift",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::materialize_schema_rejects_sequence_default_drift_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_repairs_extra_rls_policy_drift",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::materialize_schema_repairs_extra_rls_policy_drift_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_probe_helpers_do_not_drop_permanent_tables",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::materialize_schema_probe_helpers_do_not_drop_permanent_tables_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "money_rate_components_are_all_or_none",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_types.rs::money_rate_components_are_all_or_none_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "materialize_schema_rolls_back_partial_model_tables_on_failure",
+      "classification": "typed_activation_replacement",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_installer_final.rs::materialize_schema_rolls_back_partial_model_tables_on_failure_via_generated_installer"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "rls_hides_and_blocks_cross_customer_rows_for_non_owner_role",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_rls.rs::rls_hides_and_blocks_cross_customer_rows_for_non_owner_role"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "tenant_scoped_foreign_keys_reject_cross_customer_links",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_rls.rs::tenant_scoped_foreign_keys_reject_cross_customer_links"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/materialization.rs",
+      "test": "published_writes_notify_their_scope_on_commit",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_runtime_work_sessions.rs::published_writes_drafts_and_discards_notify_their_scope"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "schema_deserialization_requires_model_kind",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_contracts.rs::active_schema_api_fails_closed_when_stored_schema_omits_model_kind"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "change_type_import_default_is_optional_metadata",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_contracts.rs::active_schema_api_preserves_optional_import_default_metadata"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "validates_a_minimal_schema_contract",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_validates_a_minimal_schema_contract"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "validates_at_most_one_import_default_per_target_model",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_validates_at_most_one_import_default_per_target_model"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_duplicate_change_type_fields",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_rejects_duplicate_change_type_fields"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "validates_unique_metadata_only_on_single_column_scalar_fields",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_validates_unique_metadata_only_on_single_column_scalar_fields"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_option_set_on_relation_fields",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_rejects_option_set_on_relation_fields"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_option_set_on_scalar_fields",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_rejects_option_set_on_scalar_fields"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_empty_declared_enum_option_set",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_rejects_empty_declared_enum_option_set"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_normalized_declared_enum_option_id_collisions",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_rejects_normalized_declared_enum_option_id_collisions"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_invalid_declared_enum_option_ids_before_deduping",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_rejects_invalid_declared_enum_option_ids_before_deduping"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_normalized_custom_enum_option_id_collisions",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_rejects_normalized_custom_enum_option_id_collisions"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "accepts_opaque_scope_ids_without_identifier_normalization",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_accepts_opaque_scope_ids_without_identifier_normalization"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_empty_opaque_scope_ids",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_rejects_empty_opaque_scope_ids"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "validates_top_level_app_contract",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_validates_top_level_app_schema_contract"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "app_contract_round_trips_through_json",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_wire_final.rs::app_contract_round_trips_through_json_match_generated_sql_client"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_invalid_schema_contracts_with_structured_paths",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_rejects_invalid_schema_contracts_with_structured_paths"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "validates_row_version_apply_contracts_against_schema",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_contracts.rs::validates_row_version_apply_contracts_against_schema_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "validates_custom_field_contracts_against_schema",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_contracts.rs::validates_custom_field_contracts_against_schema_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "separates_unknown_custom_enum_options_from_type_mismatches",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_contracts.rs::separates_unknown_custom_enum_options_from_type_mismatches_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_invalid_custom_field_writes_with_structured_paths",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_contracts.rs::rejects_invalid_custom_field_writes_with_structured_paths_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "archived_custom_field_ids_on_other_models_are_unknown",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_contracts.rs::archived_custom_field_ids_on_other_models_are_unknown_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_empty_custom_field_only_writes",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_contracts.rs::rejects_empty_custom_field_only_writes_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_reusing_archived_custom_field_ids",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_rejects_reusing_archived_custom_field_ids"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_custom_fields_that_normalize_collide_with_declared_field_ids",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_rejects_custom_fields_that_normalize_collide_with_declared_field_ids"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_custom_field_ids_that_collide_after_normalization",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_rejects_custom_field_ids_that_collide_after_normalization"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_custom_fields_that_collide_with_system_columns",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_rejects_custom_fields_that_collide_with_system_columns"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "custom_field_entries_serialize_as_field_type_value_objects",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_wire_final.rs::custom_field_entries_serialize_as_field_type_value_objects_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_blank_unique_text_values",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_contracts.rs::rejects_blank_unique_text_values_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_apply_contracts_that_do_not_match_schema_identity_or_write_shape",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_contracts.rs::rejects_apply_contracts_that_do_not_match_schema_identity_or_write_shape_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "requires_agent_writes_to_reference_a_recorded_run",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_agent_contracts.rs::requires_agent_writes_to_reference_a_recorded_run_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "validates_agent_run_ledger_entries",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_agent_contracts.rs::validates_agent_run_ledger_entries_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_record_event_values_and_unknown_value_fields",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_contracts.rs::rejects_record_event_values_and_unknown_value_fields_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_record_events_without_record_key",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_contracts.rs::rejects_record_events_without_record_key_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_conflicting_and_tombstoned_new_record_subjects",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_contracts.rs::rejects_conflicting_and_tombstoned_new_record_subjects_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_mixed_subject_addressing_for_an_explicit_new_record",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_contracts.rs::rejects_mixed_subject_addressing_for_an_explicit_new_record_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "permits_repeated_versions_for_an_explicit_new_record",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_types.rs::permits_repeated_versions_for_an_explicit_new_record_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_values_that_do_not_match_declared_field_type",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_types.rs::rejects_values_that_do_not_match_declared_field_type_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "validates_all_field_value_variants_against_declared_field_types",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_types.rs::validates_all_field_value_variants_against_declared_field_types_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_unknown_declared_enum_option",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_types.rs::rejects_unknown_declared_enum_option_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_invalid_money_rate_values",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_types.rs::rejects_invalid_money_rate_values_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_invalid_iso_country_and_currency_values",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_types.rs::rejects_invalid_iso_country_and_currency_values_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_invalid_record_keys",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_types.rs::rejects_invalid_record_keys_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_change_type_model_mismatch_without_enforcing_touches",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_types.rs::rejects_change_type_model_mismatch_without_enforcing_touches_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "change_type_touches_and_required_are_descriptive_for_apply",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_apply_types.rs::change_type_touches_and_required_are_descriptive_for_apply_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_normalized_identifier_collisions",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_rejects_normalized_identifier_collisions"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_declared_fields_that_collide_with_system_columns",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_rejects_declared_fields_that_collide_with_system_columns"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "rejects_money_rate_component_column_collisions",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_compiler_contracts.rs::compiler_rejects_money_rate_component_column_collisions"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "error_envelope_preserves_machine_readable_validation_details",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_wire_final.rs::error_envelope_preserves_machine_readable_validation_details_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "db_error_envelope_uses_stable_machine_readable_codes",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_wire_final.rs::db_error_envelope_uses_stable_machine_readable_codes_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "unique_field_conflict_envelope_carries_generic_structured_details",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_wire_final.rs::unique_field_conflict_envelope_carries_generic_structured_details_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "db_error_envelope_strips_internal_error_details",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_wire_final.rs::db_error_envelope_strips_internal_error_details_match_generated_sql_client"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "db_error_envelope_preserves_schema_drift_detail_shape",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_wire_final.rs::db_error_envelope_preserves_schema_drift_detail_shape_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "db_error_envelope_preserves_bare_details_shape",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_wire_final.rs::db_error_envelope_preserves_bare_details_shape_match_generated_sql"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "contract_ids_serialize_as_plain_json_strings",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_contracts.rs::active_schema_api_returns_contract_ids_as_plain_strings"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "record_ids_serialize_as_uuids_not_freeform_strings",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_wire_final.rs::record_ids_serialize_as_uuids_not_freeform_strings_match_generated_sql_client"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "apply_contract_round_trips_through_json",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_wire_final.rs::apply_contract_round_trips_through_json_match_generated_sql_client"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/contracts.rs",
+      "test": "apply_contract_rejects_removed_reason_field",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_parity_wire_final.rs::apply_contract_rejects_removed_reason_field_match_generated_sql_client"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/sql_transport.rs",
+      "test": "generated_sql_function_mapping_is_static_and_complete",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/kernel/tests/sql_transport.rs::generated_sql_function_mapping_is_static_and_complete"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/sql_transport.rs",
+      "test": "successful_envelope_decodes_data",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/kernel/tests/sql_transport.rs::successful_envelope_decodes_data"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/sql_transport.rs",
+      "test": "active_schema_revision_envelope_decodes_to_the_current_facade_dto",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/kernel/tests/sql_transport.rs::active_schema_revision_envelope_decodes_to_the_current_facade_dto"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/sql_transport.rs",
+      "test": "negative_envelope_decodes_without_losing_error_fields",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/kernel/tests/sql_transport.rs::negative_envelope_decodes_without_losing_error_fields"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/sql_transport.rs",
+      "test": "malformed_envelopes_fail_closed_with_the_existing_serialization_error",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/kernel/tests/sql_transport.rs::malformed_envelopes_fail_closed_with_the_existing_serialization_error"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/sql_transport.rs",
+      "test": "database_transport_is_parameterized_and_works_in_a_transaction",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/kernel/tests/sql_transport.rs::database_transport_is_parameterized_and_works_in_a_transaction"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/sql_transport.rs",
+      "test": "database_transport_errors_preserve_the_existing_database_error",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/kernel/tests/sql_transport.rs::database_transport_errors_preserve_the_existing_database_error"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/sql_transport.rs",
+      "test": "generated_tenant_transaction_sets_scope_and_holds_the_activation_reader_lock",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/kernel/tests/sql_transport.rs::generated_tenant_transaction_sets_scope_and_holds_the_activation_reader_lock"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/sql_transport.rs",
+      "test": "caller_owned_generated_apply_uses_the_nonretrying_entrypoint_and_rolls_back",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/kernel/tests/sql_transport.rs::caller_owned_generated_apply_uses_the_nonretrying_entrypoint_and_rolls_back"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/sql_transport.rs",
+      "test": "caller_owned_generated_apply_does_not_retry_serialization_failures",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/kernel/tests/sql_transport.rs::caller_owned_generated_apply_does_not_retry_serialization_failures"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/sql_transport.rs",
+      "test": "generated_top_level_write_protocol_retries_only_exact_dependency_drift",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/kernel/tests/sql_transport.rs::generated_top_level_write_protocol_retries_only_exact_dependency_drift"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/sql_transport.rs",
+      "test": "generated_top_level_write_protocol_does_not_retry_unrelated_40001",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/kernel/tests/sql_transport.rs::generated_top_level_write_protocol_does_not_retry_unrelated_40001"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/sql_transport.rs",
+      "test": "generated_visible_reads_share_scope_and_caller_rollback",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/kernel/tests/sql_transport.rs::generated_visible_reads_share_scope_and_caller_rollback"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/sql_transport.rs",
+      "test": "generated_for_update_read_holds_row_lock_until_rollback_or_commit",
+      "classification": "generated_client_protocol",
+      "sql_counterparts": [
+        "packages/kernel/tests/sql_transport.rs::generated_for_update_read_holds_row_lock_until_rollback_or_commit"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/tests/wire_roundtrip.rs",
+      "test": "shared_wire_fixtures_round_trip_through_rust_contracts",
+      "classification": "shared_wire_contract",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/tests/wire_roundtrip.rs",
+      "test": "generated_sql_result_dtos_are_bidirectional_wire_types",
+      "classification": "shared_wire_contract",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/tests/wire_roundtrip.rs",
+      "test": "schema_revision_ids_use_lossless_decimal_strings_on_the_public_wire",
+      "classification": "shared_wire_contract",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/tests/wire_roundtrip.rs",
+      "test": "schema_extension_requests_round_trip_and_reject_server_owned_fields",
+      "classification": "shared_wire_contract",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/tests/wire_roundtrip.rs",
+      "test": "installer_principal_scope_bindings_are_strict_global_wire_contracts",
+      "classification": "shared_wire_contract",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/db.rs",
+      "test": "native_policy_gate_preserves_pre_policy_installed_legacy_scope",
+      "classification": "rust_internal_mechanic",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/db.rs",
+      "test": "native_policy_gate_preserves_legacy_and_rejects_declared_scope",
+      "classification": "rust_internal_mechanic",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/db.rs",
+      "test": "query_timeout_mapping_only_recognizes_query_cancellation",
+      "classification": "generated_client_mechanic",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/db.rs",
+      "test": "field_history_limit_defaults_and_clamps",
+      "classification": "rust_internal_mechanic",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/db.rs",
+      "test": "version_precedence_uses_causal_order_after_lifecycle",
+      "classification": "rust_internal_mechanic",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/db.rs",
+      "test": "catalog_snapshot_has_a_bounded_model_independent_query_plan",
+      "classification": "retired_rust_materializer_mechanic",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/db.rs",
+      "test": "materialization_locks_are_ordered_and_use_one_batch_query",
+      "classification": "retired_rust_materializer_mechanic",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/db.rs",
+      "test": "postgres_catalog_and_probe_round_trips_stay_constant_under_load",
+      "classification": "retired_rust_materializer_mechanic",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/db.rs",
+      "test": "canonical_json_sorts_object_keys_recursively",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_runtime_shared.rs::generated_canonical_json_matches_the_rust_idempotency_format"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/src/db.rs",
+      "test": "canonical_json_matches_current_stored_fingerprint_shape",
+      "classification": "rust_internal_mechanic",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/db.rs",
+      "test": "relation_target_visibility_lifecycle_tiebreaks_before_draft_stage",
+      "classification": "exact",
+      "sql_counterparts": [
+        "packages/schema-compiler/tests/sql_runtime_apply.rs::generated_mainline_planned_relations_respect_same_day_tombstone_winner"
+      ],
+      "status": "implemented"
+    },
+    {
+      "source_suite": "packages/kernel/src/validation.rs",
+      "test": "enum_alias_collision_is_reported_once_per_match_key",
+      "classification": "compiler_validation",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/validation.rs",
+      "test": "enum_id_match_key_collision_message_is_origin_agnostic",
+      "classification": "compiler_validation",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/validation.rs",
+      "test": "enum_alias_collisions_on_distinct_match_keys_are_reported_separately",
+      "classification": "compiler_validation",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/validation.rs",
+      "test": "custom_field_collisions_are_rejected_unless_the_prior_revision_held_them",
+      "classification": "compiler_validation",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/validation.rs",
+      "test": "validates_lookup_display_and_many_relation_contract",
+      "classification": "compiler_validation",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/validation.rs",
+      "test": "custom_field_lifecycle_and_model_opt_in_are_single_authorities",
+      "classification": "compiler_validation",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/validation.rs",
+      "test": "rejects_new_values_for_retired_models_fields_and_enum_options",
+      "classification": "compiler_validation",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/validation.rs",
+      "test": "rejects_version_preconditions_outside_mainline",
+      "classification": "compiler_validation",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/validation.rs",
+      "test": "validates_clear_disjointness_and_recursive_metadata_limits",
+      "classification": "compiler_validation",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/validation.rs",
+      "test": "validates_many_relation_values_and_lookup_record_lifecycle",
+      "classification": "compiler_validation",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/validation.rs",
+      "test": "retired_enum_aliases_can_transfer_but_retired_ids_remain_reserved",
+      "classification": "compiler_validation",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/identifiers.rs",
+      "test": "normalizes_identifiers_to_stable_ascii_shape",
+      "classification": "compiler_identifier_contract",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/identifiers.rs",
+      "test": "rejects_identifiers_that_do_not_have_a_valid_logical_shape",
+      "classification": "compiler_identifier_contract",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/identifiers.rs",
+      "test": "bounds_physical_identifiers_with_deterministic_hash_suffix",
+      "classification": "compiler_identifier_contract",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/identifiers.rs",
+      "test": "bounds_physical_identifiers_without_slicing_inside_utf8_codepoints",
+      "classification": "compiler_identifier_contract",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/iso_codes.rs",
+      "test": "country_codes_match_typescript_reference_data_engine",
+      "classification": "compiler_reference_data_contract",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/iso_codes.rs",
+      "test": "tender_currency_codes_match_typescript_currency_engine",
+      "classification": "compiler_reference_data_contract",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/postgres_connection.rs",
+      "test": "describes_connection_target_without_credentials",
+      "classification": "installer_connection_policy",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/postgres_connection.rs",
+      "test": "describes_ipv6_connection_target",
+      "classification": "installer_connection_policy",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/postgres_connection.rs",
+      "test": "describes_key_value_connection_target_without_echoing_secret",
+      "classification": "installer_connection_policy",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/postgres_connection.rs",
+      "test": "accepts_verify_full_while_preserving_the_declared_policy",
+      "classification": "installer_connection_policy",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/postgres_connection.rs",
+      "test": "accepts_verify_full_in_key_value_connection_strings",
+      "classification": "installer_connection_policy",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/postgres_connection.rs",
+      "test": "treats_a_uri_like_password_as_key_value_conninfo",
+      "classification": "installer_connection_policy",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/postgres_connection.rs",
+      "test": "rejects_duplicate_sslmode_in_url_and_key_value_connections",
+      "classification": "installer_connection_policy",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/postgres_connection.rs",
+      "test": "fails_closed_for_unparseable_connection_target",
+      "classification": "installer_connection_policy",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/postgres_connection.rs",
+      "test": "unparseable_targets_never_match_each_other",
+      "classification": "installer_connection_policy",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/postgres_connection.rs",
+      "test": "matches_neon_pooler_and_direct_hosts_for_same_endpoint",
+      "classification": "installer_connection_policy",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/postgres_connection.rs",
+      "test": "rejects_different_postgres_targets",
+      "classification": "installer_connection_policy",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/postgres_connection.rs",
+      "test": "rejects_different_postgres_target_ports",
+      "classification": "installer_connection_policy",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    },
+    {
+      "source_suite": "packages/kernel/src/postgres_connection.rs",
+      "test": "does_not_normalize_non_neon_pooler_hosts",
+      "classification": "installer_connection_policy",
+      "sql_counterparts": [],
+      "status": "not_sql_runtime"
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+#!/bin/sh
+#MISE description="Provision Better Auth schema, organizations, and internal membership"
+set -eu
+
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+repo_root="$(cd "$script_dir/../../../.." && pwd)"
+cd "$repo_root"
+# shellcheck source=.config/mise/scripts/auth/lib.sh
+. "$script_dir/lib.sh"
+
+if [ -n "${VERCEL_ENV:-}" ]; then
+  bun .config/mise/scripts/repository/auth-schema-check.ts --identity-only
+  if [ -n "${AUTH_DATABASE_RESOURCE:-}" ]; then
+    BETTER_AUTH_APP_NAME=Autograph bun .config/mise/scripts/repository/auth-enrolled-provision.ts apply
+    exit 0
+  fi
+  echo "Auth schema history: unenrolled legacy provisioning" >&2
+  bun .config/mise/scripts/repository/auth-account-schema-compatibility.ts
+  BETTER_AUTH_APP_NAME=Autograph bun x auth@1.7.3 migrate --config packages/auth/migration.ts --yes
+  bun .config/mise/scripts/repository/auth-account-schema-compatibility.ts
+  bun .config/mise/scripts/repository/auth-db-provision-sql.ts
+  exit 0
+fi
+
+auth_run sh -c '
+  set -eu
+  if [ -z "${PLATFORM_AUTH_DATABASE_URL:-}" ]; then
+    echo "PLATFORM_AUTH_DATABASE_URL is required." >&2
+    exit 1
+  fi
+  if [ -z "${BETTER_AUTH_URL:-}" ]; then
+    echo "BETTER_AUTH_URL is required." >&2
+    exit 1
+  fi
+  if [ -z "${BETTER_AUTH_SECRET:-}" ] && [ -z "${BETTER_AUTH_SECRETS:-}" ]; then
+    echo "BETTER_AUTH_SECRET or BETTER_AUTH_SECRETS is required." >&2
+    exit 1
+  fi
+
+  bun .config/mise/scripts/repository/auth-schema-check.ts --identity-only
+  if [ -n "${AUTH_DATABASE_RESOURCE:-}" ]; then
+    BETTER_AUTH_APP_NAME=Autograph bun .config/mise/scripts/repository/auth-enrolled-provision.ts apply
+    exit 0
+  fi
+  echo "Auth schema history: unenrolled legacy provisioning" >&2
+  bun .config/mise/scripts/repository/auth-account-schema-compatibility.ts
+  BETTER_AUTH_APP_NAME=Autograph bun x auth@1.7.3 migrate --config packages/auth/migration.ts --yes
+  bun .config/mise/scripts/repository/auth-account-schema-compatibility.ts
+  bun .config/mise/scripts/repository/auth-db-provision-sql.ts
+'

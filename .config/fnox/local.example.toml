@@ -1,0 +1,41 @@
+[providers.local]
+type = "plain"
+
+[profiles.local.secrets]
+AMPERSAND_PROJECT_ID = { provider = "local", if_missing = "error" }
+AMPERSAND_DEVELOPMENT_PROJECT_ID = { provider = "local", if_missing = "ignore" }
+AMPERSAND_PRODUCTION_PROJECT_ID = { provider = "local", if_missing = "ignore" }
+AMPERSAND_QUICKBOOKS_INTEGRATION_ID = { provider = "local", if_missing = "error" }
+AMPERSAND_XERO_INTEGRATION_ID = { provider = "local", if_missing = "ignore" }
+AMPERSAND_RAMP_INTEGRATION_ID = { provider = "local", if_missing = "ignore" }
+AMPERSAND_API_KEY = { provider = "local", if_missing = "error" }
+AMPERSAND_DEVELOPMENT_API_KEY = { provider = "local", if_missing = "ignore" }
+AMPERSAND_PRODUCTION_API_KEY = { provider = "local", if_missing = "ignore" }
+AMPERSAND_JWT_KEY_ID = { provider = "local", if_missing = "error" }
+AMPERSAND_DEVELOPMENT_JWT_KEY_ID = { provider = "local", if_missing = "ignore" }
+AMPERSAND_PRODUCTION_JWT_KEY_ID = { provider = "local", if_missing = "ignore" }
+AMPERSAND_JWT_PRIVATE_KEY_PEM = { provider = "local", if_missing = "error" }
+AMPERSAND_PAYLOAD_ALLOWED_HOSTS = { provider = "local", value = "withampersand.com", if_missing = "error" }
+AMPERSAND_RAMP_PROXY_ALLOWED_HOSTS = { provider = "local", value = "api.ramp.com,demo-api.ramp.com", if_missing = "ignore" }
+AMPERSAND_READ_WEBHOOK_SIGNING_SECRET = { provider = "local", if_missing = "error" }
+AMPERSAND_NOTIFICATION_WEBHOOK_SIGNING_SECRET = { provider = "local", if_missing = "error" }
+AMPERSAND_ENVIRONMENT = { provider = "local", value = "development", if_missing = "error" }
+AMPERSAND_RAMP_PROXY_ENABLED = { provider = "local", value = "true", if_missing = "ignore" }
+AMPERSAND_RAMP_PROXY_ALLOWED_ENDPOINTS = { provider = "local", value = "", if_missing = "ignore" }
+AMPERSAND_RAMP_PROXY_MUTATIONS_ENABLED = { provider = "local", value = "false", if_missing = "ignore" }
+AMPERSAND_DEVELOPMENT_XERO_INTEGRATION_ID = { provider = "local", if_missing = "ignore" }
+AMPERSAND_PRODUCTION_XERO_INTEGRATION_ID = { provider = "local", if_missing = "ignore" }
+AMPERSAND_DEVELOPMENT_XERO_CLIENT_ID = { provider = "local", if_missing = "ignore" }
+AMPERSAND_DEVELOPMENT_XERO_CLIENT_SECRET = { provider = "local", if_missing = "ignore" }
+AMPERSAND_DEVELOPMENT_XERO_SCOPES = { provider = "local", if_missing = "ignore" }
+AMPERSAND_DEVELOPMENT_XERO_PROVIDER_APP_EXTERNAL_REF = { provider = "local", if_missing = "ignore" }
+AMPERSAND_PRODUCTION_XERO_CLIENT_ID = { provider = "local", if_missing = "ignore" }
+AMPERSAND_PRODUCTION_XERO_CLIENT_SECRET = { provider = "local", if_missing = "ignore" }
+AMPERSAND_PRODUCTION_XERO_SCOPES = { provider = "local", if_missing = "ignore" }
+AMPERSAND_PRODUCTION_XERO_PROVIDER_APP_EXTERNAL_REF = { provider = "local", if_missing = "ignore" }
+PLATFORM_AMPERSAND_DEVELOPMENT_READ_HOOKDECK_URL = { provider = "local", if_missing = "ignore" }
+PLATFORM_AMPERSAND_DEVELOPMENT_NOTIFICATIONS_HOOKDECK_URL = { provider = "local", if_missing = "ignore" }
+PLATFORM_AMPERSAND_PRODUCTION_READ_HOOKDECK_URL = { provider = "local", if_missing = "ignore" }
+PLATFORM_AMPERSAND_PRODUCTION_NOTIFICATIONS_HOOKDECK_URL = { provider = "local", if_missing = "ignore" }
+INTEGRATION_RETAIN_RAW_PAYLOAD = { provider = "local", value = "false", if_missing = "ignore" }
+INTEGRATION_RAW_PAYLOAD_RETENTION_POLICY = { provider = "local", value = "", if_missing = "ignore" }

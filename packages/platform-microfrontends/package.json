@@ -1,0 +1,27 @@
+{
+  "name": "@autograph/platform-microfrontends",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./identity": "./src/policy/identity.ts",
+    "./zone-ingress": "./src/policy/zone-ingress.ts",
+    "./next-request-ingress": "./src/policy/next-request-ingress.ts",
+    "./verified-data-context": "./src/policy/verified-data-context.ts"
+  },
+  "scripts": {
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run __tests__"
+  },
+  "dependencies": {
+    "@autograph/generated-app-runtime": "workspace:*",
+    "next": "catalog:",
+    "pg": "catalog:"
+  },
+  "devDependencies": {
+    "@autograph/typescript-config": "workspace:*",
+    "@types/pg": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

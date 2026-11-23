@@ -1,0 +1,36 @@
+/* Dirty-cell glyph: 6px circle in the upper-right of a cell whose
+ * (rowId, fieldId) address is present in the edit buffer. The library applies
+ * the `.ag-cell-dirty` class via `dirtyCellClassRules` factored from
+ * `EditableRowVersionGrid`'s context; this stylesheet renders the glyph.
+ *
+ * Lives in the module (not the design system) because the glyph SHAPE belongs
+ * to the editable-grid surface contract — moving it would require surfacing a
+ * design-system token only this surface uses.
+ * AG Grid cells already provide the positioning context. Do not set
+ * `position` here; overriding AG Grid's cell positioning breaks dirty-cell
+ * layout.
+ */
+.ag-cell-dirty::after {
+  content: "";
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-action-primary);
+  pointer-events: none;
+}
+
+/* Dirty cells go visually quiet: no background highlight, no border accent.
+ * The 6px dot above + the inline `was X` micro-text inside the cell
+ * (rendered by `DiffCellRenderer`, styled in `diff-cell.css`) are the only
+ * cues. The strong "edit pending" identity lives on the row-meta strip
+ * inserted beneath the row. See `row-meta-row.css`.
+ *
+ * AG Grid carries cell-class state via `cellClassRules`; we explicitly null
+ * out `background-color` here so a future theme override can't re-add a
+ * subtle highlight without a deliberate edit to this rule. */
+.ag-cell.ag-cell-dirty {
+  background-color: transparent;
+}

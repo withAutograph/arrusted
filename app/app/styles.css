@@ -1,0 +1,120 @@
+@import "../../packages/design-systems/core/tokens/theme.css";
+@source "./**/*.{ts,tsx}";
+@source "../../packages/design-systems/core/**/*.{ts,tsx}";
+@source "../../packages/modules/**/*.{ts,tsx}";
+@source "../../packages/canvas/**/*.{ts,tsx}";
+@source "../../packages/auth/**/*.{ts,tsx}";
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f6f8;
+  color: #20252c;
+}
+a {
+  color: inherit;
+}
+.site-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 18px 30px;
+  background: white;
+  border-bottom: 1px solid #dce1e8;
+}
+.site-header nav {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+}
+.page {
+  max-width: 1000px;
+  margin: 40px auto;
+  padding: 0 24px;
+}
+.page h1 {
+  font-size: 32px;
+  font-weight: 650;
+  margin-bottom: 12px;
+}
+.page p {
+  margin-bottom: 20px;
+  color: #526071;
+}
+.table-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 24px 0;
+}
+.table-links a,
+.session-list a {
+  background: white;
+  border: 1px solid #dce1e8;
+  border-radius: 10px;
+  padding: 18px;
+  text-decoration: none;
+  display: block;
+}
+.session-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+.auth-card {
+  max-width: 420px;
+  margin: 70px auto;
+  padding: 32px;
+  background: white;
+  border: 1px solid #dce1e8;
+  border-radius: 16px;
+}
+.auth-card h1 {
+  font-size: 26px;
+  margin-bottom: 20px;
+}
+.auth-card form {
+  display: grid;
+  gap: 16px;
+}
+.auth-card label {
+  display: grid;
+  gap: 6px;
+}
+.auth-card input {
+  padding: 10px;
+  border: 1px solid #abb6c4;
+  border-radius: 6px;
+}
+.primary {
+  background: #244ed8;
+  color: white;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.primary:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.error {
+  color: #a52c2c;
+  margin: 12px 0;
+}
+.canvas-shell {
+  height: calc(100dvh - 65px);
+}
+
+.note-form { display: grid; gap: 14px; max-width: 500px; margin: 20px 0; }
+.note-form label { display: grid; gap: 5px; }
+.note-form input, .note-form textarea { padding: 10px; border: 1px solid #abb6c4; border-radius: 6px; background: white; }
+
+.record-entry { margin: 20px 24px; padding: 16px; background: white; border: 1px solid #dce1e8; border-radius: 8px; }
+.record-entry summary { cursor: pointer; font-weight: 600; }
+.record-entry fieldset { display: grid; gap: 12px; margin: 16px 0; border: 0; padding: 0; }
+.record-entry label { display: grid; gap: 4px; max-width: 520px; }
+.record-entry input, .record-entry select { padding: 8px; border: 1px solid #abb6c4; border-radius: 4px; }
+.record-entry button { width: fit-content; }
+.record-preview { overflow: auto; max-height: 400px; margin: 16px 0; }
+.record-preview table { border-collapse: collapse; width: 100%; }
+.record-preview td, .record-preview th { padding: 8px; border: 1px solid #dce1e8; text-align: left; }

@@ -1,0 +1,6 @@
+#!/bin/sh
+#MISE description="Grant a local Better Auth user access to the seeded local customer"
+set -eu
+
+cd "$MISE_MONOREPO_ROOT"
+.config/mise/scripts/auth/grant-local-access "$@"

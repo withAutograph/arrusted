@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Package the protected generated-app install/access executable with owned parser assets"
+set -euo pipefail
+
+exec mise run repository:exec -- build-protected-generated-app-worker.mjs "$@"

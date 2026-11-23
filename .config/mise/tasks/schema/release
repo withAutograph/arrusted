@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+#MISE description="Compile or verify complete checked schema release artifacts"
+set -euo pipefail
+
+cd "$MISE_MONOREPO_ROOT"
+case "${1:-}" in
+  compile|check)
+    command="$1"
+    shift
+    exec mise exec -- bun .config/mise/scripts/repository/schema-release.ts "$command" "$@"
+    ;;
+  *)
+    echo "usage: mise run schema:release -- <compile|check>" >&2
+    exit 64
+    ;;
+esac

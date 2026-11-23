@@ -1,0 +1,39 @@
+{
+  "name": "@autograph/canvas-host",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./server": "./server.ts",
+    "./client": "./client.ts",
+    "./protocol": "./protocol.ts",
+    "./mcp-app": "./mcp-app/resource.ts"
+  },
+  "scripts": {
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "CANVAS_HOST_POSTGRES=1 vp test --config vite.config.ts --run",
+    "build": "vp build --config mcp-app/vite.config.ts"
+  },
+  "dependencies": {
+    "@autograph/canvas": "workspace:*",
+    "@autograph/generated-app-runtime": "workspace:*",
+    "@autograph/platform-microfrontends": "workspace:*",
+    "@autograph/work-session-tools": "workspace:*",
+    "@modelcontextprotocol/ext-apps": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@autograph/auth": "workspace:*",
+    "@autograph/typescript-config": "workspace:*",
+    "@autograph/vite-config": "workspace:*",
+    "@types/pg": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "pg": "catalog:",
+    "typescript": "catalog:",
+    "vite-plugin-singlefile": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
+  }
+}

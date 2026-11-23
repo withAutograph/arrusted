@@ -1,0 +1,6 @@
+#!/bin/sh
+#MISE description="Prove fixed Neon resource bootstrap worker against owned disposable PostgreSQL"
+set -eu
+bun .config/mise/scripts/repository/test-neon-resource-bootstrap-worker.ts
+
+bun .config/mise/scripts/repository/test-neon-resource-retirement-worker.ts

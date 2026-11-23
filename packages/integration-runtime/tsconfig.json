@@ -1,0 +1,7 @@
+{
+  "extends": "../../.config/typescript/workspace-paths.json",
+  "compilerOptions": {
+    "exactOptionalPropertyTypes": true
+  },
+  "include": ["**/*.ts"]
+}

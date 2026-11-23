@@ -1,0 +1,65 @@
+{
+  "name": "@autograph/auth",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#components/*": "./components/*.tsx",
+    "#lib/*": "./lib/*.ts"
+  },
+  "exports": {
+    ".": "./index.ts",
+    "./agent-grant-policy": "./agent-grant-policy.ts",
+    "./auth": "./auth.ts",
+    "./canvas-frame": "./canvas-frame.ts",
+    "./client": "./client.ts",
+    "./env": "./env.ts",
+    "./integration-authority-protocol": "./integration-authority-protocol.ts",
+    "./next": "./next.ts",
+    "./preview-qa": "./preview-qa.ts",
+    "./schema-readiness": "./schema-readiness.ts",
+    "./server": "./server.ts",
+    "./server-policy": "./server-policy.ts",
+    "./styles.css": "./styles.css",
+    "./ui": "./ui.tsx",
+    "./ui-view-paths": "./ui-view-paths.ts",
+    "./single-organization": "./single-organization.ts"
+  },
+  "scripts": {
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "AUTH_AGENT_GRANT_POSTGRES=1 vp test --config vite.config.ts --run"
+  },
+  "dependencies": {
+    "@base-ui/react": "1.8.0",
+    "@better-auth-ui/core": "catalog:",
+    "@better-auth-ui/react": "catalog:",
+    "@better-auth/cimd": "catalog:",
+    "@better-auth/infra": "0.4.7",
+    "@better-auth/oauth-provider": "catalog:",
+    "@tanstack/react-query": "catalog:",
+    "@vercel/functions": "3.10.4",
+    "@vercel/oidc": "catalog:",
+    "better-auth": "catalog:",
+    "class-variance-authority": "0.7.1",
+    "clsx": "catalog:",
+    "date-fns": "4.4.0",
+    "lucide-react": "catalog:",
+    "pg": "catalog:",
+    "radix-ui": "1.6.7",
+    "react-day-picker": "catalog:",
+    "resend": "6.35.0",
+    "sonner": "2.0.8",
+    "tailwind-merge": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@autograph/vite-config": "workspace:*",
+    "@better-auth/memory-adapter": "catalog:",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0 <20.0.0"
+  }
+}

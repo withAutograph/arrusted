@@ -1,0 +1,29 @@
+flowchart LR
+  U1[/U1 Open production-shaped preview/]
+  U2[/U2 Perform accepted AppSpec walkthrough/]
+  S1[(S1 Apply governed write)]
+  U3[/U3 Review result/]
+  S2[(S2 Run checks and compare with accepted HTML plus AppSpec)]
+  S2Q{S2 Checks pass?}
+  A1[A1 Explain failure]
+  U4[/U4 Request correction/]
+  A2[A2 Repair app]
+  S3[(S3 Capture evidence)]
+  U5[/U5 Review evidence and accept result/]
+  R([Local first version])
+
+  U1 --> U2 --> S1 --> U3 --> S2 --> S2Q
+  S2Q -- No --> A1 --> U4 --> A2 --> S2
+  S2Q -- Yes --> S3 --> U5
+  U5 -- Revise --> U4
+  U5 -- Accept --> R
+
+  classDef built fill:#DCFCE7,stroke:#15803D,color:#14532D,stroke-width:2px
+  classDef partial fill:#FEF3C7,stroke:#D97706,color:#78350F,stroke-width:2px
+  classDef missing fill:#FEE2E2,stroke:#DC2626,color:#7F1D1D,stroke-width:2px
+  classDef outcome fill:#DBEAFE,stroke:#2563EB,color:#1E3A8A,stroke-width:3px
+
+  class U1,U2,S1,U3 built
+  class S2,S2Q,A1,U4,A2 partial
+  class S3,U5 missing
+  class R outcome

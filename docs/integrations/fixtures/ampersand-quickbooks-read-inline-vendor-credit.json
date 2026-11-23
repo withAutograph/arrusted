@@ -1,0 +1,37 @@
+{
+  "action": "read",
+  "consumerRef": "user-123",
+  "groupRef": "customer-sandbox:quickbooks:00000000-0000-4000-8000-000000000011",
+  "installationId": "00000000-0000-4000-8000-000000000001",
+  "installationUpdateTime": "2026-07-16T18:00:00Z",
+  "objectName": "vendorCredit",
+  "operationId": "00000000-0000-4000-8000-000000000103",
+  "operationTime": "2026-07-16T18:06:00Z",
+  "projectId": "ampersand-project-id",
+  "provider": "quickbooksSandbox",
+  "resultInfo": { "type": "inline", "numRecords": 1 },
+  "result": [
+    {
+      "raw": {
+        "Id": "credit-201",
+        "SyncToken": "0",
+        "VendorRef": { "value": "42", "name": "Acme Software LLC" },
+        "DocNumber": "CREDIT-201",
+        "TxnDate": "2026-07-11",
+        "TotalAmt": 75.25,
+        "CurrencyRef": { "value": "USD" },
+        "MetaData": { "LastUpdatedTime": "2026-07-16T14:02:00-04:00" }
+      },
+      "mappedFields": {
+        "source_record_id": "credit-201",
+        "vendor_source_record_id": "42",
+        "counterparty_name": "Acme Software LLC",
+        "document_number": "CREDIT-201",
+        "amount": 75.25,
+        "currency_code": "USD",
+        "transaction_date": "2026-07-11",
+        "source_updated_at": "2026-07-16T14:02:00-04:00"
+      }
+    }
+  ]
+}

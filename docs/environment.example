@@ -1,0 +1,36 @@
+# Better Auth session and storage (unique to each environment)
+PLATFORM_AUTH_DATABASE_URL=postgres://auth:password@host/auth
+BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_SECRET=replace-with-a-unique-session-secret
+# BETTER_AUTH_SECRETS=1:replace-with-a-versioned-session-secret
+# Optional Better Auth recovery delivery through an approved Resend sending domain.
+# Use a sending-only domain-scoped key, never the Production dashboard key.
+# AUTH_RECOVERY_RESEND_API_KEY=replace-with-a-sending-only-resend-key
+# AUTH_RECOVERY_EMAIL_FROM=recovery@your-verified-sending-domain.example
+PLATFORM_AUTH_TRUSTED_ORIGINS=http://localhost:3000
+# PLATFORM_AUTH_COOKIE_DOMAIN=.autograph.so
+# Local, Vercel Development, and Vercel Preview allow email/password signup.
+# Google user creation is disabled everywhere; Production forces all signup off.
+
+# Google sign-in for previously linked accounts is opt-in locally and unavailable
+# in Preview. Uncomment this whole block only after replacing every placeholder.
+# GOOGLE_CLIENT_ID=replace-with-google-client-id
+# GOOGLE_CLIENT_SECRET=replace-with-google-client-secret
+# VITE_PLATFORM_AUTH_SOCIAL_PROVIDERS=google
+
+# OAuth Proxy (shared only within one administrative trust boundary)
+# OAUTH_PROXY_PRODUCTION_URL=https://apps.autograph.so
+# OAUTH_PROXY_SECRET=replace-with-the-shared-proxy-secret
+
+# New Local/Preview signups are added to the one all-app organization marked by
+# the server-owned auth database provisioning contract (the canonical `dev`
+# organization), whose server-owned appIds grant access to all apps. Set an app-specific PLATFORM_HC_CUSTOMER_IDS or
+# PLATFORM_VENDOR_CUSTOMER_IDS value only when a preview intentionally needs a
+# different bounded organization set.
+
+# BETTER_AUTH_SECRET/BETTER_AUTH_SECRETS protect sessions and must remain unique
+# per environment. OAUTH_PROXY_SECRET only wraps the cross-environment proxy
+# return envelope; the initiating environment's Better Auth state remains bound
+# to its own session secret and allowed callback origin. Share it only between
+# environments administered by the same trusted operators; do not distribute it
+# to an untrusted environment. Never reuse it as Better Auth session-secret material.

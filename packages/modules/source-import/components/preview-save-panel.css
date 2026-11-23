@@ -1,0 +1,163 @@
+/* PreviewSavePanel — layout for Preview & save stage body.
+ *
+ * Hidden tab mounts stay in the DOM so per-model dirty state survives
+ * tab switches. The host's surface composite owns top-level page
+ * chrome; this panel only manages the tab + grid + bar stack. */
+
+.preview-save-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: var(--space-3);
+  height: 100%;
+  min-height: 0;
+}
+
+.preview-save-panel__tabs {
+  min-height: 0;
+}
+
+.preview-save-panel[data-active-tab-kind="model"] .preview-save-panel__tabs {
+  flex: 0 0 auto;
+}
+
+.preview-save-panel[data-active-tab-kind="model"] .preview-save-tabs__body {
+  flex: 0 0 auto;
+  height: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.preview-save-panel[data-active-tab-kind="errors"] .preview-save-panel__tabs {
+  flex: 1 1 auto;
+}
+
+.preview-save-panel__active-anchor {
+  /* Placeholder rendered inside PreviewSaveTabs' active body. The actual
+   * grid mounts live below via display: none toggling so per-model
+   * dirty state survives tab switches. The anchor exists so the tabs'
+   * panel has SOMETHING to render (avoids an empty role=tabpanel
+   * complaint from assistive tech) but takes no space. */
+  display: none;
+}
+
+.preview-save-panel__mounts {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+.preview-save-panel[data-active-tab-kind="errors"] .preview-save-panel__mounts {
+  display: none;
+}
+
+.preview-save-panel__mount {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+/* When a mount is hidden, no need for layout; the inline `display: none`
+ * on the element handles it. The selector remains for tests/storybook
+ * to query against without relying on the inline style. */
+.preview-save-panel__mount[data-visible="false"] {
+  display: none;
+}
+
+.preview-save-panel__preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  padding-block-start: var(--space-3);
+}
+
+.preview-save-panel__errors {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: var(--space-3);
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-4);
+}
+
+.preview-save-panel__errors-summary {
+  color: var(--color-text-secondary);
+  font-size: var(--text-body);
+  margin: 0;
+}
+
+.preview-save-panel__errors-table {
+  border-collapse: collapse;
+  font-size: var(--text-control-sm);
+  width: 100%;
+}
+
+.preview-save-panel__errors-table th,
+.preview-save-panel__errors-table td {
+  border-bottom: var(--size-divider) solid var(--color-border-subtle);
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  vertical-align: top;
+}
+
+.preview-save-panel__errors-table th {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.preview-save-panel__errors-code {
+  color: var(--color-status-danger);
+  display: block;
+  font-weight: var(--font-weight-semibold);
+}
+
+.preview-save-panel__errors-message {
+  color: var(--color-text-primary);
+  display: block;
+  margin-top: var(--space-1);
+}
+
+.preview-save-panel__notices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-panel);
+  background: var(--color-bg-muted);
+}
+
+.preview-save-panel__notices-title {
+  margin: 0;
+  font-size: var(--text-control-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.preview-save-panel__notices-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.preview-save-panel__notices-list li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+}
+
+.preview-save-panel__notices-code {
+  font-family: var(--font-family-mono, ui-monospace, monospace);
+  font-size: var(--text-control-xs);
+  color: var(--color-text-secondary);
+}
+
+.preview-save-panel__notices-message {
+  font-size: var(--text-control-sm);
+  color: var(--color-text-primary);
+}

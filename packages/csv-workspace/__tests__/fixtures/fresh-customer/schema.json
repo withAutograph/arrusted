@@ -1,0 +1,187 @@
+{
+  "app_id": "laboratory_intake",
+  "change_types": [
+    {
+      "id": "catalog-maintenance",
+      "label": "Maintain racks",
+      "required": [],
+      "target_model": "rack",
+      "touches": ["caption", "alternate_labels"]
+    },
+    {
+      "id": "specimen-intake",
+      "label": "Receive specimens",
+      "required": [],
+      "target_model": "specimen",
+      "touches": ["accession", "title", "rack", "notes"]
+    },
+    {
+      "id": "record-result",
+      "label": "Record observations",
+      "required": [],
+      "target_model": "observation",
+      "touches": ["specimen", "observed_on", "reading"]
+    }
+  ],
+  "custom_fields": [],
+  "customer_id": "north_lab",
+  "models": [
+    {
+      "display_field_id": "caption",
+      "extensions": {
+        "record_metadata": null,
+        "typed_custom_fields": false
+      },
+      "fields": [
+        {
+          "id": "caption",
+          "is_unique": false,
+          "label": "Rack caption",
+          "lifecycle": "active",
+          "management": "fixed",
+          "option_set": [],
+          "origin": "app",
+          "required": true,
+          "target_model": null,
+          "type": "text"
+        },
+        {
+          "id": "alternate_labels",
+          "is_unique": false,
+          "label": "Alternate labels",
+          "lifecycle": "active",
+          "management": "fixed",
+          "option_set": [],
+          "origin": "app",
+          "required": false,
+          "target_model": null,
+          "type": "known_aliases"
+        }
+      ],
+      "id": "rack",
+      "kind": "lookup",
+      "label": "Rack",
+      "lifecycle": "active",
+      "management": "tenant_managed",
+      "many_relations": [],
+      "origin": "app"
+    },
+    {
+      "display_field_id": null,
+      "extensions": {
+        "record_metadata": null,
+        "typed_custom_fields": false
+      },
+      "fields": [
+        {
+          "id": "accession",
+          "is_unique": true,
+          "label": "Accession",
+          "lifecycle": "active",
+          "management": "fixed",
+          "option_set": [],
+          "origin": "app",
+          "required": true,
+          "target_model": null,
+          "type": "text"
+        },
+        {
+          "id": "title",
+          "is_unique": false,
+          "label": "Specimen title",
+          "lifecycle": "active",
+          "management": "fixed",
+          "option_set": [],
+          "origin": "app",
+          "required": true,
+          "target_model": null,
+          "type": "text"
+        },
+        {
+          "id": "rack",
+          "is_unique": false,
+          "label": "Storage rack",
+          "lifecycle": "active",
+          "management": "fixed",
+          "option_set": [],
+          "origin": "app",
+          "required": true,
+          "target_model": "rack",
+          "type": "relation"
+        },
+        {
+          "id": "notes",
+          "is_unique": false,
+          "label": "Specimen note",
+          "lifecycle": "active",
+          "management": "fixed",
+          "option_set": [],
+          "origin": "app",
+          "required": false,
+          "target_model": null,
+          "type": "text"
+        }
+      ],
+      "id": "specimen",
+      "kind": "entity",
+      "label": "Specimen",
+      "lifecycle": "active",
+      "management": "fixed",
+      "many_relations": [],
+      "origin": "app"
+    },
+    {
+      "display_field_id": null,
+      "extensions": {
+        "record_metadata": null,
+        "typed_custom_fields": false
+      },
+      "fields": [
+        {
+          "id": "specimen",
+          "is_unique": false,
+          "label": "Observed specimen",
+          "lifecycle": "active",
+          "management": "fixed",
+          "option_set": [],
+          "origin": "app",
+          "required": true,
+          "target_model": "specimen",
+          "type": "relation"
+        },
+        {
+          "id": "observed_on",
+          "is_unique": false,
+          "label": "Observation date",
+          "lifecycle": "active",
+          "management": "fixed",
+          "option_set": [],
+          "origin": "app",
+          "required": true,
+          "target_model": null,
+          "type": "date"
+        },
+        {
+          "id": "reading",
+          "is_unique": false,
+          "label": "Reading",
+          "lifecycle": "active",
+          "management": "fixed",
+          "option_set": [],
+          "origin": "app",
+          "required": true,
+          "target_model": null,
+          "type": "number"
+        }
+      ],
+      "id": "observation",
+      "kind": "entity",
+      "label": "Observation",
+      "lifecycle": "active",
+      "management": "fixed",
+      "many_relations": [],
+      "origin": "app"
+    }
+  ],
+  "version": "2027-03-15.laboratory-intake-v1"
+}

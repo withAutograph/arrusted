@@ -1,0 +1,29 @@
+flowchart LR
+  S0[(S0 Receive accepted HTML plus structured AppSpec)]
+  G0{G0 Build-ready gate passed?}
+  A1[A1 Create implementation plan from AppSpec]
+  U1[/U1 Review and approve plan/]
+  A2[A2 Verify available capabilities]
+  A3[A3 Map app-owned and library-owned work]
+  S1[(S1 Run implementation preflight)]
+  S2[(S2 Scaffold workspace)]
+  S3[(S3 Define and validate data objects and relationships)]
+  S4[(S4 Build integrations and import adapters)]
+  S5[(S5 Generate typed client)]
+  S6[(S6 Start API)]
+  A4[A4 Compose production UI and app policy]
+  S7[(S7 Start local preview)]
+  S8[(S8 Compare implementation with accepted HTML and AppSpec)]
+
+  S0 --> G0
+  G0 -- No --> S0
+  G0 -- Yes --> A1 --> U1
+  U1 -- Revise --> A1
+  U1 -- Approve --> A2 --> A3 --> S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> A4 --> S7 --> S8
+
+  classDef built fill:#DCFCE7,stroke:#15803D,color:#14532D,stroke-width:2px
+  classDef partial fill:#FEF3C7,stroke:#D97706,color:#78350F,stroke-width:2px
+  classDef missing fill:#FEE2E2,stroke:#DC2626,color:#7F1D1D,stroke-width:2px
+
+  class U1 built
+  class S0,G0,A1,A2,A3,S1,S2,S3,S4,S5,S6,A4,S7,S8 partial

@@ -1,0 +1,90 @@
+{
+  "fixture_id": "ampersand-ramp-proxy-accounting-vendors-sanitized-v0",
+  "fixture_status": "sanitized_static_example_not_live_capture",
+  "captured_at": null,
+  "source_docs": [
+    "https://docs.withampersand.com/provider-guides/ramp",
+    "https://docs.withampersand.com/proxy-actions",
+    "https://docs.ramp.com/llms-api.txt",
+    "https://docs.ramp.com/developer-api/v1/pagination"
+  ],
+  "ampersand_proxy_request": {
+    "method": "GET",
+    "url": "https://proxy.withampersand.com/developer/v1/accounting/vendors?is_active=true&page_size=2",
+    "provider": "rampDemo",
+    "provider_base_url": "https://demo-api.ramp.com",
+    "provider_path": "/developer/v1/accounting/vendors",
+    "headers": {
+      "x-amp-proxy-version": "1",
+      "x-amp-project-id": "ampersand-project-id",
+      "x-amp-integration-name": "vendor-ramp",
+      "x-amp-group-ref": "customer-sandbox",
+      "x-amp-rate-limiter-mode": "throttle"
+    },
+    "omitted_secret_headers": [
+      "x-api-key"
+    ]
+  },
+  "provider_response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "data": [
+        {
+          "accounting_connection_id": "00000000-0000-4000-8000-000000002001",
+          "code": "V-1000",
+          "created_at": "2026-07-01T15:00:00Z",
+          "entity_remote_ids": [
+            "entity-us"
+          ],
+          "id": "erp-vendor-0001",
+          "is_active": true,
+          "is_synced": true,
+          "name": "Example Software LLC",
+          "provider_name": "Example ERP",
+          "ramp_id": "00000000-0000-4000-8000-000000002101",
+          "updated_at": "2026-07-08T18:00:00Z",
+          "vendor_category_info": {
+            "id": "vendor-category-software",
+            "name": "Software",
+            "ramp_id": "00000000-0000-4000-8000-000000002201"
+          }
+        }
+      ],
+      "page": {
+        "next": "https://demo-api.ramp.com/developer/v1/accounting/vendors?start=cursor-redacted&page_size=2"
+      }
+    }
+  },
+  "ampersand_throttle_error_response": {
+    "status": 429,
+    "headers": {
+      "content-type": "application/json",
+      "x-trace-id": "trace-ramp-accounting-vendors-rate-limit",
+      "x-amp-retry-after": "Thu, 09 Jul 2026 15:00:00 GMT",
+      "x-amp-retryable": "true"
+    },
+    "body": {
+      "message": "Too many requests",
+      "error_v2": {
+        "error_code": "RATE_LIMIT_EXCEEDED",
+        "additional_info": {
+          "retry_after": "2026-07-09T15:00:00Z"
+        }
+      }
+    }
+  },
+  "live_gate": {
+    "required_before_direct_apply": true,
+    "may_compile_to_apply_change_set": false,
+    "must_replace_or_supplement_with_live_capture": true,
+    "missing_proof": [
+      "Ramp sandbox accounting vendor fields through Ampersand proxy",
+      "actual proxy success response headers",
+      "actual proxy error response shape",
+      "first and final page pagination behavior"
+    ]
+  }
+}

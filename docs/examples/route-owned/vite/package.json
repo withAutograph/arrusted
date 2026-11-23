@@ -1,0 +1,27 @@
+{
+  "name": "@autograph/example-vite",
+  "private": true,
+  "scripts": {
+    "dev": "bun ../../.config/mise/scripts/repository/run-vite-microfrontend.ts dev",
+    "check": "bun ../../.config/mise/scripts/repository/run-vite-microfrontend.ts check",
+    "test": "bun ../../.config/mise/scripts/repository/run-vite-microfrontend.ts test --run",
+    "build": "bun ../../.config/mise/scripts/repository/build-vite-microfrontend.ts",
+    "start:zone": "bun ../../.config/mise/scripts/repository/run-static-zone-local.ts ."
+  },
+  "dependencies": {
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "@autograph/microfrontends": "workspace:*",
+    "@autograph/vite-config": "workspace:*",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.1",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vercel/microfrontends": "2.4.0",
+    "typescript": "7.0.2",
+    "vite-plus": "0.2.6"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "action": "read",
+  "consumerRef": "user-123",
+  "groupRef": "customer-sandbox:quickbooks:00000000-0000-4000-8000-000000000011",
+  "installationId": "00000000-0000-4000-8000-000000000001",
+  "installationUpdateTime": "2026-07-16T18:00:00Z",
+  "objectName": "bill",
+  "operationId": "00000000-0000-4000-8000-000000000102",
+  "operationTime": "2026-07-16T18:05:00Z",
+  "projectId": "ampersand-project-id",
+  "provider": "quickbooksSandbox",
+  "resultInfo": { "type": "inline", "numRecords": 1 },
+  "result": [
+    {
+      "raw": {
+        "Id": "bill-101",
+        "SyncToken": "0",
+        "VendorRef": { "value": "42", "name": "Acme Software LLC" },
+        "DocNumber": "BILL-101",
+        "TxnDate": "2026-07-10",
+        "DueDate": "2026-08-09",
+        "TotalAmt": 1250.5,
+        "Balance": 250.5,
+        "CurrencyRef": { "value": "USD" },
+        "MetaData": { "LastUpdatedTime": "2026-07-16T14:01:00-04:00" }
+      },
+      "mappedFields": {
+        "source_record_id": "bill-101",
+        "vendor_source_record_id": "42",
+        "counterparty_name": "Acme Software LLC",
+        "document_number": "BILL-101",
+        "amount": 1250.5,
+        "open_amount": 250.5,
+        "currency_code": "USD",
+        "transaction_date": "2026-07-10",
+        "due_date": "2026-08-09",
+        "source_updated_at": "2026-07-16T14:01:00-04:00"
+      }
+    }
+  ]
+}

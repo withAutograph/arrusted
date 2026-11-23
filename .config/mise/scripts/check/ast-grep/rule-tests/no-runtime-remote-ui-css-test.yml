@@ -1,0 +1,10 @@
+id: no-runtime-remote-ui-css
+valid:
+  - '@import "./tokens.css";'
+  - '.logo { background-image: url("https://cdn.example.com/logo.svg"); }'
+invalid:
+  - '@import "https://apps.example.com/app.css";'
+  - '@import url("https://apps.example.com/app.css");'
+  - '@import "//apps.example.com/app.css";'
+  - '@import "/vendor/api/ui.css";'
+  - '@import url("/vendor/api/ui.css");'

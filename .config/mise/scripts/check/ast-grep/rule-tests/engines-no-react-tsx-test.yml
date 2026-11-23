@@ -1,0 +1,12 @@
+id: engines-no-react-tsx
+valid:
+  - import { parse } from "./parse"; export const value = parse("x");
+  - 'import data from "./data.json" with { type: "react" }; export const value = 1;'
+  - const reactPackage = "react"; export const value = 1;
+  - '// import React from "react"; export const value = 1;'
+invalid:
+  - import React from "react"; export const value = <div />;
+  - import ReactDom = require("react-dom/client"); export const value = 1;
+  - export { createElement } from "react";
+  - const react = require("react-dom/server"); export const value = 1;
+  - const react = import("react/jsx-runtime"); export const value = 1;

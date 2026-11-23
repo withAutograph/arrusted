@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "remediated", "exceptions"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "remediated": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["package", "minimumVersion", "advisories"],
+        "properties": {
+          "package": { "type": "string", "minLength": 1 },
+          "minimumVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+          "advisories": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "integer" },
+            "uniqueItems": true
+          }
+        }
+      }
+    },
+    "exceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "package",
+          "advisory",
+          "severity",
+          "runtimeReachable",
+          "runtimeReachability",
+          "compensatingControls",
+          "owner",
+          "expiresAt",
+          "followUpIssue"
+        ],
+        "properties": {
+          "package": { "type": "string", "minLength": 1 },
+          "advisory": { "type": "integer" },
+          "severity": { "enum": ["high"] },
+          "runtimeReachable": { "const": false },
+          "runtimeReachability": { "type": "string", "minLength": 20 },
+          "compensatingControls": { "type": "string", "minLength": 20 },
+          "owner": { "type": "string", "minLength": 1 },
+          "expiresAt": { "type": "string", "format": "date" },
+          "followUpIssue": { "type": "string", "pattern": "^A-[0-9]+$" }
+        }
+      }
+    }
+  }
+}

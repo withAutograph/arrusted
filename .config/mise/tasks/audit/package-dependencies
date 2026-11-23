@@ -1,0 +1,6 @@
+#!/bin/sh
+#MISE description="Report likely unused direct package dependencies for manual review"
+set -eu
+
+cd "$MISE_MONOREPO_ROOT"
+exec bun .config/mise/scripts/repository/check-package-manifests.ts --report-unused

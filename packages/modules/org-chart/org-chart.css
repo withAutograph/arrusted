@@ -1,0 +1,45 @@
+.org-chart-frame {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  background: var(--color-bg-page);
+}
+
+.org-chart-chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-surface);
+}
+
+.org-chart-chrome-left,
+.org-chart-chrome-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  white-space: nowrap;
+}
+
+.org-chart-search-input {
+  width: 240px;
+}
+
+.org-chart-match-badge {
+  font-size: var(--text-caption);
+  color: var(--color-text-secondary);
+}
+
+.org-chart-match-badge[data-empty="true"] {
+  color: var(--color-status-warning);
+}
+
+.org-chart-canvas-slot {
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+}

@@ -1,0 +1,2442 @@
+{
+  "extras": {
+    "constraints": [
+      {
+        "authority": "authoritative",
+        "expression": {
+          "fields": ["employee", "position"],
+          "max": null,
+          "min": 1,
+          "type": "count_present"
+        },
+        "id": "org_assignment_has_subject",
+        "label": "Org assignment has a subject",
+        "message": "Org assignment writes must include employee and/or position",
+        "model": "org_assignment",
+        "notes": null
+      },
+      {
+        "authority": "authoritative",
+        "expression": {
+          "fields": ["reports_to_employee", "reports_to_position"],
+          "max": 1,
+          "min": null,
+          "type": "count_present"
+        },
+        "id": "org_assignment_has_at_most_one_manager",
+        "label": "Org assignment has at most one manager",
+        "message": "Org assignment writes must not include both reports_to_employee and reports_to_position",
+        "model": "org_assignment",
+        "notes": null
+      },
+      {
+        "authority": "authoritative",
+        "expression": {
+          "end": "end_date",
+          "start": "start_date",
+          "subjects": [["employee"], ["position"]],
+          "type": "non_overlapping_intervals"
+        },
+        "id": "org_assignment_one_active_per_subject",
+        "label": "One active org assignment per employee or position",
+        "message": "An employee or a position has at most one active org assignment on any date",
+        "model": "org_assignment",
+        "notes": "Mirrors org_assignment_import_reconciliation_policy subjects and effective fields; start_date and end_date are inclusive and an absent end_date is open."
+      }
+    ],
+    "derived_fields": [],
+    "field_metadata": [
+      {
+        "enum_option_notes": [],
+        "field": "name",
+        "model": "department",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "known_aliases",
+        "model": "department",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "name",
+        "model": "location",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "known_aliases",
+        "model": "location",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "name",
+        "model": "level",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "known_aliases",
+        "model": "level",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "name",
+        "model": "business_unit",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "known_aliases",
+        "model": "business_unit",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "name",
+        "model": "job_family",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "known_aliases",
+        "model": "job_family",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "name",
+        "model": "pnl_category",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "known_aliases",
+        "model": "pnl_category",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "ref",
+        "model": "employee",
+        "notes": "Unique employee reference. Often an internal HRIS number like EMP-001 or alphanumeric ID."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "name",
+        "model": "employee",
+        "notes": "Employee's full display name, typically \"First Last\"."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "known_aliases",
+        "model": "employee",
+        "notes": "Confirmed alternate employee names used for deterministic import matching."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "employment_status",
+        "model": "employee",
+        "notes": "Current employment state: active, terminated, on leave, etc."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "title",
+        "model": "employee",
+        "notes": "The employee's current job title, e.g. \"Senior Software Engineer\", \"VP Sales\"."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "department",
+        "model": "employee",
+        "notes": "Organizational department the employee belongs to: Engineering, Sales, Marketing, etc."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "location",
+        "model": "employee",
+        "notes": "Office or work site. Often a city or office name like \"SF HQ\", \"Remote - US\", \"New York\""
+      },
+      {
+        "enum_option_notes": [],
+        "field": "start_date",
+        "model": "employee",
+        "notes": "Hire date or employment start date."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "end_date",
+        "model": "employee",
+        "notes": "Last day of employment. Null if currently active."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "base_salary",
+        "model": "employee",
+        "notes": "Annual base salary. Currency amount, often with $ or /yr."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "target_bonus",
+        "model": "employee",
+        "notes": "Annual target bonus amount or percentage of base."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "target_commission",
+        "model": "employee",
+        "notes": "Annual target commission amount. Typically for sales roles."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "name_last",
+        "model": "employee",
+        "notes": "Employee's family/surname."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "name_first",
+        "model": "employee",
+        "notes": "Employee's given/first name."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "work_email",
+        "model": "employee",
+        "notes": "Corporate email address."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "job_family",
+        "model": "employee",
+        "notes": "Job family grouping: Engineering, Design, Sales, Operations, etc."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "business_unit",
+        "model": "employee",
+        "notes": "Division or business unit within the organization. \"EMEA\", a product line, a geographical region."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "pnl_category",
+        "model": "employee",
+        "notes": "Profit & loss line item classification."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "level",
+        "model": "employee",
+        "notes": "Job level for compensation bands: L1, L2, IC3, M1, etc."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "ref",
+        "model": "position",
+        "notes": "Unique position reference. Often a code like POS-001 or an alphanumeric ID."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "name",
+        "model": "position",
+        "notes": "Descriptive name for the budgeted position. \"Senior Engineer\", \"Marketing Manager\", etc."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "known_aliases",
+        "model": "position",
+        "notes": "Confirmed alternate position names used for deterministic import matching."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "position_status",
+        "model": "position",
+        "notes": "Open, Filled, Frozen, Eliminated, Hiring, etc."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "base_salary",
+        "model": "position",
+        "notes": "Budgeted base salary for the position. Currency amount."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "target_bonus",
+        "model": "position",
+        "notes": "Budgeted target bonus amount."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "target_commission",
+        "model": "position",
+        "notes": "Budgeted target commission amount."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "start_date",
+        "model": "position",
+        "notes": "Expected start date for the position."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "end_date",
+        "model": "position",
+        "notes": "Expected end date for the position."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "department",
+        "model": "position",
+        "notes": "Department the position is budgeted under."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "location",
+        "model": "position",
+        "notes": "Office, city or site for the position."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "business_unit",
+        "model": "position",
+        "notes": "Business unit the position belongs to."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "job_family",
+        "model": "position",
+        "notes": "Job family grouping for the position."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "level",
+        "model": "position",
+        "notes": "Job or compensation level for the position."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "annual_equity_value",
+        "model": "position",
+        "notes": "Budgeted annual equity value."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "benefits_actual",
+        "model": "position",
+        "notes": "Actual benefits cost for the position."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "taxes_actual",
+        "model": "position",
+        "notes": "Actual employer tax cost."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "pnl_category",
+        "model": "position",
+        "notes": "P&L line item classification for this position's cost."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "employee",
+        "model": "org_assignment",
+        "notes": "Employee occupying or participating in the assignment."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "position",
+        "model": "org_assignment",
+        "notes": "Position occupied or planned by the assignment."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "reports_to_employee",
+        "model": "org_assignment",
+        "notes": "Preferred manager target when a human manager is known."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "reports_to_position",
+        "model": "org_assignment",
+        "notes": "Fallback manager target for empty-org planning."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "start_date",
+        "model": "org_assignment",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "end_date",
+        "model": "org_assignment",
+        "notes": null
+      }
+    ],
+    "inverse_relations": [],
+    "many_relations": [],
+    "model_metadata": [
+      {
+        "field_groups": [],
+        "model": "department",
+        "notes": null
+      },
+      {
+        "field_groups": [],
+        "model": "location",
+        "notes": null
+      },
+      {
+        "field_groups": [],
+        "model": "level",
+        "notes": null
+      },
+      {
+        "field_groups": [],
+        "model": "business_unit",
+        "notes": null
+      },
+      {
+        "field_groups": [],
+        "model": "job_family",
+        "notes": null
+      },
+      {
+        "field_groups": [],
+        "model": "pnl_category",
+        "notes": null
+      },
+      {
+        "field_groups": [
+          {
+            "fields": ["ref", "name", "known_aliases", "employment_status", "title"],
+            "id": "summary",
+            "label": "Summary"
+          },
+          {
+            "fields": [
+              "department",
+              "location",
+              "job_family",
+              "business_unit",
+              "pnl_category",
+              "level"
+            ],
+            "id": "organization",
+            "label": "Organization"
+          },
+          {
+            "fields": ["start_date"],
+            "id": "employment",
+            "label": "Employment"
+          },
+          {
+            "fields": ["base_salary", "target_bonus", "target_commission"],
+            "id": "compensation",
+            "label": "Compensation"
+          },
+          {
+            "fields": ["name_last", "name_first", "work_email"],
+            "id": "personal",
+            "label": "Personal"
+          },
+          {
+            "fields": ["end_date"],
+            "id": "departure",
+            "label": "Departure"
+          }
+        ],
+        "model": "employee",
+        "notes": null
+      },
+      {
+        "field_groups": [
+          {
+            "fields": ["ref", "name", "known_aliases", "position_status"],
+            "id": "summary",
+            "label": "Summary"
+          },
+          {
+            "fields": [
+              "department",
+              "location",
+              "business_unit",
+              "job_family",
+              "level",
+              "pnl_category"
+            ],
+            "id": "organization",
+            "label": "Organization"
+          },
+          {
+            "fields": ["start_date", "end_date"],
+            "id": "timing",
+            "label": "Timing"
+          },
+          {
+            "fields": [
+              "base_salary",
+              "target_bonus",
+              "target_commission",
+              "annual_equity_value",
+              "benefits_actual",
+              "taxes_actual"
+            ],
+            "id": "budget",
+            "label": "Budget"
+          }
+        ],
+        "model": "position",
+        "notes": null
+      },
+      {
+        "field_groups": [
+          {
+            "fields": ["employee", "position"],
+            "id": "assignment",
+            "label": "Assignment"
+          },
+          {
+            "fields": ["reports_to_employee", "reports_to_position"],
+            "id": "reporting",
+            "label": "Reporting"
+          },
+          {
+            "fields": ["start_date", "end_date"],
+            "id": "timing",
+            "label": "Timing"
+          }
+        ],
+        "model": "org_assignment",
+        "notes": null
+      }
+    ],
+    "seed_change_sets": [
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "department_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-department-engineering",
+        "notes": "Seed department Engineering",
+        "seed_identity": "48478d2b3c680fd4c5c296425fb42842ecaf8eca80be0e3420f2becbf674ebb6",
+        "seed_record_ids": ["8d0901fe-69e3-5e7a-b02c-40ca2171893e"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "department",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "engineering"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["eng"]
+              },
+              "name": {
+                "type": "text",
+                "value": "Engineering"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "department_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-department-product",
+        "notes": "Seed department Product",
+        "seed_identity": "89a4aefe243cc515610cf538cb345523555d58fa606b9b847e34da8f57692e72",
+        "seed_record_ids": ["5bf33854-9b6d-54d0-b3eb-c739854f4b92"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "department",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "product"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["prod"]
+              },
+              "name": {
+                "type": "text",
+                "value": "Product"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "department_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-department-design",
+        "notes": "Seed department Design",
+        "seed_identity": "0470b794d2ca5aae4955bb1cf940e357056e90af304a6275fb26e1829d878451",
+        "seed_record_ids": ["e30dc7e3-511c-5e50-ae50-2dbb72e37928"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "department",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "design"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["creative"]
+              },
+              "name": {
+                "type": "text",
+                "value": "Design"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "department_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-department-sales",
+        "notes": "Seed department Sales",
+        "seed_identity": "b7d369c3f87a613f4906ddc39bf545229bbfb10b0b6286535d47fa3f87c79ff3",
+        "seed_record_ids": ["7c960cd7-247a-506f-9a9b-282de24a493f"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "department",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "sales"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["gtm"]
+              },
+              "name": {
+                "type": "text",
+                "value": "Sales"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "department_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-department-operations",
+        "notes": "Seed department Operations",
+        "seed_identity": "422b0dfe0e79fc8c75f90fe87730a107981ca52c2815c92ace8d5a2e2ecaee37",
+        "seed_record_ids": ["fbbf3db0-26dd-5073-b9bb-3a841743a6b5"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "department",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "operations"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["ops"]
+              },
+              "name": {
+                "type": "text",
+                "value": "Operations"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "location_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-location-san_francisco_ca",
+        "notes": "Seed location San Francisco, CA",
+        "seed_identity": "af8170c52e7501eedc65a816c144a0e5939dabd8ff6104f4687fd8518ffd0ede",
+        "seed_record_ids": ["a5a829da-f7df-5fc8-bbe3-89f395519e24"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "location",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "san_francisco_ca"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["SF HQ"]
+              },
+              "name": {
+                "type": "text",
+                "value": "San Francisco, CA"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "location_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-location-new_york_ny",
+        "notes": "Seed location New York, NY",
+        "seed_identity": "d79d95481c4c964fa8a5634ad26afc50591a23010c98e47fab1c4a71380be942",
+        "seed_record_ids": ["1e22f3eb-6140-52b6-b172-1ec08387f346"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "location",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "new_york_ny"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["NYC"]
+              },
+              "name": {
+                "type": "text",
+                "value": "New York, NY"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "location_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-location-remote_us",
+        "notes": "Seed location Remote (US)",
+        "seed_identity": "0e1f9faf646eb0e5f9070c05fee3e6636e984186dcde55a91cb9ff0c914712e0",
+        "seed_record_ids": ["9be07de2-bcbb-5bf6-9094-857d8e32773d"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "location",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "remote_us"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["Remote - US"]
+              },
+              "name": {
+                "type": "text",
+                "value": "Remote (US)"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "location_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-location-chicago_il",
+        "notes": "Seed location Chicago, IL",
+        "seed_identity": "d8b7e0f9aedc66ff2b4883a4412893592aca4c52bd9df636d2524735e862eb3f",
+        "seed_record_ids": ["c7406661-59f9-5f86-969d-31d01ab14b1e"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "location",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "chicago_il"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": []
+              },
+              "name": {
+                "type": "text",
+                "value": "Chicago, IL"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "location_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-location-austin_tx",
+        "notes": "Seed location Austin, TX",
+        "seed_identity": "5c2931227d16efddee3f500670e4a282695416ee4ec2624d4633e33053e42ed5",
+        "seed_record_ids": ["bbc0838f-e660-5ea1-842e-3659110ebd54"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "location",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "austin_tx"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": []
+              },
+              "name": {
+                "type": "text",
+                "value": "Austin, TX"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "level_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-level-l3",
+        "notes": "Seed level L3",
+        "seed_identity": "de2328e515ec3ddc15dd68c24eaef23643eaa2af2cab324ad5c4974e4d8207de",
+        "seed_record_ids": ["5d0e43eb-bc31-5265-ba63-58a020cba89d"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "level",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "l3"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["IC3"]
+              },
+              "name": {
+                "type": "text",
+                "value": "L3"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "level_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-level-l4",
+        "notes": "Seed level L4",
+        "seed_identity": "0a4550ea169921b4a745691c8b21a4f3db2c167cf536874f011e84309e8f0d00",
+        "seed_record_ids": ["8ca5dad7-93c5-5885-a668-c7126def46e5"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "level",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "l4"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["IC4"]
+              },
+              "name": {
+                "type": "text",
+                "value": "L4"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "level_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-level-l5",
+        "notes": "Seed level L5",
+        "seed_identity": "95b997c4109eddff1f9b7d41b225e5e72f1a8be1d72692717e7654d3b70526d7",
+        "seed_record_ids": ["4d3a43e9-5f17-5a58-8fb6-926c74e52172"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "level",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "l5"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["IC5"]
+              },
+              "name": {
+                "type": "text",
+                "value": "L5"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "level_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-level-l6",
+        "notes": "Seed level L6",
+        "seed_identity": "d17ef79333b4e5147d71fc4b7769020e5065db023bfb1a00a6b65b22741fb53b",
+        "seed_record_ids": ["d0d6f0ca-4529-579f-9346-9ec5fc0e6b00"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "level",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "l6"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["IC6"]
+              },
+              "name": {
+                "type": "text",
+                "value": "L6"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "business_unit_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-business_unit-product_engineering",
+        "notes": "Seed business_unit Product & Engineering",
+        "seed_identity": "9ef83ae4e8b1286135121b78f5633119f281ab8cdc39bb2282bde467ddc95cf1",
+        "seed_record_ids": ["4be1e624-ca61-5245-9fac-543bd8fdad08"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "business_unit",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "product_engineering"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": []
+              },
+              "name": {
+                "type": "text",
+                "value": "Product & Engineering"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "business_unit_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-business_unit-go_to_market",
+        "notes": "Seed business_unit Go To Market",
+        "seed_identity": "5bdf3df84c5d8ddc8eacb9c4eb9278d8fb166773c93d72044201c26a75fd3310",
+        "seed_record_ids": ["cb39c5b3-fadf-5091-93fd-8c507305ddcf"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "business_unit",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "go_to_market"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["GTM"]
+              },
+              "name": {
+                "type": "text",
+                "value": "Go To Market"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "business_unit_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-business_unit-operations",
+        "notes": "Seed business_unit Operations",
+        "seed_identity": "f9dec76bfd91d42efb1c258f532d97c4eedd4a35d30c49af3f9ed2f897cf0b72",
+        "seed_record_ids": ["867ed45a-ff5c-5ef2-b3c2-f641747604ea"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "business_unit",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "operations"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["Ops"]
+              },
+              "name": {
+                "type": "text",
+                "value": "Operations"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "job_family_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-job_family-engineering",
+        "notes": "Seed job_family Engineering",
+        "seed_identity": "7409ef9f28331ad4af5870e4374876591e8ab0dcb825bab148eb93bd6105d823",
+        "seed_record_ids": ["e76b97d4-4219-5e2a-adf0-7d9138b3487c"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "job_family",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "engineering"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": []
+              },
+              "name": {
+                "type": "text",
+                "value": "Engineering"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "job_family_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-job_family-product",
+        "notes": "Seed job_family Product",
+        "seed_identity": "9e628fe2d1b53e9721f65e6a8b950a64c9b65efe8aa492efe93e289ce16533bc",
+        "seed_record_ids": ["a14234a6-7dc4-5ffc-8502-0130d3b8b95d"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "job_family",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "product"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": []
+              },
+              "name": {
+                "type": "text",
+                "value": "Product"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "job_family_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-job_family-design",
+        "notes": "Seed job_family Design",
+        "seed_identity": "a0ecc18c3bfc261d7a3a37941488a13d5f328ef087670d6a3e742e876e9755d7",
+        "seed_record_ids": ["1599d6c0-02a8-5ea9-996b-f1e765336690"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "job_family",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "design"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": []
+              },
+              "name": {
+                "type": "text",
+                "value": "Design"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "job_family_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-job_family-sales",
+        "notes": "Seed job_family Sales",
+        "seed_identity": "bc9cbd461f2a042e6bdad126d9a9f8d9e38751e365770cdcc61dd338d671e35e",
+        "seed_record_ids": ["45c44e42-3661-5520-859a-23428fe58d1b"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "job_family",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "sales"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": []
+              },
+              "name": {
+                "type": "text",
+                "value": "Sales"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "job_family_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-job_family-talent",
+        "notes": "Seed job_family Talent",
+        "seed_identity": "0dd288e871e3700c400d0bd2853a1eb10a60db866508cba58db5bb1bd3ee1e2e",
+        "seed_record_ids": ["5a269302-2a79-5b39-bc0f-47c4dc937ab0"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "job_family",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "talent"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["Recruiting"]
+              },
+              "name": {
+                "type": "text",
+                "value": "Talent"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "pnl_category_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-pnl_category-r_and_d",
+        "notes": "Seed pnl_category R&D",
+        "seed_identity": "6652a8d3326b02f06064a7f28b4c2b0a3f24c3999a38b29e2e38fff34e96c7b8",
+        "seed_record_ids": ["fe296cf2-3560-5599-ab7e-1a95110e5365"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "pnl_category",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "r_and_d"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["r-and-d"]
+              },
+              "name": {
+                "type": "text",
+                "value": "R&D"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "pnl_category_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-pnl_category-sales_marketing",
+        "notes": "Seed pnl_category Sales & Marketing",
+        "seed_identity": "9710f4a27fdd55b0e447d30b7e4154f7755d75ae0c331299477880afc50ba0c7",
+        "seed_record_ids": ["b7fe3a41-a789-5f50-b6a4-d69ad27c5682"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "pnl_category",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "sales_marketing"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["sales-marketing"]
+              },
+              "name": {
+                "type": "text",
+                "value": "Sales & Marketing"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "actor_id": "apps/hc",
+        "change_type_id": "pnl_category_update",
+        "idempotency_key": "hc-seed-hc-status-field-renames-pnl_category-g_and_a",
+        "notes": "Seed pnl_category General & Administrative",
+        "seed_identity": "484ebc218922f5f665adc0af029ede6ae6f2f77a1935ff1b8ab50e0e793e68d7",
+        "seed_record_ids": ["b575c96c-bf4f-5262-b0f4-756b60edbc39"],
+        "source_kind": "hc_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "pnl_category",
+            "provenance": {
+              "source": "apps/hc seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "g_and_a"
+            },
+            "tombstones_record": false,
+            "values": {
+              "known_aliases": {
+                "type": "text_list",
+                "value": ["g-and-a"]
+              },
+              "name": {
+                "type": "text",
+                "value": "General & Administrative"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "app_id": "hc",
+    "change_types": [
+      {
+        "id": "department_update",
+        "is_import_default": true,
+        "label": "Department update",
+        "required": [],
+        "target_model": "department",
+        "touches": []
+      },
+      {
+        "id": "location_update",
+        "is_import_default": true,
+        "label": "Location update",
+        "required": [],
+        "target_model": "location",
+        "touches": []
+      },
+      {
+        "id": "level_update",
+        "is_import_default": true,
+        "label": "Level update",
+        "required": [],
+        "target_model": "level",
+        "touches": []
+      },
+      {
+        "id": "business_unit_update",
+        "is_import_default": true,
+        "label": "Business unit update",
+        "required": [],
+        "target_model": "business_unit",
+        "touches": []
+      },
+      {
+        "id": "job_family_update",
+        "is_import_default": true,
+        "label": "Job family update",
+        "required": [],
+        "target_model": "job_family",
+        "touches": []
+      },
+      {
+        "id": "pnl_category_update",
+        "is_import_default": true,
+        "label": "P&L category update",
+        "required": [],
+        "target_model": "pnl_category",
+        "touches": []
+      },
+      {
+        "id": "employee_update",
+        "is_import_default": true,
+        "label": "Employee update",
+        "required": [],
+        "target_model": "employee",
+        "touches": []
+      },
+      {
+        "id": "position_update",
+        "is_import_default": true,
+        "label": "Position update",
+        "required": [],
+        "target_model": "position",
+        "touches": []
+      },
+      {
+        "id": "position_status_change",
+        "label": "Position status change",
+        "required": [],
+        "target_model": "position",
+        "touches": ["position_status", "start_date", "end_date"]
+      },
+      {
+        "id": "position_budget_change",
+        "label": "Position budget change",
+        "required": [],
+        "target_model": "position",
+        "touches": [
+          "base_salary",
+          "target_bonus",
+          "target_commission",
+          "annual_equity_value",
+          "benefits_actual",
+          "taxes_actual",
+          "pnl_category"
+        ]
+      },
+      {
+        "id": "position_structure_change",
+        "label": "Position structure change",
+        "required": [],
+        "target_model": "position",
+        "touches": ["department", "location", "business_unit", "job_family", "level"]
+      },
+      {
+        "id": "org_assignment_change",
+        "is_import_default": true,
+        "label": "Org assignment change",
+        "required": [],
+        "target_model": "org_assignment",
+        "touches": [
+          "employee",
+          "position",
+          "reports_to_employee",
+          "reports_to_position",
+          "start_date",
+          "end_date"
+        ]
+      }
+    ],
+    "custom_fields": [],
+    "customer_id": "hc",
+    "models": [
+      {
+        "display_field_id": "name",
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": true
+        },
+        "fields": [
+          {
+            "id": "name",
+            "is_unique": true,
+            "label": "Name",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "known_aliases",
+            "is_unique": false,
+            "label": "Aliases",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "known_aliases"
+          }
+        ],
+        "id": "department",
+        "kind": "lookup",
+        "label": "Department",
+        "lifecycle": "active",
+        "management": "tenant_managed",
+        "many_relations": [],
+        "origin": "app"
+      },
+      {
+        "display_field_id": "name",
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": true
+        },
+        "fields": [
+          {
+            "id": "name",
+            "is_unique": true,
+            "label": "Name",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "known_aliases",
+            "is_unique": false,
+            "label": "Aliases",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "known_aliases"
+          }
+        ],
+        "id": "location",
+        "kind": "lookup",
+        "label": "Location",
+        "lifecycle": "active",
+        "management": "tenant_managed",
+        "many_relations": [],
+        "origin": "app"
+      },
+      {
+        "display_field_id": "name",
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": true
+        },
+        "fields": [
+          {
+            "id": "name",
+            "is_unique": true,
+            "label": "Name",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "known_aliases",
+            "is_unique": false,
+            "label": "Aliases",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "known_aliases"
+          }
+        ],
+        "id": "level",
+        "kind": "lookup",
+        "label": "Level",
+        "lifecycle": "active",
+        "management": "tenant_managed",
+        "many_relations": [],
+        "origin": "app"
+      },
+      {
+        "display_field_id": "name",
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": true
+        },
+        "fields": [
+          {
+            "id": "name",
+            "is_unique": true,
+            "label": "Name",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "known_aliases",
+            "is_unique": false,
+            "label": "Aliases",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "known_aliases"
+          }
+        ],
+        "id": "business_unit",
+        "kind": "lookup",
+        "label": "Business Unit",
+        "lifecycle": "active",
+        "management": "tenant_managed",
+        "many_relations": [],
+        "origin": "app"
+      },
+      {
+        "display_field_id": "name",
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": true
+        },
+        "fields": [
+          {
+            "id": "name",
+            "is_unique": true,
+            "label": "Name",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "known_aliases",
+            "is_unique": false,
+            "label": "Aliases",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "known_aliases"
+          }
+        ],
+        "id": "job_family",
+        "kind": "lookup",
+        "label": "Job Family",
+        "lifecycle": "active",
+        "management": "tenant_managed",
+        "many_relations": [],
+        "origin": "app"
+      },
+      {
+        "display_field_id": "name",
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": true
+        },
+        "fields": [
+          {
+            "id": "name",
+            "is_unique": true,
+            "label": "Name",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "known_aliases",
+            "is_unique": false,
+            "label": "Aliases",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "known_aliases"
+          }
+        ],
+        "id": "pnl_category",
+        "kind": "lookup",
+        "label": "P&L Category",
+        "lifecycle": "active",
+        "management": "tenant_managed",
+        "many_relations": [],
+        "origin": "app"
+      },
+      {
+        "display_field_id": null,
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": true
+        },
+        "fields": [
+          {
+            "id": "ref",
+            "is_unique": true,
+            "label": "Employee Ref",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "name",
+            "is_unique": false,
+            "label": "Full Name",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "known_aliases",
+            "is_unique": false,
+            "label": "Known Aliases",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "known_aliases"
+          },
+          {
+            "id": "employment_status",
+            "is_unique": false,
+            "label": "Employment Status",
+            "lifecycle": "active",
+            "management": "tenant_managed",
+            "option_set": [
+              {
+                "aliases": ["Current"],
+                "id": "active",
+                "label": "Active",
+                "lifecycle": "active",
+                "management": "tenant_managed",
+                "origin": "app"
+              },
+              {
+                "aliases": ["Onboarding", "Prehire"],
+                "id": "pending",
+                "label": "Pending",
+                "lifecycle": "active",
+                "management": "tenant_managed",
+                "origin": "app"
+              },
+              {
+                "aliases": ["Terminated", "Retired"],
+                "id": "inactive",
+                "label": "Inactive",
+                "lifecycle": "active",
+                "management": "tenant_managed",
+                "origin": "app"
+              },
+              {
+                "aliases": ["Leave", "PTO"],
+                "id": "on_leave",
+                "label": "On Leave",
+                "lifecycle": "active",
+                "management": "tenant_managed",
+                "origin": "app"
+              }
+            ],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "enum"
+          },
+          {
+            "id": "title",
+            "is_unique": false,
+            "label": "Job Title",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "department",
+            "is_unique": false,
+            "label": "Department",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "department",
+            "type": "relation"
+          },
+          {
+            "id": "location",
+            "is_unique": false,
+            "label": "Work Location",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "location",
+            "type": "relation"
+          },
+          {
+            "id": "start_date",
+            "is_unique": false,
+            "label": "Start Date",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "date"
+          },
+          {
+            "id": "end_date",
+            "is_unique": false,
+            "label": "Termination Date",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "date"
+          },
+          {
+            "id": "base_salary",
+            "is_unique": false,
+            "label": "Base Salary",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "money_rate"
+          },
+          {
+            "id": "target_bonus",
+            "is_unique": false,
+            "label": "Target Bonus",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "money_rate"
+          },
+          {
+            "id": "target_commission",
+            "is_unique": false,
+            "label": "Target Commission",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "money_rate"
+          },
+          {
+            "id": "name_last",
+            "is_unique": false,
+            "label": "Last Name",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "name_first",
+            "is_unique": false,
+            "label": "First Name",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "work_email",
+            "is_unique": true,
+            "label": "Work Email",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "job_family",
+            "is_unique": false,
+            "label": "Job Family",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "job_family",
+            "type": "relation"
+          },
+          {
+            "id": "business_unit",
+            "is_unique": false,
+            "label": "Business Unit",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "business_unit",
+            "type": "relation"
+          },
+          {
+            "id": "pnl_category",
+            "is_unique": false,
+            "label": "P&L Category",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "pnl_category",
+            "type": "relation"
+          },
+          {
+            "id": "level",
+            "is_unique": false,
+            "label": "Compensation Level",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "level",
+            "type": "relation"
+          }
+        ],
+        "id": "employee",
+        "kind": "entity",
+        "label": "Employee",
+        "lifecycle": "active",
+        "management": "fixed",
+        "many_relations": [],
+        "origin": "app"
+      },
+      {
+        "display_field_id": null,
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": true
+        },
+        "fields": [
+          {
+            "id": "ref",
+            "is_unique": true,
+            "label": "Position Ref",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "name",
+            "is_unique": false,
+            "label": "Position Name",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "known_aliases",
+            "is_unique": false,
+            "label": "Known Aliases",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "known_aliases"
+          },
+          {
+            "id": "position_status",
+            "is_unique": false,
+            "label": "Position Status",
+            "lifecycle": "active",
+            "management": "tenant_managed",
+            "option_set": [
+              {
+                "aliases": ["requested", "unapproved"],
+                "id": "pending",
+                "label": "Pending",
+                "lifecycle": "active",
+                "management": "tenant_managed",
+                "origin": "app"
+              },
+              {
+                "aliases": ["open"],
+                "id": "open",
+                "label": "Open",
+                "lifecycle": "active",
+                "management": "tenant_managed",
+                "origin": "app"
+              },
+              {
+                "aliases": ["filled"],
+                "id": "filled",
+                "label": "Filled",
+                "lifecycle": "active",
+                "management": "tenant_managed",
+                "origin": "app"
+              },
+              {
+                "aliases": ["on_hold", "on-hold", "paused"],
+                "id": "paused",
+                "label": "Paused",
+                "lifecycle": "active",
+                "management": "tenant_managed",
+                "origin": "app"
+              },
+              {
+                "aliases": ["closed", "archived", "eliminated"],
+                "id": "closed",
+                "label": "Closed",
+                "lifecycle": "active",
+                "management": "tenant_managed",
+                "origin": "app"
+              }
+            ],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "enum"
+          },
+          {
+            "id": "base_salary",
+            "is_unique": false,
+            "label": "Budgeted Base",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "money_rate"
+          },
+          {
+            "id": "target_bonus",
+            "is_unique": false,
+            "label": "Budgeted Bonus",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "money_rate"
+          },
+          {
+            "id": "target_commission",
+            "is_unique": false,
+            "label": "Budgeted Commission",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "money_rate"
+          },
+          {
+            "id": "start_date",
+            "is_unique": false,
+            "label": "Budget Start",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "date"
+          },
+          {
+            "id": "end_date",
+            "is_unique": false,
+            "label": "Budget End",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "date"
+          },
+          {
+            "id": "department",
+            "is_unique": false,
+            "label": "Department",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "department",
+            "type": "relation"
+          },
+          {
+            "id": "location",
+            "is_unique": false,
+            "label": "Work Location",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "location",
+            "type": "relation"
+          },
+          {
+            "id": "business_unit",
+            "is_unique": false,
+            "label": "Business Unit",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "business_unit",
+            "type": "relation"
+          },
+          {
+            "id": "job_family",
+            "is_unique": false,
+            "label": "Job Family",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "job_family",
+            "type": "relation"
+          },
+          {
+            "id": "level",
+            "is_unique": false,
+            "label": "Level",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "level",
+            "type": "relation"
+          },
+          {
+            "id": "annual_equity_value",
+            "is_unique": false,
+            "label": "Equity Budget ($)",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "money_rate"
+          },
+          {
+            "id": "benefits_actual",
+            "is_unique": false,
+            "label": "Benefits Actual",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "money_rate"
+          },
+          {
+            "id": "taxes_actual",
+            "is_unique": false,
+            "label": "Employer Taxes Actual",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "money_rate"
+          },
+          {
+            "id": "pnl_category",
+            "is_unique": false,
+            "label": "P&L Category",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "pnl_category",
+            "type": "relation"
+          }
+        ],
+        "id": "position",
+        "kind": "entity",
+        "label": "Position",
+        "lifecycle": "active",
+        "management": "fixed",
+        "many_relations": [],
+        "origin": "app"
+      },
+      {
+        "display_field_id": null,
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": false
+        },
+        "fields": [
+          {
+            "id": "employee",
+            "is_unique": false,
+            "label": "Employee",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "employee",
+            "type": "relation"
+          },
+          {
+            "id": "position",
+            "is_unique": false,
+            "label": "Position",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "position",
+            "type": "relation"
+          },
+          {
+            "id": "reports_to_employee",
+            "is_unique": false,
+            "label": "Manager",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "employee",
+            "type": "relation"
+          },
+          {
+            "id": "reports_to_position",
+            "is_unique": false,
+            "label": "Reports To Position",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "position",
+            "type": "relation"
+          },
+          {
+            "id": "start_date",
+            "is_unique": false,
+            "label": "Assignment Start",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "date"
+          },
+          {
+            "id": "end_date",
+            "is_unique": false,
+            "label": "Assignment End",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "date"
+          }
+        ],
+        "id": "org_assignment",
+        "kind": "entity",
+        "label": "Org Assignment",
+        "lifecycle": "active",
+        "management": "fixed",
+        "many_relations": [],
+        "origin": "app"
+      }
+    ],
+    "version": "2026-11-04.draft-records-v121"
+  }
+}

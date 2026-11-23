@@ -1,0 +1,6 @@
+@import "../packages/design-systems/core/tokens/theme.css";
+@source "../packages/design-systems/core/components/**/*.{ts,tsx}";
+@source "../packages/design-systems/core/compositions/**/*.{ts,tsx}";
+@source "../packages/design-systems/core/stories/**/*.{ts,tsx}";
+@source "../packages/modules/**/*.{ts,tsx}";
+@source "../packages/canvas/**/*.{ts,tsx}";

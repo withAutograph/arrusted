@@ -1,0 +1,6 @@
+#!/bin/bash
+#MISE description="Run every generated SQL parity and runtime target against PostgreSQL"
+
+set -euo pipefail
+
+exec /bin/bash packages/schema-compiler/scripts/run-sql-parity.sh

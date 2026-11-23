@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CSV Import — Mid-Flow (3-panel + tally + rear-view)</title>
+    <style>
+      /* Tokens mirror packages/design-systems/core/tokens/theme.css.
+         Keep semantic names in sync; if tokens diverge here, update the
+         real theme.css first and copy the values back. */
+      :root {
+        --color-blue-500: #8192ff;
+        --color-blue-600: #6b7de2;
+        --color-blue-50: #f5f4ff;
+        --color-ink-900: #292929;
+        --color-ink-700: #4e5253;
+        --color-ink-500: #747778;
+        --color-ink-300: #a9adaf;
+        --color-canvas: #fafaf9;
+        --color-surface: #fefefe;
+        --color-border: rgba(41, 41, 41, 0.08);
+        --color-border-strong: rgba(41, 41, 41, 0.16);
+        --color-success: #17b196;
+        --color-success-bg: #e6fbf7;
+        --color-warning: #eb8526;
+        --color-warning-bg: #ffeede;
+
+        --color-bg-page: var(--color-canvas);
+        --color-bg-surface: var(--color-surface);
+        --color-bg-subtle: #f8f8f8;
+        --color-bg-selected: var(--color-blue-50);
+        --color-bg-hover: rgba(41, 41, 41, 0.04);
+        --color-bg-muted: rgba(41, 41, 41, 0.06);
+        --color-text-primary: var(--color-ink-900);
+        --color-text-secondary: var(--color-ink-700);
+        --color-text-muted: var(--color-ink-500);
+        --color-action-primary: var(--color-blue-500);
+        --color-action-primary-hover: var(--color-blue-600);
+        --color-border-subtle: var(--color-border);
+        --color-border-strong: var(--color-border-strong);
+        --color-status-success: var(--color-success);
+        --color-status-success-bg: var(--color-success-bg);
+        --color-status-warning: var(--color-warning);
+        --color-status-warning-bg: var(--color-warning-bg);
+
+        --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+        --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+        --font-weight-normal: 400;
+        --font-weight-medium: 500;
+        --font-weight-semibold: 600;
+
+        --text-micro: 11px;
+        --text-caption: 12px;
+        --text-control-sm: 13px;
+        --text-body: 14px;
+        --text-title: 16px;
+        --text-section-title: 18px;
+        --text-page-title: 24px;
+
+        --tracking-label: 0.06em;
+        --tracking-micro: 0.08em;
+
+        --space-1: 4px; --space-1-5: 6px; --space-2: 8px; --space-2-5: 10px;
+        --space-3: 12px; --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
+
+        --radius-xs: 4px;
+        --radius-control: 8px;
+        --radius-panel: 10px;
+        --radius-shell: 12px;
+        --radius-pill: 9999px;
+
+        --shadow-subtle: 0 1px 2px rgba(41, 41, 41, 0.06);
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; height: 100%; }
+      body { font-family: var(--font-sans); font-size: var(--text-body); color: var(--color-text-primary); background: var(--color-bg-page); line-height: 1.55; }
+      .shell { display: flex; flex-direction: column; height: 100vh; }
+      .topbar { display: flex; align-items: center; gap: var(--space-4); background: var(--color-bg-surface); border-bottom: 1px solid var(--color-border-subtle); padding: 0 var(--space-6); height: 56px; flex-shrink: 0; }
+      .topbar-brand { font-weight: var(--font-weight-semibold); }
+      .topbar-eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: var(--text-caption); color: var(--color-text-muted); font-weight: var(--font-weight-medium); }
+      .topbar-meta { margin-left: auto; font-size: var(--text-caption); color: var(--color-text-muted); display: flex; gap: var(--space-2); align-items: center; }
+      .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-action-primary); animation: pulse 1.4s ease-in-out infinite; }
+      @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+      .filebar { background: var(--color-bg-surface); border-bottom: 1px solid var(--color-border-subtle); padding: var(--space-2) var(--space-6); display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-caption); color: var(--color-text-muted); }
+      .filebar code { font-family: var(--font-mono); background: var(--color-bg-muted); padding: 1px 6px; border-radius: var(--radius-xs); color: var(--color-text-secondary); }
+      .filebar-actions { margin-left: auto; display: flex; gap: var(--space-2); }
+
+      .accordion { flex: 1; display: grid; grid-template-columns: 240px 1fr 240px; gap: 0; background: var(--color-bg-page); overflow: hidden; }
+      .col { background: var(--color-bg-surface); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+      .col + .col { border-left: 1px solid var(--color-border-subtle); }
+      .col.collapsed { background: var(--color-bg-muted); cursor: pointer; transition: background 120ms; }
+      .col.collapsed:hover { background: var(--color-bg-hover); }
+      .col.active::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--color-action-primary); }
+      .col-header { padding: var(--space-5); border-bottom: 1px solid var(--color-border-subtle); flex-shrink: 0; }
+      .col.collapsed .col-header { border-bottom: none; padding-bottom: 0; }
+      .col-step { font-size: var(--text-caption); color: var(--color-text-muted); font-weight: var(--font-weight-medium); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: var(--space-2); display: flex; align-items: center; gap: var(--space-2); }
+      .col-status { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: var(--font-weight-semibold); }
+      .col-status.done { background: var(--color-status-success-bg); color: var(--color-status-success); }
+      .col-status.active { background: var(--color-action-primary); color: white; }
+      .col-status.pending { background: var(--color-bg-muted); color: var(--color-text-muted); border: 1px solid var(--color-border-strong); }
+      .col-title { font-size: var(--text-title); font-weight: var(--font-weight-semibold); margin: 0; }
+      .col-summary { font-size: var(--text-caption); color: var(--color-text-secondary); margin-top: var(--space-2); }
+      .col-summary strong { color: var(--color-text-primary); }
+      .col-cta { margin-top: var(--space-3); font-size: var(--text-caption); color: var(--color-action-primary); }
+      .col-body { flex: 1; overflow-y: auto; padding: var(--space-5); }
+      .col.collapsed .col-body { padding-top: 0; }
+      .col.collapsed .col-body-content { display: none; }
+      .col.collapsed .col-body-collapsed { display: block; margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--color-border-subtle); font-size: var(--text-caption); color: var(--color-text-muted); }
+      .col-body-collapsed { display: none; }
+      .col-body-collapsed-row { display: flex; gap: var(--space-2); margin-bottom: var(--space-2); }
+      .col-body-collapsed-row span:first-child { color: var(--color-status-success); flex-shrink: 0; }
+
+      /* === Tally: each row is a completed step. Click to expand inline.
+             Reverting from any row wipes everything after it and restarts. === */
+      .tally { margin-bottom: var(--space-5); display: flex; flex-direction: column; gap: var(--space-1); }
+      .tally-heading { font-size: var(--text-body); color: var(--color-text-secondary); margin: 0 0 var(--space-3) 0; }
+      .tally-heading strong { color: var(--color-text-primary); font-weight: var(--font-weight-semibold); }
+
+      /* Collapsed row */
+      .tally-row { display: grid; grid-template-columns: 16px 1fr auto; gap: var(--space-3); align-items: center; padding: var(--space-2) var(--space-2); border-radius: var(--radius-xs); cursor: pointer; }
+      .tally-row:hover { background: var(--color-bg-muted); }
+      .tally-icon { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; flex-shrink: 0; }
+      .tally-icon.done { background: var(--color-status-success-bg); color: var(--color-status-success); }
+      .tally-icon.warn { background: var(--color-status-warning-bg); color: var(--color-status-warning); }
+      .tally-icon.pending { background: transparent; color: var(--color-text-muted); border: 1px solid var(--color-border-strong); }
+      .tally-label { font-size: var(--text-body); line-height: 1.4; color: var(--color-text-primary); }
+      .tally-label .muted { color: var(--color-text-muted); }
+      .tally-chevron { color: var(--color-text-muted); font-size: 14px; opacity: 0; transition: opacity 120ms; }
+      .tally-row:hover .tally-chevron { opacity: 1; color: var(--color-action-primary); }
+
+      /* Expanded row — same row, more chrome. Latest completed step is
+         expanded by default; older steps expand on click. Only one expanded
+         at a time. */
+      .tally-row.expanded { display: block; background: var(--color-bg-subtle); padding: var(--space-3) var(--space-4); cursor: default; }
+      .tally-row.expanded:hover { background: var(--color-bg-subtle); }
+      .tally-row.expanded .tally-collapsed-header { display: flex; gap: var(--space-3); align-items: center; margin-bottom: var(--space-2); }
+      .tally-row.expanded .tally-chevron { opacity: 1; transform: rotate(90deg); color: var(--color-text-muted); margin-left: auto; }
+      .tally-detail { font-size: var(--text-caption); color: var(--color-text-secondary); line-height: 1.55; margin: var(--space-2) 0 var(--space-3) calc(16px + var(--space-3)); }
+      .tally-detail code { font-family: var(--font-mono); font-size: 12px; background: var(--color-bg-muted); padding: 1px 4px; border-radius: 3px; }
+      .tally-actions { display: flex; gap: var(--space-4); align-items: center; margin-left: calc(16px + var(--space-3)); font-size: var(--text-caption); }
+      .tally-actions button { appearance: none; background: transparent; border: none; color: var(--color-action-primary); cursor: pointer; padding: 0; font-size: var(--text-caption); font-weight: var(--font-weight-medium); }
+      .tally-actions button:hover { text-decoration: underline; }
+      .tally-actions .revise { color: var(--color-status-warning); }
+      .tally-actions .collapse { color: var(--color-text-muted); margin-left: auto; }
+      .tally-row.expanded .tally-chevron-inline { display: none; }
+
+      /* === Windshield: current question === */
+      .working-area { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-3) 0 var(--space-5) 0; }
+      .card { background: var(--color-bg-surface); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-panel); padding: var(--space-4) var(--space-5); }
+      .card-eyebrow { font-size: var(--text-caption); color: var(--color-text-muted); font-weight: var(--font-weight-medium); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: var(--space-2); display: flex; align-items: center; gap: var(--space-2); }
+
+      /* Windshield: current question. Differentiated by subtle accent
+         background + accent eyebrow + pulsing status dot, not by a stripe. */
+      .card-current { background: var(--color-bg-selected); border-color: var(--color-action-primary); }
+      .card-current .card-eyebrow { color: var(--color-action-primary); }
+      .card-current .card-eyebrow .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-action-primary); animation: pulse 1.4s ease-in-out infinite; }
+      .current-question { font-size: var(--text-title); margin: 0 0 var(--space-3) 0; font-weight: var(--font-weight-medium); line-height: 1.45; }
+      .current-question code { font-family: var(--font-mono); background: var(--color-bg-surface); padding: 1px 6px; border-radius: 4px; font-size: 13px; }
+      .current-reasoning { color: var(--color-text-secondary); font-size: var(--text-body); margin: 0 0 var(--space-3) 0; line-height: 1.55; }
+      .current-reasoning code { font-family: var(--font-mono); background: var(--color-bg-surface); padding: 0 4px; border-radius: 3px; font-size: 13px; }
+      .current-samples-label { font-size: var(--text-caption); color: var(--color-text-muted); margin: var(--space-3) 0 var(--space-2) 0; }
+      .samples { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+      .sample { font-family: var(--font-mono); font-size: var(--text-caption); background: var(--color-bg-surface); padding: 2px var(--space-2); border-radius: var(--radius-xs); color: var(--color-text-primary); border: 1px solid var(--color-border-subtle); }
+
+      .current-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-4); align-items: center; }
+      .choice { appearance: none; border: 1px solid var(--color-border-subtle); background: var(--color-bg-surface); color: var(--color-text-primary); padding: var(--space-2) var(--space-4); border-radius: var(--radius-control); font-size: var(--text-body); font-weight: var(--font-weight-medium); cursor: pointer; }
+      .choice:hover { background: var(--color-bg-hover); border-color: var(--color-action-primary); }
+      .choice.primary { background: var(--color-action-primary); color: white; border-color: var(--color-action-primary); }
+      .choice.primary:hover { background: #4338ca; }
+      .choice.secondary { color: var(--color-text-muted); }
+      .ask-followup { margin-left: auto; appearance: none; background: transparent; border: 1px dashed var(--color-action-primary); color: var(--color-action-primary); padding: var(--space-2) var(--space-4); border-radius: var(--radius-control); font-size: var(--text-body); font-weight: var(--font-weight-medium); cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2); }
+      .ask-followup:hover { background: var(--color-bg-surface); }
+      .ask-followup-icon { font-size: 12px; }
+
+      .remaining { color: var(--color-text-muted); font-size: var(--text-caption); margin: var(--space-4) 0 0 0; }
+      .activity-toggle { font-size: var(--text-caption); color: var(--color-text-muted); cursor: pointer; padding: var(--space-3) 0; display: flex; align-items: center; gap: var(--space-2); border-top: 1px solid var(--color-border-subtle); margin-top: var(--space-5); }
+      .activity-toggle:hover { color: var(--color-action-primary); }
+
+      .btn { appearance: none; border: 1px solid var(--color-border-strong); background: var(--color-bg-surface); color: var(--color-text-primary); padding: var(--space-2) var(--space-4); border-radius: var(--radius-control); font-size: var(--text-body); font-weight: var(--font-weight-medium); cursor: pointer; }
+      .btn-sm { padding: var(--space-1) var(--space-3); font-size: var(--text-caption); }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="topbar-brand">Autograph</div>
+        <span style="color: var(--color-text-muted)">/</span>
+        <div>
+          <div class="topbar-eyebrow">HEADCOUNT · DATA SOURCES</div>
+          <div style="font-weight: var(--font-weight-medium)">Import data</div>
+        </div>
+        <div class="topbar-meta">
+          <span class="pulse-dot" aria-hidden="true"></span>
+          <span>Working on your file · 3 of 5 things sorted</span>
+        </div>
+      </header>
+      <div class="filebar" aria-label="Source file">
+        <span>File:</span>
+        <code>headcount-q1-2026.csv</code>
+        <span>·</span><span>47 rows · 12 columns</span>
+        <span>·</span><span>uploaded 14m ago</span>
+        <div class="filebar-actions"><button class="btn btn-sm">Replace file</button></div>
+      </div>
+
+      <div class="accordion">
+        <section class="col collapsed" aria-label="Imported file (collapsed)" role="button" tabindex="0">
+          <div class="col-header">
+            <div class="col-step"><span class="col-status done" aria-hidden="true">✓</span>Stage 1</div>
+            <h2 class="col-title">Imported file</h2>
+            <p class="col-summary"><strong>47 rows</strong> across <strong>12 columns</strong></p>
+            <p class="col-cta">Click to view raw data →</p>
+          </div>
+          <div class="col-body">
+            <div class="col-body-collapsed">
+              <div class="col-body-collapsed-row"><span>·</span><span>ref, name, title, dept, location, start_date, …</span></div>
+              <div class="col-body-collapsed-row"><span>·</span><span>UTF-8 encoding, comma delimiter</span></div>
+              <div class="col-body-collapsed-row"><span>·</span><span>No parse errors</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="col active" aria-label="Clean up data (active)">
+          <div class="col-header">
+            <div class="col-step"><span class="col-status active" aria-hidden="true">●</span>Stage 2 · in progress</div>
+            <h2 class="col-title">Clean up &amp; map</h2>
+            <p class="col-summary"><strong>3 of 5</strong> sorted · 1 more after this one</p>
+          </div>
+
+          <div class="col-body">
+            <div class="col-body-content">
+
+              <!-- Tally: each completed step is a row. Click any row to expand
+                   inline and see evidence / revise. Reverting from any row
+                   wipes everything after it and restarts the flow from that
+                   point. Latest completed step is expanded by default. -->
+              <section class="tally" aria-label="What I've figured out">
+                <p class="tally-heading"><strong>Here's what I have so far.</strong> Click any step to take a closer look. Changing one restarts from that point.</p>
+
+                <div class="tally-row" role="button" tabindex="0">
+                  <span class="tally-icon done">✓</span>
+                  <span class="tally-label">This file updates <strong>employees</strong>, <strong>positions</strong>, and <strong>org assignments</strong></span>
+                  <span class="tally-chevron">›</span>
+                </div>
+                <div class="tally-row" role="button" tabindex="0">
+                  <span class="tally-icon done">✓</span>
+                  <span class="tally-label"><strong>10 of 12 columns</strong> matched <span class="muted">— employee ref, name, title, department, hire date, manager, status…</span></span>
+                  <span class="tally-chevron">›</span>
+                </div>
+                <div class="tally-row" role="button" tabindex="0">
+                  <span class="tally-icon done">✓</span>
+                  <span class="tally-label">All your <strong>departments</strong> and <strong>statuses</strong> match existing values</span>
+                  <span class="tally-chevron">›</span>
+                </div>
+                <div class="tally-row" role="button" tabindex="0">
+                  <span class="tally-icon warn">!</span>
+                  <span class="tally-label"><strong>6 manager names</strong> I couldn't find in your system <span class="muted">— staged for your review on the next step</span></span>
+                  <span class="tally-chevron">›</span>
+                </div>
+                <div class="tally-row" role="button" tabindex="0">
+                  <span class="tally-icon done">✓</span>
+                  <span class="tally-label"><strong>41 people</strong> already in your system, <strong>6 new</strong> will be added</span>
+                  <span class="tally-chevron">›</span>
+                </div>
+
+                <!-- LATEST completed step, expanded by default. Acts as
+                     "just decided" review — same row, different state. -->
+                <div class="tally-row expanded" role="region" aria-label="Most recent step (expanded)">
+                  <div class="tally-collapsed-header">
+                    <span class="tally-icon done">✓</span>
+                    <span class="tally-label">Cleaned up <strong>6 dates</strong> that were in a different format</span>
+                    <span class="tally-chevron">›</span>
+                  </div>
+                  <p class="tally-detail">
+                    A few rows used <code>5/1/26</code>-style; I rewrote them to match the rest of your file. Affected 6 of 47 rows.
+                  </p>
+                  <div class="tally-actions">
+                    <button>See the rows that changed</button>
+                    <button class="revise">Revise (restart from here)</button>
+                    <button class="collapse">Collapse ✕</button>
+                  </div>
+                </div>
+
+                <!-- Pending step (the one the agent is asking about now) -->
+                <div class="tally-row" role="button" tabindex="0">
+                  <span class="tally-icon pending">○</span>
+                  <span class="tally-label"><strong>Location</strong> — waiting on your call (see below)</span>
+                  <span class="tally-chevron">›</span>
+                </div>
+              </section>
+
+              <!-- WINDSHIELD: current question, lighter visuals, follow-up promoted -->
+              <div class="working-area">
+                <article class="card card-current" aria-label="Current question">
+                  <div class="card-eyebrow"><span class="status-dot"></span> I need your call</div>
+                  <p class="current-question">
+                    Is <code>location</code> the employee's work location, or the position's location?
+                  </p>
+                  <p class="current-reasoning">
+                    Both employees and positions have a location. Most values look like cities or "Remote" (which leans employee), but a few look like position codes — <code>HQ-SF-Eng-3</code>. Tell me which one and I'll keep going.
+                  </p>
+                  <p class="current-samples-label">Sample values from your file</p>
+                  <div class="samples">
+                    <span class="sample">SF</span>
+                    <span class="sample">San Francisco</span>
+                    <span class="sample">Remote — US</span>
+                    <span class="sample">London</span>
+                    <span class="sample">HQ-SF-Eng-3</span>
+                    <span class="sample">NYC</span>
+                  </div>
+                  <div class="current-actions">
+                    <button class="choice primary">Employee work location</button>
+                    <button class="choice">Position location</button>
+                    <button class="choice">Both — split the values</button>
+                    <button class="choice secondary">Don't map this column</button>
+                    <button class="ask-followup">
+                      <span class="ask-followup-icon">💬</span>
+                      Ask a follow-up
+                    </button>
+                  </div>
+                </article>
+              </div>
+
+              <p class="remaining">1 more question after this one.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="col collapsed" aria-label="Preview and save (collapsed)" role="button" tabindex="0">
+          <div class="col-header">
+            <div class="col-step"><span class="col-status pending" aria-hidden="true">○</span>Stage 3</div>
+            <h2 class="col-title">Preview &amp; save</h2>
+            <p class="col-summary"><strong>39</strong> rows ready · <strong>7</strong> need a look</p>
+            <p class="col-cta">Click to see what'll save →</p>
+          </div>
+          <div class="col-body">
+            <div class="col-body-collapsed">
+              <div class="col-body-collapsed-row"><span>·</span><span>47 employees</span></div>
+              <div class="col-body-collapsed-row"><span>·</span><span>12 positions referenced</span></div>
+              <div class="col-body-collapsed-row"><span>·</span><span>3 new departments</span></div>
+              <div class="col-body-collapsed-row"><span>·</span><span>1 row needs a fix</span></div>
+              <div style="margin-top: var(--space-4); padding: var(--space-3); background: var(--color-status-warning-bg); border-radius: var(--radius-xs); color: var(--color-status-warning); font-size: var(--text-caption)">Waiting on 1 question above</div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </body>
+</html>

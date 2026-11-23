@@ -1,0 +1,82 @@
+id: ag-grid-through-editable-grid-ts
+language: TypeScript
+severity: error
+message: import AG Grid only from the editable-grid module
+note: Apps and other packages mount AG Grid through @modules/editable-grid.
+files:
+  [
+    packages/domain-libs/**/*.ts,
+    packages/**/*.ts,
+    packages/domain-libs/**/*.mts,
+    packages/**/*.mts,
+    packages/domain-libs/**/*.cts,
+    packages/**/*.cts,
+  ]
+ignores: [packages/modules/editable-grid/**]
+rule:
+  any:
+    - { all: [{ kind: import_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { all: [{ kind: import_statement }, { regex: '^import\b[\s\S]*?=\s*require\s*\(' }, { has: { matches: forbidden-source, stopBy: end } }] }
+    - { all: [{ kind: export_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { pattern: require($SOURCE) }
+    - { pattern: import($SOURCE) }
+constraints:
+  SOURCE: { matches: forbidden-source }
+utils:
+  forbidden-source:
+    all:
+      - { any: [{ kind: string }, { kind: template_string }] }
+      - { regex: '^[''"\x60]ag-grid-[^''"\x60]+[''"\x60]$' }
+---
+id: ag-grid-through-editable-grid-tsx
+language: Tsx
+severity: error
+message: import AG Grid only from the editable-grid module
+note: Apps and other packages mount AG Grid through @modules/editable-grid.
+files: [packages/domain-libs/**/*.tsx, packages/**/*.tsx]
+ignores: [packages/modules/editable-grid/**]
+rule:
+  any:
+    - { all: [{ kind: import_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { all: [{ kind: import_statement }, { regex: '^import\b[\s\S]*?=\s*require\s*\(' }, { has: { matches: forbidden-source, stopBy: end } }] }
+    - { all: [{ kind: export_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { pattern: require($SOURCE) }
+    - { pattern: import($SOURCE) }
+constraints:
+  SOURCE: { matches: forbidden-source }
+utils:
+  forbidden-source:
+    all:
+      - { any: [{ kind: string }, { kind: template_string }] }
+      - { regex: '^[''"\x60]ag-grid-[^''"\x60]+[''"\x60]$' }
+---
+id: ag-grid-through-editable-grid-js
+language: JavaScript
+severity: error
+message: import AG Grid only from the editable-grid module
+note: Apps and other packages mount AG Grid through @modules/editable-grid.
+files:
+  [
+    packages/domain-libs/**/*.js,
+    packages/domain-libs/**/*.jsx,
+    packages/domain-libs/**/*.mjs,
+    packages/domain-libs/**/*.cjs,
+    packages/**/*.js,
+    packages/**/*.jsx,
+    packages/**/*.mjs,
+    packages/**/*.cjs,
+  ]
+ignores: [packages/modules/editable-grid/**]
+rule:
+  any:
+    - { all: [{ kind: import_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { all: [{ kind: export_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { pattern: require($SOURCE) }
+    - { pattern: import($SOURCE) }
+constraints:
+  SOURCE: { matches: forbidden-source }
+utils:
+  forbidden-source:
+    all:
+      - { any: [{ kind: string }, { kind: template_string }] }
+      - { regex: '^[''"\x60]ag-grid-[^''"\x60]+[''"\x60]$' }

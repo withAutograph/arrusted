@@ -1,0 +1,74 @@
+#!/bin/sh
+#MISE description="Print local Google OAuth callback diagnostics"
+set -eu
+
+cd "$MISE_MONOREPO_ROOT"
+. .config/mise/scripts/auth/oauth-env.sh
+fnox_config="${PLATFORM_FNOX_CONFIG:-.config/fnox/local.toml}"
+fnox_profile="${PLATFORM_FNOX_PROFILE:-local}"
+
+load_secret() {
+  name="$1"
+  if [ ! -f "$fnox_config" ]; then
+    return
+  fi
+  fnox -c "$fnox_config" -P "$fnox_profile" --no-defaults \
+    get "$name" --if-missing ignore 2>/dev/null || true
+}
+
+value_or_unset() {
+  if [ -n "$1" ]; then
+    printf '%s\n' "$1"
+  else
+    printf '<unset>\n'
+  fi
+}
+
+present_or_missing() {
+  if [ -n "$1" ]; then
+    printf 'present\n'
+  else
+    printf 'missing\n'
+  fi
+}
+
+better_auth_url="${BETTER_AUTH_URL:-$(load_secret BETTER_AUTH_URL)}"
+social_providers="${VITE_PLATFORM_AUTH_SOCIAL_PROVIDERS:-$(load_secret VITE_PLATFORM_AUTH_SOCIAL_PROVIDERS)}"
+google_client_id="${GOOGLE_CLIENT_ID:-$(load_secret GOOGLE_CLIENT_ID)}"
+google_client_secret="${GOOGLE_CLIENT_SECRET:-$(load_secret GOOGLE_CLIENT_SECRET)}"
+oauth_proxy_production_url="${OAUTH_PROXY_PRODUCTION_URL:-$(load_secret OAUTH_PROXY_PRODUCTION_URL)}"
+oauth_proxy_secret="${OAUTH_PROXY_SECRET:-$(load_secret OAUTH_PROXY_SECRET)}"
+GOOGLE_CLIENT_ID="$google_client_id"
+GOOGLE_CLIENT_SECRET="$google_client_secret"
+OAUTH_PROXY_PRODUCTION_URL="$oauth_proxy_production_url"
+OAUTH_PROXY_SECRET="$oauth_proxy_secret"
+VITE_PLATFORM_AUTH_SOCIAL_PROVIDERS="$social_providers"
+
+if [ -n "$better_auth_url" ]; then
+  authorized_origin="$(printf '%s' "$better_auth_url" | sed -E 's#^([^/]*//[^/]*).*$#\1#')"
+else
+  authorized_origin="<unset>"
+fi
+
+case ",$(printf '%s' "$social_providers" | tr '[:upper:]' '[:lower:]' | tr -d ' ')," in
+  *,google,*) google_ui="enabled" ;;
+  *) google_ui="disabled" ;;
+esac
+
+cat <<EOF
+Better Auth URL: $(value_or_unset "$better_auth_url")
+Current local return origin: $authorized_origin
+Stable production Google callback: $OAUTH_STABLE_GOOGLE_CALLBACK
+GOOGLE_CLIENT_ID: $(present_or_missing "$google_client_id")
+GOOGLE_CLIENT_SECRET: $(present_or_missing "$google_client_secret")
+OAUTH_PROXY_PRODUCTION_URL: $(value_or_unset "$oauth_proxy_production_url")
+OAUTH_PROXY_SECRET: $(present_or_missing "$oauth_proxy_secret")
+VITE_PLATFORM_AUTH_SOCIAL_PROVIDERS: $(value_or_unset "$social_providers")
+Google sign-in UI: $google_ui
+OAuth configuration: $(oauth_configuration_status)
+EOF
+
+if [ "$(oauth_configuration_status)" = "incomplete" ]; then
+  oauth_print_incomplete_details
+  exit 1
+fi

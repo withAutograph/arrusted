@@ -1,0 +1,4 @@
+# Required by mise 2026.6.x: monorepo task paths (`//path:task`) are only
+# enabled by a root mise.toml sentinel, even when project config lives under
+# .config/mise/config.toml.
+monorepo_root = true

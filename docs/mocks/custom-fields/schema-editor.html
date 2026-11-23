@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fields — schema editor mock (inline)</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1c2430; --muted:#6b7686; --faint:#9aa4b2;
+    --line:#e6e9ee; --line2:#eef1f5; --accent:#2f6df0; --accent-soft:#eaf1fe;
+    --lock:#aeb6c2; --chip:#eef1f6; --chip-ink:#566273; --danger:#c4453a;
+    --draft:#f2f8f3; --draft-line:#cfe6d4;
+    --radius:12px; --shadow:0 1px 2px rgba(20,30,50,.05),0 8px 24px rgba(20,30,50,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.5 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .app{max-width:1080px;margin:0 auto;padding:28px 24px 60px;}
+  header.page h1{font-size:24px;margin:0 0 4px;letter-spacing:-.01em}
+  header.page p{margin:0 0 22px;color:var(--muted)}
+  .layout{display:grid;grid-template-columns:232px 1fr;gap:20px;align-items:start}
+
+  .rail{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:8px;box-shadow:var(--shadow)}
+  .rail h2{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);margin:8px 10px 6px}
+  .rail button{display:flex;width:100%;align-items:center;gap:9px;border:0;background:none;text-align:left;
+    padding:9px 10px;border-radius:9px;cursor:pointer;color:var(--ink);font-size:14.5px}
+  .rail button:hover{background:var(--line2)}
+  .rail button.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+  .rail .dot{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+  .rail button.active .dot{background:var(--accent)}
+  .rail .count{margin-left:auto;font-size:12px;color:var(--faint)}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .panel .top{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line)}
+  .panel .top h2{margin:0;font-size:17px}
+  .panel .top .sub{color:var(--muted);font-size:13px;margin-top:2px}
+  .btn{border:1px solid var(--accent);background:var(--accent);color:#fff;padding:9px 14px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer}
+  .btn.subtle{background:#fff;color:var(--muted);border-color:var(--line)}
+  .seg{display:inline-flex;background:var(--line2);border-radius:9px;padding:3px}
+  .seg-btn{border:0;background:none;padding:7px 13px;border-radius:7px;font-size:13.5px;cursor:pointer;color:var(--muted);font-weight:600}
+  .seg-btn.active{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(20,30,50,.12)}
+
+  .group-label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--faint);padding:14px 20px 6px}
+
+  .row{display:flex;align-items:center;gap:14px;padding:12px 20px;border-top:1px solid var(--line2)}
+  .row .name{font-weight:600}
+  .row .meta{display:flex;flex-direction:column;min-width:0}
+  .row .slug{font-size:12px;color:var(--faint);font-family:ui-monospace,Menlo,monospace}
+  .chip{font-size:12px;border-radius:999px;padding:3px 10px;white-space:nowrap;background:var(--chip);color:var(--chip-ink)}
+  .chip.text{background:#eef1f6}.chip.num{background:#efe9fb;color:#5a3fb0}
+  .chip.bool{background:#eef1f6}.chip.date{background:#e4f3f1;color:#1d7a6e}
+  .chip.choice{background:#fdeede;color:#9a6a00}.chip.rel{background:#e7f0ff;color:#2f6df0}
+  .chip.money{background:#e7f6ec;color:#1f8a52}
+  .row .spacer{margin-left:auto}
+  .lock{color:var(--lock);font-size:13px;display:inline-flex;align-items:center;gap:5px}
+  .acts{display:flex;gap:4px;align-items:center;opacity:0;transition:opacity .12s}
+  .row:hover .acts{opacity:1}
+  .ord{display:flex;flex-direction:column;margin-right:2px}
+  .ord button,.icon-btn{border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;color:var(--muted)}
+  .ord button{width:26px;height:17px;line-height:1;font-size:10px;border-radius:6px}
+  .ord button:first-child{margin-bottom:2px}
+  .icon-btn{width:30px;height:30px;font-size:14px}
+  .icon-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .icon-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+
+  /* inline editor (edit + add share this) */
+  .editor{border-top:1px solid var(--line2);padding:16px 20px;background:var(--draft)}
+  .editor.editing{background:#fafbfe;border-left:3px solid var(--accent)}
+  .editor .erow{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end}
+  .fld{display:flex;flex-direction:column;gap:5px}
+  .fld label{font-size:12px;font-weight:600;color:var(--muted)}
+  .fld input[type=text],.fld select{padding:8px 11px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;min-width:180px}
+  .fld input:focus,.fld select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .perm{font-size:12px;color:var(--faint);font-family:ui-monospace,Menlo,monospace;margin-top:2px}
+  .perm b{color:#9a6a00;font-weight:600}
+  .typelock{display:flex;flex-direction:column;gap:5px}
+  .typelock .lk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);
+    border:1px dashed var(--line);border-radius:8px;padding:7px 10px;background:#fff}
+  .opts{margin-top:14px}
+  .opts .ol{display:flex;flex-direction:column;gap:7px;max-width:340px}
+  .opts .orow{display:flex;gap:7px}
+  .opts .orow input{flex:1;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font:inherit}
+  .opts .orow button{width:34px;border:1px solid var(--line);background:#fff;border-radius:8px;color:var(--muted);cursor:pointer}
+  .opts .addopt{margin-top:8px;border:1px dashed var(--line);background:#fff;color:var(--accent);padding:6px 11px;border-radius:8px;cursor:pointer;font-size:13px}
+  .ebar{display:flex;gap:8px;margin-top:16px;align-items:center}
+  .ebar .note{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px}
+
+  /* sample data */
+  .data-note{padding:14px 20px;color:var(--muted);font-size:13px;border-bottom:1px solid var(--line2)}
+  .hl-key{background:#fffaf0;border-radius:4px;padding:1px 5px;color:#9a6a00}
+  .data-scroll{overflow:auto}
+  .data-tbl{width:100%;border-collapse:collapse;font-size:14px}
+  .data-tbl th{text-align:left;padding:11px 16px;border-bottom:1px solid var(--line);font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);white-space:nowrap}
+  .data-tbl td{padding:11px 16px;border-bottom:1px solid var(--line2);white-space:nowrap}
+  .data-tbl th.hl,.data-tbl td.hl{background:#fffaf0}
+  .cf-tag{font-size:10px;background:#ffe9bf;color:#9a6a00;border-radius:999px;padding:1px 6px;margin-left:6px;text-transform:none;letter-spacing:0}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="page">
+    <h1>Fields</h1>
+    <p>Add and manage your own fields on top of the built-in ones. Built-in fields can’t be changed.</p>
+  </header>
+
+  <div class="layout">
+    <nav class="rail">
+      <h2>Records</h2>
+      <button class="active"><span class="dot"></span>Employee<span class="count">2</span></button>
+      <button><span class="dot"></span>Position<span class="count">1</span></button>
+      <button><span class="dot"></span>Department</button>
+      <button><span class="dot"></span>Location</button>
+    </nav>
+
+    <section class="panel">
+      <div class="top">
+        <div><h2>Employee</h2><div class="sub">Built-in fields are locked. Edit custom fields right here.</div></div>
+        <div style="display:flex;gap:12px;align-items:center">
+          <div class="seg"><button class="seg-btn active" id="segFields" onclick="setView('fields')">Fields</button><button class="seg-btn" id="segData" onclick="setView('data')">Sample data</button></div>
+          <button class="btn" onclick="showAdd()">+ Add custom field</button>
+        </div>
+      </div>
+
+      <div id="viewFields">
+        <div class="group-label">Built-in fields</div>
+        <div class="row"><div class="meta"><span class="name">Name</span></div><span class="chip text">Text</span><span class="spacer"></span><span class="lock">🔒 Built-in</span></div>
+        <div class="row"><div class="meta"><span class="name">Employee ID</span><span class="slug">ref · permanent</span></div><span class="chip text">Text</span><span class="spacer"></span><span class="lock">🔒 Built-in</span></div>
+        <div class="row"><div class="meta"><span class="name">Start date</span></div><span class="chip date">Date</span><span class="spacer"></span><span class="lock">🔒 Built-in</span></div>
+
+        <div class="group-label">Custom fields</div>
+
+        <!-- normal custom row with inline controls -->
+        <div class="row">
+          <div class="meta"><span class="name">Cost Center</span><span class="slug">cost_center · permanent ID</span></div>
+          <span class="chip text">Text</span>
+          <span class="spacer"></span>
+          <div class="acts">
+            <span class="ord"><button title="Move up">▲</button><button title="Move down">▼</button></span>
+            <button class="icon-btn" title="Edit">✎</button>
+            <button class="icon-btn danger" title="Archive">🗄</button>
+          </div>
+        </div>
+
+        <!-- INLINE EDIT state (Tier, a Choice field) -->
+        <div class="editor editing">
+          <div class="erow">
+            <div class="fld"><label>Display name</label><input type="text" value="Seniority Tier" /><span class="perm">tier · 🔒 permanent ID</span></div>
+            <div class="typelock"><label style="font-size:12px;font-weight:600;color:var(--muted)">Type</label><span class="lk">🔒 Choice <span style="color:var(--faint)">— type can’t change</span></span></div>
+          </div>
+          <div class="opts">
+            <label style="font-size:12px;font-weight:600;color:var(--muted)">Choices <span style="font-weight:400;color:var(--faint)">— add anytime; labels can be edited, IDs are permanent; archive to retire</span></label>
+            <div class="ol" style="margin-top:7px">
+              <div class="orow"><input type="text" value="Junior" /><button title="Archive choice">✕</button></div>
+              <div class="orow"><input type="text" value="Senior" /><button title="Archive choice">✕</button></div>
+              <div class="orow"><input type="text" value="Staff" placeholder="" /><button title="Archive choice">✕</button></div>
+            </div>
+            <button class="addopt">+ Add choice</button>
+          </div>
+          <div class="ebar"><button class="btn">Save</button><button class="btn subtle">Cancel</button><span class="note">Editing in place — only the display name and choices can change.</span></div>
+        </div>
+      </div>
+
+      <div id="viewData" style="display:none">
+        <div class="data-note">A few real records — so you can see exactly what your fields hold. Custom fields are <span class="hl-key">highlighted</span>.</div>
+        <div class="data-scroll"><table class="data-tbl">
+          <thead><tr><th>Name</th><th>Employee ID</th><th>Start date</th><th class="hl">Cost Center <span class="cf-tag">custom</span></th><th class="hl">Seniority Tier <span class="cf-tag">custom</span></th></tr></thead>
+          <tbody>
+            <tr><td>Ada Lovelace</td><td>E-1024</td><td>2024-03-01</td><td class="hl">R&amp;D-200</td><td class="hl">Staff</td></tr>
+            <tr><td>Alan Turing</td><td>E-1025</td><td>2023-11-14</td><td class="hl">R&amp;D-200</td><td class="hl">Senior</td></tr>
+            <tr><td>Grace Hopper</td><td>E-1031</td><td>2025-01-06</td><td class="hl">OPS-110</td><td class="hl">Staff</td></tr>
+            <tr><td>Katherine Johnson</td><td>E-1042</td><td>2025-02-18</td><td class="hl">—</td><td class="hl">Junior</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+  function setView(v){
+    document.getElementById('viewFields').style.display=v==='fields'?'block':'none';
+    document.getElementById('viewData').style.display=v==='data'?'block':'none';
+    document.getElementById('segFields').classList.toggle('active',v==='fields');
+    document.getElementById('segData').classList.toggle('active',v==='data');
+  }
+  function slugify(s){return s.toLowerCase().trim().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'')||'…';}
+  function showAdd(){
+    if(document.getElementById('draftEditor'))return;
+    const wrap=document.getElementById('viewFields');
+    const d=document.createElement('div');d.className='editor';d.id='draftEditor';
+    d.innerHTML=`
+      <div class="erow">
+        <div class="fld"><label>Display name</label><input id="dN" type="text" placeholder="e.g. Cost Center" oninput="dSlug()"/><span class="perm" id="dP" style="display:none">ID: <b id="dS">cost_center</b> · generated once, never changes</span></div>
+        <div class="fld"><label>Type</label>
+          <select id="dT" onchange="dType()">
+            <option>Text</option><option>Number</option><option>Yes / No</option><option>Date</option>
+            <option>Choice</option><option>Relationship</option><option>Money</option><option>List of text</option>
+          </select></div>
+      </div>
+      <div id="dCond"></div>
+      <div class="ebar"><button class="btn">Add field</button><button class="btn subtle" onclick="this.closest('.editor').remove()">Cancel</button><span class="note">📌 The ID is set from the name and is permanent — pick the name carefully.</span></div>`;
+    wrap.appendChild(d);document.getElementById('dN').focus();
+  }
+  function dSlug(){const v=document.getElementById('dN').value;const p=document.getElementById('dP');
+    if(v){p.style.display='inline';document.getElementById('dS').textContent=slugify(v);}else p.style.display='none';}
+  function dType(){const t=document.getElementById('dT').value;const c=document.getElementById('dCond');
+    if(t==='Choice')c.innerHTML='<div class="opts"><label style="font-size:12px;font-weight:600;color:var(--muted)">Choices</label><div class="ol" style="margin-top:7px"><div class="orow"><input type="text" placeholder="First choice"/><button>✕</button></div></div><button class="addopt">+ Add choice</button></div>';
+    else if(t==='Relationship')c.innerHTML='<div class="opts"><div class="fld"><label>Links to</label><select><option>Employee</option><option>Position</option><option>Department</option><option>Location</option></select></div></div>';
+    else c.innerHTML='';}
+  if(location.hash==='#data')setView('data');
+  if(location.hash==='#add')showAdd();
+</script>
+</body>
+</html>

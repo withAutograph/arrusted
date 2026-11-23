@@ -1,0 +1,86 @@
+id: semantic-icons-only-ts
+language: TypeScript
+severity: error
+message: import icons through the semantic design-system barrel
+note: Only the semantic icon barrel may bind directly to @heroicons/react.
+files:
+  [
+    packages/domain-libs/**/*.ts,
+    packages/**/*.ts,
+    packages/domain-libs/**/*.mts,
+    packages/**/*.mts,
+    packages/domain-libs/**/*.cts,
+    packages/**/*.cts,
+  ]
+ignores: [packages/design-systems/core/icons/index.ts]
+rule:
+  any:
+    - { all: [{ kind: import_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { all: [{ kind: import_statement }, { regex: '^import\b[\s\S]*?=\s*require\s*\(' }, { has: { matches: forbidden-source, stopBy: end } }] }
+    - { all: [{ kind: export_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { pattern: require($SOURCE) }
+    - { pattern: import($SOURCE) }
+constraints:
+  SOURCE: { matches: forbidden-source }
+utils:
+  forbidden-source:
+    all:
+      - { any: [{ kind: string }, { kind: template_string }] }
+      - { regex: '^[''"\x60]@heroicons/react(?:/[^''"\x60]+)?[''"\x60]$' }
+---
+id: semantic-icons-only-tsx
+language: Tsx
+severity: error
+message: import icons through the semantic design-system barrel
+note: Only the semantic icon barrel may bind directly to @heroicons/react.
+files: [packages/domain-libs/**/*.tsx, packages/**/*.tsx]
+ignores: [packages/design-systems/core/icons/index.ts]
+rule:
+  any:
+    - { all: [{ kind: import_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { all: [{ kind: import_statement }, { regex: '^import\b[\s\S]*?=\s*require\s*\(' }, { has: { matches: forbidden-source, stopBy: end } }] }
+    - { all: [{ kind: export_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { pattern: require($SOURCE) }
+    - { pattern: import($SOURCE) }
+constraints:
+  SOURCE: { matches: forbidden-source }
+utils:
+  forbidden-source:
+    all:
+      - { any: [{ kind: string }, { kind: template_string }] }
+      - { regex: '^[''"\x60]@heroicons/react(?:/[^''"\x60]+)?[''"\x60]$' }
+---
+id: semantic-icons-only-js
+language: JavaScript
+severity: error
+message: import icons through the semantic design-system barrel
+note: Only the semantic icon barrel may bind directly to @heroicons/react.
+files:
+  [
+    packages/domain-libs/**/*.js,
+    packages/domain-libs/**/*.jsx,
+    packages/domain-libs/**/*.mjs,
+    packages/domain-libs/**/*.cjs,
+    packages/**/*.js,
+    packages/**/*.jsx,
+    packages/**/*.mjs,
+    packages/**/*.cjs,
+  ]
+ignores:
+  [
+    packages/design-systems/core/icons/index.js,
+    packages/design-systems/core/icons/index.jsx,
+  ]
+rule:
+  any:
+    - { all: [{ kind: import_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { all: [{ kind: export_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { pattern: require($SOURCE) }
+    - { pattern: import($SOURCE) }
+constraints:
+  SOURCE: { matches: forbidden-source }
+utils:
+  forbidden-source:
+    all:
+      - { any: [{ kind: string }, { kind: template_string }] }
+      - { regex: '^[''"\x60]@heroicons/react(?:/[^''"\x60]+)?[''"\x60]$' }

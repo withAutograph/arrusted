@@ -1,0 +1,42 @@
+flowchart LR
+  U0[/U0 Prepare machine/]
+  S0[(S0 Install dependencies and create databases)]
+  U1[/U1 State JTBD and desired interfaces/]
+  G1{G1 HTML gate: prototype-ready?}
+  A1[A1 Run adapted prototype skill]
+  S1[(S1 Generate self-contained HTML prototype)]
+  U2[/U2 Try prototype and give feedback/]
+  A2[A2 Iterate HTML and discover app contract]
+  S2[(S2 Convert prototype into structured AppSpec)]
+  G2{G2 Build gate: spec build-ready?}
+  U3[/U3 Confirm integrations, data objects, and AppSpec/]
+  A3[A3 Create implementation plan]
+  U4[/U4 Approve plan/]
+  S3[(S3 Build real Arrusted app)]
+  U5[/U5 Test production-shaped preview/]
+  S4[(S4 Validate app against accepted AppSpec)]
+  R([Local first version])
+  S5[(S5 Standalone app kit)]
+  S6[(S6 Production delivery)]
+
+  U0 --> S0 --> U1 --> G1
+  G1 -- Missing JTBD or interfaces --> U1
+  G1 -- Ready --> A1 --> S1 --> U2 --> A2
+  A2 -- Revise experience --> S1
+  A2 -- Mature enough --> S2 --> G2
+  G2 -- Unconfirmed contract --> U2
+  G2 -- Ready --> U3 --> A3 --> U4
+  U4 -- Revise --> A3
+  U4 -- Approve --> S3 --> U5 --> S4 --> R
+  R -. Later .-> S5 --> S6
+
+  classDef built fill:#DCFCE7,stroke:#15803D,color:#14532D,stroke-width:2px
+  classDef partial fill:#FEF3C7,stroke:#D97706,color:#78350F,stroke-width:2px
+  classDef missing fill:#FEE2E2,stroke:#DC2626,color:#7F1D1D,stroke-width:2px
+  classDef outcome fill:#DBEAFE,stroke:#2563EB,color:#1E3A8A,stroke-width:3px
+
+  class U0,U1,U2,U3,U4,U5,A3 partial
+  class S0 built
+  class G1,A1,S1,A2,S2,G2,S3,S4 partial
+  class S5,S6 missing
+  class R outcome

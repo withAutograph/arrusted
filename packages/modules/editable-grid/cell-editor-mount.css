@@ -1,0 +1,31 @@
+/* Cell-editor mount affordances.
+ *
+ * Suppress the doubled border that appears when an inline cell editor
+ * (text / number / bool) renders its design-system border INSIDE AG Grid's
+ * cell-edit border. The leaves intentionally carry their own border so they
+ * read as standalone form controls in storybook + sheet form contexts; in
+ * the cell-edit context, AG Grid already owns the cell-edit affordance,
+ * so the leaf's own border becomes a redundant inner ring.
+ *
+ * Scope: only INSIDE an AG Grid editing cell. Sheet forms and storybook
+ * keep their leaf borders intact.
+ */
+.ag-cell-inline-editing input,
+.ag-cell-inline-editing select,
+.ag-cell-inline-editing textarea {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important;
+  height: 100% !important;
+  padding-left: var(--space-1) !important;
+  padding-right: var(--space-1) !important;
+}
+
+/* The bool editor renders Yes/No pill buttons, not native inputs. We don't
+ * want to neutralize their pill border (the leaf's affordance IS the pill);
+ * only flatten container chrome around them. */
+.ag-cell-inline-editing [role="radiogroup"] {
+  border: none !important;
+  background: transparent !important;
+}

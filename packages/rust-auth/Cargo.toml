@@ -1,0 +1,13 @@
+[package]
+name = "rust-auth"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+kernel = { path = "../kernel" }
+http-transport = { path = "../../packages/platform-http" }
+base64 = "0.23"
+ring = "0.17"

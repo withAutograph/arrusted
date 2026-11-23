@@ -1,0 +1,6 @@
+#!/bin/sh
+#MISE description="Pack a built workspace package with root catalog versions"
+set -eu
+
+cd "$MISE_MONOREPO_ROOT"
+exec bun .config/mise/scripts/repository/pack-workspace-package.ts "$@"

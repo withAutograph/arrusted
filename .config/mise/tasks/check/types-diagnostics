@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#MISE description="Print advisory TypeScript extended diagnostics for one project"
+set -euo pipefail
+
+if [ "$#" -ne 1 ]; then
+  echo "usage: mise run check:types-diagnostics -- <tsconfig path>" >&2
+  exit 2
+fi
+
+cd "$MISE_MONOREPO_ROOT"
+exec bun x tsc --noEmit --incremental false --extendedDiagnostics -p "$1"

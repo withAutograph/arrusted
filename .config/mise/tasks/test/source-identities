@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Run generic atomic source identity tests against owned disposable PostgreSQL"
+set -euo pipefail
+cd "$MISE_MONOREPO_ROOT"
+exec bun --no-env-file .config/mise/scripts/repository/test-postgres-suite.ts source-identities

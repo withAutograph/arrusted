@@ -1,0 +1,1271 @@
+{
+  "extras": {
+    "constraints": [],
+    "derived_fields": [],
+    "field_metadata": [
+      {
+        "enum_option_notes": [],
+        "field": "name",
+        "model": "vendor",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "known_aliases",
+        "model": "vendor",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "status",
+        "model": "vendor",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "type",
+        "model": "vendor",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "department",
+        "model": "vendor",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "owner",
+        "model": "vendor",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "entity_name",
+        "model": "vendor",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "default_chart_account",
+        "model": "vendor",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "source_record_ref",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "integration_platform_id",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "source_connection_id",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "provider",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "payload_hash",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "source_record_id",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "transaction_kind",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "vendor",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "chart_account",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "counterparty_name",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "document_number",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "amount",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "open_amount",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "currency_code",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "status",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "transaction_date",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "due_date",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "accounting_date",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "service_start_date",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "service_end_date",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "settlement_date",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "source_updated_at",
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "reporting_currency_code",
+        "model": "vendor_settings",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "source_vendor",
+        "model": "vendor_identity_mapping",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "canonical_vendor",
+        "model": "vendor_identity_mapping",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "review_kind",
+        "model": "vendor_review_resolution",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "subject_key",
+        "model": "vendor_review_resolution",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "decision",
+        "model": "vendor_review_resolution",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "resolved_on",
+        "model": "vendor_review_resolution",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "reviewer",
+        "model": "vendor_review_resolution",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "ref",
+        "model": "employee",
+        "notes": "Unique employee reference. Often an internal HRIS number like EMP-001 or alphanumeric ID."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "name",
+        "model": "employee",
+        "notes": "Employee's full display name, typically \"First Last\"."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "known_aliases",
+        "model": "employee",
+        "notes": "Confirmed alternate employee names used for deterministic import matching."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "work_email",
+        "model": "employee",
+        "notes": "Corporate email address."
+      },
+      {
+        "enum_option_notes": [],
+        "field": "name",
+        "model": "department",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "known_aliases",
+        "model": "department",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "code",
+        "model": "chart_account",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "name",
+        "model": "chart_account",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "parent",
+        "model": "chart_account",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "account_type",
+        "model": "chart_account",
+        "notes": null
+      },
+      {
+        "enum_option_notes": [],
+        "field": "known_aliases",
+        "model": "chart_account",
+        "notes": null
+      }
+    ],
+    "inverse_relations": [],
+    "many_relations": [],
+    "model_metadata": [
+      {
+        "field_groups": [],
+        "model": "vendor",
+        "notes": null
+      },
+      {
+        "field_groups": [],
+        "model": "vendor_spend_transaction",
+        "notes": null
+      },
+      {
+        "field_groups": [],
+        "model": "vendor_settings",
+        "notes": null
+      },
+      {
+        "field_groups": [],
+        "model": "vendor_identity_mapping",
+        "notes": null
+      },
+      {
+        "field_groups": [],
+        "model": "vendor_review_resolution",
+        "notes": null
+      },
+      {
+        "field_groups": [
+          {
+            "fields": ["ref", "name", "known_aliases"],
+            "id": "summary",
+            "label": "Summary"
+          },
+          {
+            "fields": ["work_email"],
+            "id": "personal",
+            "label": "Personal"
+          }
+        ],
+        "model": "employee",
+        "notes": null
+      },
+      {
+        "field_groups": [],
+        "model": "department",
+        "notes": null
+      },
+      {
+        "field_groups": [],
+        "model": "chart_account",
+        "notes": null
+      }
+    ],
+    "seed_change_sets": [
+      {
+        "actor_id": "apps/vendor seed",
+        "change_type_id": null,
+        "idempotency_key": "vendor-seed-vendor_settings-default",
+        "notes": "Seed vendor_settings lookup row `default`",
+        "seed_identity": "c8859e5ad2e75b1f9273a99e63fa5bd7cea9ef2d70343cf0b5a71c80e0e04347",
+        "seed_record_ids": ["4645a4b6-d066-5b0e-98ae-4ceaa27cc274"],
+        "source_kind": "vendor_seed",
+        "writes": [
+          {
+            "clear_custom_fields": [],
+            "clear_fields": [],
+            "custom_fields": null,
+            "effective_start": "2024-01-01",
+            "metadata_patch": null,
+            "model_id": "vendor_settings",
+            "provenance": {
+              "source": "apps/vendor seed"
+            },
+            "record_key": {
+              "type": "external_key",
+              "value": "default"
+            },
+            "tombstones_record": false,
+            "values": {
+              "reporting_currency_code": {
+                "type": "text",
+                "value": "USD"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "schema": {
+    "app_id": "vendor",
+    "change_types": [
+      {
+        "id": "vendor_import",
+        "label": "Vendor Import",
+        "required": ["name"],
+        "target_model": "vendor",
+        "touches": ["name", "status"]
+      },
+      {
+        "id": "vendor_spend_transaction_import",
+        "label": "Vendor Spend Transaction Import",
+        "required": ["source_record_ref", "source_record_id", "transaction_kind"],
+        "target_model": "vendor_spend_transaction",
+        "touches": [
+          "source_record_ref",
+          "source_record_id",
+          "transaction_kind",
+          "vendor",
+          "counterparty_name",
+          "amount",
+          "currency_code",
+          "transaction_date"
+        ]
+      },
+      {
+        "id": "vendor_identity_merge",
+        "label": "Merge Vendor Identity",
+        "required": [],
+        "target_model": "vendor_identity_mapping",
+        "touches": ["source_vendor", "canonical_vendor"]
+      },
+      {
+        "id": "vendor_identity_keep_separate",
+        "label": "Keep Vendor Identities Separate",
+        "required": [],
+        "target_model": "vendor_review_resolution",
+        "touches": ["review_kind", "subject_key", "decision", "resolved_on", "reviewer"]
+      },
+      {
+        "id": "vendor_type_review",
+        "label": "Assign Vendor Type",
+        "required": ["type"],
+        "target_model": "vendor",
+        "touches": ["type"]
+      }
+    ],
+    "custom_fields": [],
+    "customer_id": "vendor",
+    "models": [
+      {
+        "display_field_id": null,
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": false
+        },
+        "fields": [
+          {
+            "id": "name",
+            "is_unique": false,
+            "label": "Vendor Name",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "known_aliases",
+            "is_unique": false,
+            "label": "Known Aliases",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "known_aliases"
+          },
+          {
+            "id": "status",
+            "is_unique": false,
+            "label": "Vendor Status",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [
+              {
+                "aliases": ["current"],
+                "id": "active",
+                "label": "Active",
+                "lifecycle": "active",
+                "management": "fixed",
+                "origin": "app"
+              },
+              {
+                "aliases": ["closed", "terminated"],
+                "id": "inactive",
+                "label": "Inactive",
+                "lifecycle": "active",
+                "management": "fixed",
+                "origin": "app"
+              }
+            ],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "enum"
+          },
+          {
+            "id": "type",
+            "is_unique": false,
+            "label": "Vendor Type",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [
+              {
+                "aliases": [],
+                "id": "software",
+                "label": "Software",
+                "lifecycle": "active",
+                "management": "fixed",
+                "origin": "app"
+              },
+              {
+                "aliases": ["consulting"],
+                "id": "professional_services",
+                "label": "Professional Services",
+                "lifecycle": "active",
+                "management": "fixed",
+                "origin": "app"
+              },
+              {
+                "aliases": ["contingent workforce", "staffing"],
+                "id": "contractor",
+                "label": "Contractor",
+                "lifecycle": "active",
+                "management": "fixed",
+                "origin": "app"
+              },
+              {
+                "aliases": ["physical goods", "logistics"],
+                "id": "supplier",
+                "label": "Supplier",
+                "lifecycle": "active",
+                "management": "fixed",
+                "origin": "app"
+              },
+              {
+                "aliases": [],
+                "id": "facilities",
+                "label": "Facilities",
+                "lifecycle": "active",
+                "management": "fixed",
+                "origin": "app"
+              },
+              {
+                "aliases": [],
+                "id": "other",
+                "label": "Other",
+                "lifecycle": "active",
+                "management": "fixed",
+                "origin": "app"
+              }
+            ],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "enum"
+          },
+          {
+            "id": "department",
+            "is_unique": false,
+            "label": "Owning Department",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "department",
+            "type": "relation"
+          },
+          {
+            "id": "owner",
+            "is_unique": false,
+            "label": "Spend Owned By",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "employee",
+            "type": "relation"
+          },
+          {
+            "id": "entity_name",
+            "is_unique": false,
+            "label": "Legal Entity Name",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "default_chart_account",
+            "is_unique": false,
+            "label": "Default Chart Account",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "chart_account",
+            "type": "relation"
+          }
+        ],
+        "id": "vendor",
+        "kind": "entity",
+        "label": "Vendor",
+        "lifecycle": "active",
+        "management": "fixed",
+        "many_relations": [],
+        "origin": "app"
+      },
+      {
+        "display_field_id": null,
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": false
+        },
+        "fields": [
+          {
+            "id": "source_record_ref",
+            "is_unique": true,
+            "label": "Source Record Ref",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "integration_platform_id",
+            "is_unique": false,
+            "label": "Integration Platform ID",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "source_connection_id",
+            "is_unique": false,
+            "label": "Source Connection ID",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "provider",
+            "is_unique": false,
+            "label": "Provider",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "payload_hash",
+            "is_unique": false,
+            "label": "Payload Hash",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "source_record_id",
+            "is_unique": false,
+            "label": "Source Record ID",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "transaction_kind",
+            "is_unique": false,
+            "label": "Transaction Kind",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [
+              {
+                "aliases": [],
+                "id": "card_transaction",
+                "label": "Card Transaction",
+                "lifecycle": "active",
+                "management": "fixed",
+                "origin": "app"
+              },
+              {
+                "aliases": ["invoice"],
+                "id": "bill",
+                "label": "Bill",
+                "lifecycle": "active",
+                "management": "fixed",
+                "origin": "app"
+              },
+              {
+                "aliases": ["vendor credit", "credit note"],
+                "id": "credit",
+                "label": "Credit",
+                "lifecycle": "active",
+                "management": "fixed",
+                "origin": "app"
+              }
+            ],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "enum"
+          },
+          {
+            "id": "vendor",
+            "is_unique": false,
+            "label": "Vendor",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "vendor",
+            "type": "relation"
+          },
+          {
+            "id": "chart_account",
+            "is_unique": false,
+            "label": "Chart Account",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "chart_account",
+            "type": "relation"
+          },
+          {
+            "id": "counterparty_name",
+            "is_unique": false,
+            "label": "Counterparty Name",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "document_number",
+            "is_unique": false,
+            "label": "Document Number",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "amount",
+            "is_unique": false,
+            "label": "Transaction Amount",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "number"
+          },
+          {
+            "id": "open_amount",
+            "is_unique": false,
+            "label": "Open Amount",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "number"
+          },
+          {
+            "id": "currency_code",
+            "is_unique": false,
+            "label": "Currency",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "iso_currency"
+          },
+          {
+            "id": "status",
+            "is_unique": false,
+            "label": "Status",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "transaction_date",
+            "is_unique": false,
+            "label": "Transaction Date",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "date"
+          },
+          {
+            "id": "due_date",
+            "is_unique": false,
+            "label": "Due Date",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "date"
+          },
+          {
+            "id": "accounting_date",
+            "is_unique": false,
+            "label": "Accounting Date",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "date"
+          },
+          {
+            "id": "service_start_date",
+            "is_unique": false,
+            "label": "Service Start Date",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "date"
+          },
+          {
+            "id": "service_end_date",
+            "is_unique": false,
+            "label": "Service End Date",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "date"
+          },
+          {
+            "id": "settlement_date",
+            "is_unique": false,
+            "label": "Settlement Date",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "date"
+          },
+          {
+            "id": "source_updated_at",
+            "is_unique": false,
+            "label": "Source Updated At",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "datetime"
+          }
+        ],
+        "id": "vendor_spend_transaction",
+        "kind": "entity",
+        "label": "Vendor Spend Transaction",
+        "lifecycle": "active",
+        "management": "fixed",
+        "many_relations": [],
+        "origin": "app"
+      },
+      {
+        "display_field_id": null,
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": false
+        },
+        "fields": [
+          {
+            "id": "reporting_currency_code",
+            "is_unique": false,
+            "label": "Reporting Currency",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "iso_currency"
+          }
+        ],
+        "id": "vendor_settings",
+        "kind": "entity",
+        "label": "Vendor Settings",
+        "lifecycle": "active",
+        "management": "fixed",
+        "many_relations": [],
+        "origin": "app"
+      },
+      {
+        "display_field_id": null,
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": false
+        },
+        "fields": [
+          {
+            "id": "source_vendor",
+            "is_unique": false,
+            "label": "Source Vendor",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": "vendor",
+            "type": "relation"
+          },
+          {
+            "id": "canonical_vendor",
+            "is_unique": false,
+            "label": "Canonical Vendor",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": "vendor",
+            "type": "relation"
+          }
+        ],
+        "id": "vendor_identity_mapping",
+        "kind": "entity",
+        "label": "Vendor Identity Mapping",
+        "lifecycle": "active",
+        "management": "fixed",
+        "many_relations": [],
+        "origin": "app"
+      },
+      {
+        "display_field_id": null,
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": false
+        },
+        "fields": [
+          {
+            "id": "review_kind",
+            "is_unique": false,
+            "label": "Review Kind",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [
+              {
+                "aliases": [],
+                "id": "identity_duplicate",
+                "label": "Vendor Identity Duplicate",
+                "lifecycle": "active",
+                "management": "fixed",
+                "origin": "app"
+              }
+            ],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "enum"
+          },
+          {
+            "id": "subject_key",
+            "is_unique": false,
+            "label": "Subject Key",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "decision",
+            "is_unique": false,
+            "label": "Decision",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [
+              {
+                "aliases": [],
+                "id": "keep_separate",
+                "label": "Keep Separate",
+                "lifecycle": "active",
+                "management": "fixed",
+                "origin": "app"
+              }
+            ],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "enum"
+          },
+          {
+            "id": "resolved_on",
+            "is_unique": false,
+            "label": "Resolved On",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "date"
+          },
+          {
+            "id": "reviewer",
+            "is_unique": false,
+            "label": "Reviewer",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          }
+        ],
+        "id": "vendor_review_resolution",
+        "kind": "entity",
+        "label": "Vendor Review Resolution",
+        "lifecycle": "active",
+        "management": "fixed",
+        "many_relations": [],
+        "origin": "app"
+      },
+      {
+        "display_field_id": null,
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": false
+        },
+        "fields": [
+          {
+            "id": "ref",
+            "is_unique": true,
+            "label": "Employee Ref",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "name",
+            "is_unique": false,
+            "label": "Full Name",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "known_aliases",
+            "is_unique": false,
+            "label": "Known Aliases",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "known_aliases"
+          },
+          {
+            "id": "work_email",
+            "is_unique": true,
+            "label": "Work Email",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "text"
+          }
+        ],
+        "id": "employee",
+        "kind": "entity",
+        "label": "Employee",
+        "lifecycle": "active",
+        "management": "fixed",
+        "many_relations": [],
+        "origin": "app"
+      },
+      {
+        "display_field_id": "name",
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": false
+        },
+        "fields": [
+          {
+            "id": "name",
+            "is_unique": true,
+            "label": "Name",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "known_aliases",
+            "is_unique": false,
+            "label": "Aliases",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "known_aliases"
+          }
+        ],
+        "id": "department",
+        "kind": "lookup",
+        "label": "Department",
+        "lifecycle": "active",
+        "management": "tenant_managed",
+        "many_relations": [],
+        "origin": "app"
+      },
+      {
+        "display_field_id": null,
+        "extensions": {
+          "record_metadata": null,
+          "typed_custom_fields": false
+        },
+        "fields": [
+          {
+            "id": "code",
+            "is_unique": false,
+            "label": "Account Code",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "name",
+            "is_unique": false,
+            "label": "Account Name",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": true,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "parent",
+            "is_unique": false,
+            "label": "Parent Chart Account",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": "chart_account",
+            "type": "relation"
+          },
+          {
+            "id": "account_type",
+            "is_unique": false,
+            "label": "Source Account Type",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "text"
+          },
+          {
+            "id": "known_aliases",
+            "is_unique": false,
+            "label": "Known Aliases",
+            "lifecycle": "active",
+            "management": "fixed",
+            "option_set": [],
+            "origin": "app",
+            "required": false,
+            "target_model": null,
+            "type": "known_aliases"
+          }
+        ],
+        "id": "chart_account",
+        "kind": "entity",
+        "label": "Chart Account",
+        "lifecycle": "active",
+        "management": "fixed",
+        "many_relations": [],
+        "origin": "app"
+      }
+    ],
+    "version": "2026-11-04.draft-records-v122"
+  }
+}

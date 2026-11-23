@@ -1,0 +1,492 @@
+{
+  "version": 1,
+  "evidenceKind": "live_sanitized",
+  "environment": "development",
+  "provider": "xero",
+  "integration": {
+    "name": "vendor-xero-readiness",
+    "installed": true,
+    "organization": {
+      "kind": "xero_demo_company",
+      "countryCode": "US"
+    },
+    "providerAppScopes": [
+      "openid",
+      "profile",
+      "email",
+      "offline_access",
+      "accounting.contacts.read",
+      "accounting.invoices.read"
+    ],
+    "scopeEvidenceSource": "ampersand_provider_app_configuration",
+    "installationFlow": [
+      "oauth_authorized",
+      "mapping_saved",
+      "full_read_triggered"
+    ],
+    "installationRef": "sanitized_installation_1"
+  },
+  "hookdeck": {
+    "destination": "vendorXeroReadinessWebhook",
+    "captures": [
+      {
+        "captureRef": "req_VZyLIByKg7ZPjnJOjjf8",
+        "rawBodyDigest": "sha256:41bf7c16da937aa24d505ceb21b71d4ee7876763b19c32cfecb64c2a281d3c81",
+        "receivedBytes": 67515,
+        "signatureHeaders": [
+          "svix-id",
+          "svix-signature",
+          "svix-timestamp"
+        ],
+        "envelope": {
+          "action": "read",
+          "projectId": "sanitized_project_1",
+          "groupRef": "sanitized_group_1",
+          "installationId": "sanitized_installation_1",
+          "installationUpdateTime": "2026-07-16T12:00:00Z",
+          "objectName": "contacts",
+          "operationId": "019f6bc0-84a0-7855-867e-450a450c317c",
+          "operationTime": "2026-07-16T12:00:00Z",
+          "provider": "xero",
+          "readType": "triggered",
+          "resultInfo": {
+            "type": "inline",
+            "numRecords": 53
+          },
+          "result": [
+            {
+              "fields": {
+                "ContactID": "sanitized_supplier_1",
+                "Name": "redacted",
+                "IsSupplier": true,
+                "ContactStatus": "ACTIVE",
+                "UpdatedDateUTC": "2026-07-16T12:00:00Z"
+              },
+              "mappedFields": {}
+            },
+            {
+              "fields": {
+                "ContactID": "sanitized_customer_1",
+                "Name": "redacted",
+                "IsSupplier": false,
+                "ContactStatus": "ACTIVE",
+                "UpdatedDateUTC": "2026-07-16T12:00:00Z"
+              },
+              "mappedFields": {}
+            }
+          ]
+        },
+        "analysis": {
+          "kind": "sanitized_full_read_v1",
+          "sourceBodyDigest": "sha256:41bf7c16da937aa24d505ceb21b71d4ee7876763b19c32cfecb64c2a281d3c81",
+          "durationMs": 26737.876,
+          "quotaCallsUsed": 1,
+          "eligibility": {
+            "eligibleRecords": 17,
+            "rejectedRecords": 36
+          },
+          "fieldCoverage": {
+            "identifiers": 53,
+            "vendorLinkage": 0,
+            "totals": 0,
+            "currency": 0,
+            "status": 53,
+            "dates": 53
+          }
+        }
+      },
+      {
+        "captureRef": "req_XpXTAYWcWLUrHmLakAFa",
+        "rawBodyDigest": "sha256:bb83667d7833af4f64689e24c2bda71a4a24dc261d25bd19feb1dd3b98001299",
+        "receivedBytes": 184733,
+        "signatureHeaders": [
+          "svix-id",
+          "svix-signature",
+          "svix-timestamp"
+        ],
+        "envelope": {
+          "action": "read",
+          "projectId": "sanitized_project_1",
+          "groupRef": "sanitized_group_1",
+          "installationId": "sanitized_installation_1",
+          "installationUpdateTime": "2026-07-16T12:00:00Z",
+          "objectName": "invoices",
+          "operationId": "019f6bc0-883c-7c2c-b417-97fadb339a94",
+          "operationTime": "2026-07-16T12:00:00Z",
+          "provider": "xero",
+          "readType": "triggered",
+          "resultInfo": {
+            "type": "inline",
+            "numRecords": 77
+          },
+          "result": [
+            {
+              "fields": {
+                "InvoiceID": "sanitized_invoice_1",
+                "InvoiceNumber": "redacted",
+                "Type": "ACCPAY",
+                "Contact": {
+                  "ContactID": "sanitized_supplier_1",
+                  "Name": "redacted"
+                },
+                "SubTotal": 100,
+                "TotalTax": 25,
+                "Total": 125,
+                "AmountDue": 125,
+                "AmountPaid": 0,
+                "CurrencyCode": "USD",
+                "Status": "AUTHORISED",
+                "Date": "2026-07-01",
+                "DueDate": "2026-07-31",
+                "UpdatedDateUTC": "2026-07-16T12:00:00Z",
+                "LineItems": [
+                  {
+                    "Description": "redacted",
+                    "Quantity": 1,
+                    "UnitAmount": 100,
+                    "LineAmount": 100
+                  }
+                ]
+              },
+              "mappedFields": {}
+            },
+            {
+              "fields": {
+                "InvoiceID": "sanitized_sales_invoice_1",
+                "InvoiceNumber": "redacted",
+                "Type": "ACCREC",
+                "Contact": {
+                  "ContactID": "sanitized_supplier_1",
+                  "Name": "redacted"
+                },
+                "SubTotal": 100,
+                "TotalTax": 25,
+                "Total": 125,
+                "AmountDue": 125,
+                "AmountPaid": 0,
+                "CurrencyCode": "USD",
+                "Status": "AUTHORISED",
+                "Date": "2026-07-01",
+                "DueDate": "2026-07-31",
+                "UpdatedDateUTC": "2026-07-16T12:00:00Z",
+                "LineItems": [
+                  {
+                    "Description": "redacted",
+                    "Quantity": 1,
+                    "UnitAmount": 100,
+                    "LineAmount": 100
+                  }
+                ]
+              },
+              "mappedFields": {}
+            }
+          ]
+        },
+        "analysis": {
+          "kind": "sanitized_full_read_v1",
+          "sourceBodyDigest": "sha256:bb83667d7833af4f64689e24c2bda71a4a24dc261d25bd19feb1dd3b98001299",
+          "durationMs": 41196.241,
+          "quotaCallsUsed": 1,
+          "eligibility": {
+            "eligibleRecords": 39,
+            "rejectedRecords": 38
+          },
+          "fieldCoverage": {
+            "identifiers": 77,
+            "vendorLinkage": 77,
+            "totals": 77,
+            "currency": 77,
+            "status": 77,
+            "dates": 77
+          }
+        }
+      },
+      {
+        "captureRef": "req_nBlXXCzrm5NmD0H1XcEM",
+        "rawBodyDigest": "sha256:c03ff1ed8eb52f00b25bcfa9a1d246572f8ed9aa53503d5d8a74f8ace0db2030",
+        "receivedBytes": 11188,
+        "signatureHeaders": [
+          "svix-id",
+          "svix-signature",
+          "svix-timestamp"
+        ],
+        "envelope": {
+          "action": "read",
+          "projectId": "sanitized_project_1",
+          "groupRef": "sanitized_group_1",
+          "installationId": "sanitized_installation_1",
+          "installationUpdateTime": "2026-07-16T12:00:00Z",
+          "objectName": "creditNotes",
+          "operationId": "019f6bc0-8ba0-7380-a53f-12aedabb49ed",
+          "operationTime": "2026-07-16T12:00:00Z",
+          "provider": "xero",
+          "readType": "triggered",
+          "resultInfo": {
+            "type": "inline",
+            "numRecords": 4
+          },
+          "result": [
+            {
+              "fields": {
+                "CreditNoteID": "sanitized_credit_1",
+                "CreditNoteNumber": "redacted",
+                "Type": "ACCPAYCREDIT",
+                "Contact": {
+                  "ContactID": "sanitized_supplier_1",
+                  "Name": "redacted"
+                },
+                "SubTotal": 20,
+                "TotalTax": 5,
+                "Total": 25,
+                "RemainingCredit": 25,
+                "CurrencyCode": "USD",
+                "Status": "AUTHORISED",
+                "Date": "2026-07-02",
+                "UpdatedDateUTC": "2026-07-16T12:00:00Z",
+                "LineItems": [
+                  {
+                    "Description": "redacted",
+                    "Quantity": 1,
+                    "UnitAmount": 20,
+                    "LineAmount": 20
+                  }
+                ]
+              },
+              "mappedFields": {}
+            },
+            {
+              "fields": {
+                "CreditNoteID": "sanitized_sales_credit_1",
+                "CreditNoteNumber": "redacted",
+                "Type": "ACCRECCREDIT",
+                "Contact": {
+                  "ContactID": "sanitized_supplier_1",
+                  "Name": "redacted"
+                },
+                "SubTotal": 20,
+                "TotalTax": 5,
+                "Total": 25,
+                "RemainingCredit": 25,
+                "CurrencyCode": "USD",
+                "Status": "AUTHORISED",
+                "Date": "2026-07-02",
+                "UpdatedDateUTC": "2026-07-16T12:00:00Z",
+                "LineItems": [
+                  {
+                    "Description": "redacted",
+                    "Quantity": 1,
+                    "UnitAmount": 20,
+                    "LineAmount": 20
+                  }
+                ]
+              },
+              "mappedFields": {}
+            }
+          ]
+        },
+        "analysis": {
+          "kind": "sanitized_full_read_v1",
+          "sourceBodyDigest": "sha256:c03ff1ed8eb52f00b25bcfa9a1d246572f8ed9aa53503d5d8a74f8ace0db2030",
+          "durationMs": 26117.133,
+          "quotaCallsUsed": 1,
+          "eligibility": {
+            "eligibleRecords": 1,
+            "rejectedRecords": 3
+          },
+          "fieldCoverage": {
+            "identifiers": 4,
+            "vendorLinkage": 4,
+            "totals": 4,
+            "currency": 4,
+            "status": 4,
+            "dates": 4
+          }
+        }
+      }
+    ]
+  },
+  "fixtures": [
+    {
+      "captureRef": "req_VZyLIByKg7ZPjnJOjjf8",
+      "recordDigest": "sha256:b1c183baa045848d1a21cadd72cc47b860a6f1a384e5fb95b3ce7f6cbdba21af",
+      "objectName": "contacts",
+      "expected": "accept",
+      "fields": {
+        "ContactID": "sanitized_supplier_1",
+        "Name": "redacted",
+        "IsSupplier": true,
+        "ContactStatus": "ACTIVE",
+        "UpdatedDateUTC": "2026-07-16T12:00:00Z"
+      }
+    },
+    {
+      "captureRef": "req_VZyLIByKg7ZPjnJOjjf8",
+      "recordDigest": "sha256:a4101c725a99ff954fb9576e6af26e1d4ca3ef6293094acd7571c430b0168653",
+      "objectName": "contacts",
+      "expected": "reject",
+      "fields": {
+        "ContactID": "sanitized_customer_1",
+        "Name": "redacted",
+        "IsSupplier": false,
+        "ContactStatus": "ACTIVE",
+        "UpdatedDateUTC": "2026-07-16T12:00:00Z"
+      }
+    },
+    {
+      "captureRef": "req_XpXTAYWcWLUrHmLakAFa",
+      "recordDigest": "sha256:ade8de4232d307d59ad28c7733439c5a7edef0d82c65385523f853a471e93aa0",
+      "objectName": "invoices",
+      "expected": "accept",
+      "fields": {
+        "InvoiceID": "sanitized_invoice_1",
+        "InvoiceNumber": "redacted",
+        "Type": "ACCPAY",
+        "Contact": {
+          "ContactID": "sanitized_supplier_1",
+          "Name": "redacted"
+        },
+        "SubTotal": 100,
+        "TotalTax": 25,
+        "Total": 125,
+        "AmountDue": 125,
+        "AmountPaid": 0,
+        "CurrencyCode": "USD",
+        "Status": "AUTHORISED",
+        "Date": "2026-07-01",
+        "DueDate": "2026-07-31",
+        "UpdatedDateUTC": "2026-07-16T12:00:00Z",
+        "LineItems": [
+          {
+            "Description": "redacted",
+            "Quantity": 1,
+            "UnitAmount": 100,
+            "LineAmount": 100
+          }
+        ]
+      }
+    },
+    {
+      "captureRef": "req_XpXTAYWcWLUrHmLakAFa",
+      "recordDigest": "sha256:83ba6cc863860faed2755a6383ba63262785c33e32e46a45f628b1f7e4105aa8",
+      "objectName": "invoices",
+      "expected": "reject",
+      "fields": {
+        "InvoiceID": "sanitized_sales_invoice_1",
+        "InvoiceNumber": "redacted",
+        "Type": "ACCREC",
+        "Contact": {
+          "ContactID": "sanitized_supplier_1",
+          "Name": "redacted"
+        },
+        "SubTotal": 100,
+        "TotalTax": 25,
+        "Total": 125,
+        "AmountDue": 125,
+        "AmountPaid": 0,
+        "CurrencyCode": "USD",
+        "Status": "AUTHORISED",
+        "Date": "2026-07-01",
+        "DueDate": "2026-07-31",
+        "UpdatedDateUTC": "2026-07-16T12:00:00Z",
+        "LineItems": [
+          {
+            "Description": "redacted",
+            "Quantity": 1,
+            "UnitAmount": 100,
+            "LineAmount": 100
+          }
+        ]
+      }
+    },
+    {
+      "captureRef": "req_nBlXXCzrm5NmD0H1XcEM",
+      "recordDigest": "sha256:083509948304ebc3fac63493c04ae0788d81dcfffe0dfd8cee4ebcbfecf93ae4",
+      "objectName": "creditNotes",
+      "expected": "accept",
+      "fields": {
+        "CreditNoteID": "sanitized_credit_1",
+        "CreditNoteNumber": "redacted",
+        "Type": "ACCPAYCREDIT",
+        "Contact": {
+          "ContactID": "sanitized_supplier_1",
+          "Name": "redacted"
+        },
+        "SubTotal": 20,
+        "TotalTax": 5,
+        "Total": 25,
+        "RemainingCredit": 25,
+        "CurrencyCode": "USD",
+        "Status": "AUTHORISED",
+        "Date": "2026-07-02",
+        "UpdatedDateUTC": "2026-07-16T12:00:00Z",
+        "LineItems": [
+          {
+            "Description": "redacted",
+            "Quantity": 1,
+            "UnitAmount": 20,
+            "LineAmount": 20
+          }
+        ]
+      }
+    },
+    {
+      "captureRef": "req_nBlXXCzrm5NmD0H1XcEM",
+      "recordDigest": "sha256:104f2431f3b152f0b554fb174e12136cb2127cc384099f230fd8df23b88033a5",
+      "objectName": "creditNotes",
+      "expected": "reject",
+      "fields": {
+        "CreditNoteID": "sanitized_sales_credit_1",
+        "CreditNoteNumber": "redacted",
+        "Type": "ACCRECCREDIT",
+        "Contact": {
+          "ContactID": "sanitized_supplier_1",
+          "Name": "redacted"
+        },
+        "SubTotal": 20,
+        "TotalTax": 5,
+        "Total": 25,
+        "RemainingCredit": 25,
+        "CurrencyCode": "USD",
+        "Status": "AUTHORISED",
+        "Date": "2026-07-02",
+        "UpdatedDateUTC": "2026-07-16T12:00:00Z",
+        "LineItems": [
+          {
+            "Description": "redacted",
+            "Quantity": 1,
+            "UnitAmount": 20,
+            "LineAmount": 20
+          }
+        ]
+      }
+    },
+    {
+      "recordDigest": "sha256:741f9e99a1ab9e576986fe9781752f4959799468b889c1cd1f8658cf3fc0d90c",
+      "objectName": "bankTransactions",
+      "expected": "reject",
+      "fields": {
+        "BankTransactionID": "sanitized_bank_transaction_1",
+        "Type": "SPEND"
+      }
+    }
+  ],
+  "fullInvoiceRead": {
+    "selectedOperationRef": "019f6bc0-883c-7c2c-b417-97fadb339a94",
+    "representativeReads": [
+      {
+        "operationRef": "019f6bc0-883c-7c2c-b417-97fadb339a94",
+        "records": 77,
+        "bytes": 184733,
+        "durationMs": 41196.241,
+        "quotaCallsUsed": 1,
+        "quotaEvidenceSource": "ampersand_operation_provider_get_pages"
+      }
+    ],
+    "cadenceSeconds": 86400
+  },
+  "decision": {
+    "status": "go",
+    "u11MayStart": true,
+    "rationale": "redacted"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "extends": [
+    "../../.config/typescript/workspace-paths.json",
+    "@autograph/typescript-config/vitest.json"
+  ],
+  "include": ["./**/*.ts", "./**/*.tsx"]
+}

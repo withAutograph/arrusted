@@ -1,0 +1,12 @@
+id: semantic-icons-only-tsx
+valid:
+  - import { PlusIcon } from "@design-system/icons"; export const view = <PlusIcon />;
+  - 'import data from "./data.json" with { type: "@heroicons/react" }; export const view = <div />;'
+  - const iconPackage = "@heroicons/react"; export const view = <div />;
+  - '// import { PlusIcon } from "@heroicons/react/24/solid"; export const view = <div />;'
+invalid:
+  - import { PlusIcon } from "@heroicons/react/24/solid"; export const view = <PlusIcon />;
+  - import Icons = require("@heroicons/react/24/outline"); export const view = <div />;
+  - export { PlusIcon } from "@heroicons/react/24/outline";
+  - const icons = require("@heroicons/react"); export const view = <div />;
+  - const icons = import("@heroicons/react/20/solid"); export const view = <div />;

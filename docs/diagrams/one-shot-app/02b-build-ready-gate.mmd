@@ -1,0 +1,34 @@
+flowchart TB
+  P1[/P1 User accepts HTML experience and interface inventory/]
+  P2[(P2 Integrations, imports, source systems, refresh, and source-of-truth rules)]
+  P3[(P3 Data objects, fields, identities, and relationships)]
+  P4[(P4 Controls, filters, grouping, as-of, comparisons, and actions)]
+  P5[(P5 Reads, writes, drafts, review, provenance, and authority boundaries)]
+  P6[(P6 Roles, permissions, agent responsibilities, and non-goals)]
+  P7[(P7 Empty, loading, failure, and first-use behavior)]
+  P8[(P8 Acceptance walkthrough plus labeled unresolved decisions)]
+  G{G Build-ready?}
+  A1[A1 Return blocking assumption to prototype loop]
+  U1[/U1 Confirm, correct, or explicitly defer/]
+  R([Accepted structured AppSpec])
+
+  P1 --> G
+  P2 --> G
+  P3 --> G
+  P4 --> G
+  P5 --> G
+  P6 --> G
+  P7 --> G
+  P8 --> G
+  G -- No --> A1 --> U1 --> G
+  G -- Yes --> R
+
+  classDef built fill:#DCFCE7,stroke:#15803D,color:#14532D,stroke-width:2px
+  classDef partial fill:#FEF3C7,stroke:#D97706,color:#78350F,stroke-width:2px
+  classDef missing fill:#FEE2E2,stroke:#DC2626,color:#7F1D1D,stroke-width:2px
+  classDef outcome fill:#DBEAFE,stroke:#2563EB,color:#1E3A8A,stroke-width:3px
+
+  class P1,U1 built
+  class P2,P3,P4,P5,P6,P7,P8,A1 partial
+  class G missing
+  class R outcome

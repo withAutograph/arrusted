@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Suggest documentation sections relevant to changed paths"
+set -euo pipefail
+
+exec mise run repository:exec -- doc-section-link.sh "$@"

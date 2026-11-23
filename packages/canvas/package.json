@@ -1,0 +1,33 @@
+{
+  "name": "@autograph/canvas",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./threads": "./threads.ts"
+  },
+  "scripts": {
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "vp test --config vite.config.ts --run"
+  },
+  "dependencies": {
+    "@autograph/generated-app-runtime": "workspace:*",
+    "@autograph/work-session-tools": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@autograph/typescript-config": "workspace:*",
+    "@autograph/vite-config": "workspace:*",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0 <20.0.0",
+    "react-dom": ">=19.0.0 <20.0.0"
+  }
+}

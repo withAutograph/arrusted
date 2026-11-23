@@ -1,0 +1,243 @@
+[settings]
+experimental = true
+quiet = true
+
+[monorepo]
+config_roots = ["app", ".storybook", "packages/domain-libs/*", "packages/kernel"]
+
+[tools]
+actionlint = "1.7.12"
+bun = "1.3.14"
+"cargo:cargo-audit" = "0.22.2"
+cue = "0.16.1"
+fnox = "1.32.0"
+"gitleaks" = "8.30.1"
+"hk" = "2.0.1"
+"node" = "24.18.0"
+pitchfork = "2.25.0"
+"conda:postgresql" = "17.7"
+"rust" = { version = "1.97.1", profile = "default", components = "clippy,rustfmt" }
+"trivy" = "0.72.0"
+"github:nubjs/nub" = "0.5.0"
+
+[deps.bun]
+auto = true
+
+[env]
+RUSTUP_TOOLCHAIN = "1.97.1"
+# fnox 1.32 loads global config beneath explicit -c paths. Keep local profiles
+# isolated from machine-wide secrets and providers.
+FNOX_CONFIG_DIR = "{{config_root}}/.config/fnox/isolated-global"
+PLATFORM_FNOX_CONFIG = ".config/fnox/local.toml"
+PLATFORM_FNOX_PROFILE = "local"
+# Task shells must receive only mise's resolved tool environment. In
+# particular, inherited Bash startup files can replace mise's PATH in nested
+# task shells before repository commands run.
+BASH_ENV = "/dev/null"
+_.path = ["{{config_root}}/node_modules/.bin"]
+
+[tasks.check]
+description = "Run the canonical repository check"
+usage = '''
+flag "--pr" help="Run checks for files changed against the default branch"
+'''
+run = 'mise run repository:exec -- run-workspace-check.sh "${usage_pr:-false}"'
+
+[tasks.format]
+description = "Format package and Rust workspaces"
+depends = ["format:app", "format:kernel"]
+
+[task_templates."hk:app-step"]
+run = 'env -u INIT_CWD -u npm_config_local_prefix -u npm_package_json -u npm_package_name hk check --all {{ vars.hk_args }}'
+
+[tasks."format:app"]
+description = "Format package workspaces"
+extends = "hk:app-step"
+vars = { hk_args = "--fix --step format:app" }
+
+[tasks."format:kernel"]
+description = "Format Rust workspace code"
+run = "sh .config/mise/tasks/kernel/format"
+
+[tasks.lint]
+description = "Lint package and Rust workspaces"
+depends = ["lint:app", "lint:kernel"]
+
+[tasks."lint:app"]
+description = "Lint package workspaces"
+extends = "hk:app-step"
+vars = { hk_args = "--step lint:app" }
+
+[tasks."lint:kernel"]
+description = "Lint Rust workspace code"
+run = "sh .config/mise/tasks/kernel/lint"
+
+[tasks."check:app"]
+description = "Check package workspaces"
+extends = "hk:app-step"
+vars = { hk_args = "--step check:app" }
+
+[tasks."check:kernel"]
+description = "Check Rust workspace code"
+run = "sh .config/mise/tasks/kernel/check"
+
+[tasks."check:types"]
+description = "Check TypeScript projects"
+run = "env -u INIT_CWD -u npm_config_local_prefix -u npm_package_json -u npm_package_name hk check --all --step check:types"
+
+[tasks."check:workspace-imports"]
+description = "Check resolved workspace imports and domain-library cycles"
+run = "mise run repository:exec -- check-workspace-imports.ts && mise exec -- bunx vitest run .config/mise/scripts/repository/check-workspace-imports.test.ts .config/mise/scripts/repository/source-analysis.test.ts --silent"
+
+[tasks."check:package-manifests"]
+description = "Check workspace package metadata and shared dependency pins"
+run = "mise run repository:exec -- check-package-manifests.ts && mise exec -- bunx vitest run .config/mise/scripts/repository/check-package-manifests.test.ts --silent"
+
+[tasks."check:tooling-layout"]
+description = "Enforce approved root directories and task-first tooling ownership"
+run = "mise run check:root-layout && mise run repository:exec -- check-mise-task-ownership.ts && mise exec -- bunx vitest run .config/mise/scripts/repository/check-mise-task-ownership.test.ts --silent"
+
+[tasks."check:rust-dependency-policy"]
+description = "Check Cargo dependency and feature policy"
+run = "mise run repository:exec -- check-rust-dependency-policy.ts && mise exec -- bunx vitest run .config/mise/scripts/repository/check-rust-dependency-policy.test.ts --silent"
+
+[tasks."test:ast-grep"]
+description = "Prove scoped architecture rules accept and reject the intended syntax"
+run = "mise exec -- ast-grep test --config .config/mise/scripts/check/ast-grep/sgconfig.yml --skip-snapshot-tests"
+
+[tasks."check:ast-grep"]
+description = "Scan supported source roots with the scoped architecture rules"
+run = "mise exec -- ast-grep scan --config .config/mise/scripts/check/ast-grep/sgconfig.yml packages --report-style short"
+
+[tasks."check:contracts"]
+description = "Check generated contracts"
+run = "mise exec -- cargo run -p typegen -- --check"
+
+[tasks."generate:contracts"]
+description = "Generate TypeScript contracts from the Rust-owned wire contract"
+run = "mise exec -- cargo run -p typegen"
+
+[tasks."check:mise-rust-cache-paths"]
+description = "Check mise Rust cache paths stay outside the repository"
+run = "mise exec --no-deps -- bun .config/mise/scripts/repository/check-mise-rust-cache-paths.ts"
+
+[tasks."test:mise-rust-cache-paths"]
+description = "Prove mise Rust cache path checks fail closed"
+run = "mise exec --no-deps -- mise run repository:exec -- test-mise-rust-cache-paths.sh"
+
+[tasks."check:rust-validation-orchestration"]
+description = "Check Rust validation coverage, ordering, and fail-fast behavior"
+run = "mise exec --no-deps -- mise run repository:exec -- test-rust-validation-orchestration.sh"
+
+[tasks."security:dependencies"]
+description = "Audit exact JavaScript and Rust dependency locks with sanitized reports"
+run = "mise run repository:exec -- supply-chain-security.ts dependencies"
+
+[tasks."security:secrets"]
+description = "Scan the exact committed repository tree for secrets with a sanitized report"
+run = "bun .config/mise/scripts/repository/supply-chain-security.ts secrets"
+
+[tasks."security:images"]
+description = "Scan every immutable OCI artifact in an image lock"
+usage = 'arg "<manifest>" help="Path to images.lock.json"'
+run = 'mise run repository:exec -- supply-chain-security.ts images --manifest "$usage_manifest"'
+
+[tasks."check:supply-chain-fixtures"]
+description = "Prove positive and representative vulnerable supply-chain fixtures"
+run = "mise exec -- bunx vitest run .config/mise/scripts/repository/supply-chain-security.test.ts --silent"
+
+[tasks.test]
+description = "Run package and kernel tests"
+depends = ["test:app", "test:kernel"]
+
+[tasks."test:app"]
+description = "Run package tests"
+run = "turbo run test --filter='./packages/*' --filter='./packages/*/*' --filter=@autograph/turbo-generators && vp test --config packages/vite.config.ts --run"
+
+[tasks."test:app:platform"]
+description = "Run retained platform safety fixtures"
+env = { NODE_OPTIONS = "--no-experimental-webstorage" }
+run = """
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-${CARGO_BUILD_TARGET_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/schema-compiler/target}}"
+groups="${APP_PLATFORM_FIXTURE_GROUP:-installer organization auth-history runtime rust-hooks}"
+for group in $groups; do
+  case "$group" in
+    installer|organization|runtime) cargo build --locked -p schema-compiler ;;
+    auth-history|rust-hooks) ;;
+    *) echo "Invalid platform fixture group: $group" >&2; exit 2 ;;
+  esac
+  case "$group" in
+    installer) bun .config/mise/scripts/repository/test-protected-generated-installer.ts ;;
+    organization) bun .config/mise/scripts/repository/test-owned-realm-organization.ts ;;
+    auth-history) mise run --skip-tools auth:test:schema-history ;;
+    runtime) bun x vp test --run .config/mise/scripts/repository/repository-source-conditions.test.ts packages/protected-installer/node-spool-fence.test.ts .config/mise/scripts/repository/auth-schema-proposal-binary.test.ts .config/mise/scripts/repository/schema-release.test.ts .config/mise/scripts/repository/schema-release-predecessor.test.ts .config/mise/scripts/repository/schema-release-check.test.ts ;;
+    rust-hooks)
+      mise run check:rust-validation-orchestration
+      mise run test:mise-rust-cache-paths
+      node --test .config/mise/scripts/repository/check-mise-rust-toolchain.test.mjs
+      bun x vp test --run .config/mise/scripts/repository/check-rust-dependency-policy.test.ts
+      ;;
+  esac
+done
+"""
+
+[tasks."test:auth-tenant-migration"]
+description = "Test Auth organization provisioning, identity preservation and idempotence"
+run = "mise run repository:exec -- test-auth-tenant-migration.sh"
+
+[tasks."generate:package"]
+description = "Generate a source or built package workspace from the shared Turbo generator"
+usage = '''
+arg "<package_path>" help="Package path relative to packages/"
+flag "--built" help="Create a built package for installation outside the workspace"
+'''
+run = '''
+if [ "${usage_built:-false}" = "true" ]; then
+  turbo gen --config .config/turbo/generators/config.ts package --args "$usage_package_path" built
+else
+  turbo gen --config .config/turbo/generators/config.ts package --args "$usage_package_path" source
+fi
+'''
+
+[tasks."generate:domain-lib-turbo"]
+description = "Regenerate domain-library Turbo configurations"
+run = "bun .config/turbo/generators/domain-lib-turbo.ts --write"
+
+[tasks."test:kernel"]
+description = "Run Rust workspace tests"
+run = "sh .config/mise/tasks/kernel/test"
+
+[tasks."test:kernel:workspace"]
+description = "Run Rust workspace tests"
+run = "sh .config/mise/tasks/kernel/test-workspace"
+
+[tasks."eval:dashboard-agent"]
+description = "Score an agent-generated dashboard submission against the repository corpus"
+run = "mise exec -- bun packages/dashboard-agent-evals/cli.ts"
+
+[tasks.build]
+description = "Build package and catalog outputs"
+depends = ["build:app", "build:catalog"]
+
+[tasks."build:app"]
+description = "Build package workspaces"
+run = "mise exec -- turbo run build --only --filter='./packages/*' --filter='./packages/*/*'"
+
+[tasks."build:catalog"]
+description = "Build the component catalog"
+run = "mise --cd .storybook build"
+
+[tasks."hook:run"]
+description = "Run hk for an opt-in git hook"
+usage = '''
+arg "<hook_name>" help="Hook name to run"
+'''
+run = 'hk run "$usage_hook_name"'
+
+[tasks."hook:pre-commit"]
+description = "Run the pre-commit git hook"
+run = "hk run pre-commit"
+
+[tasks."hook:pre-push"]
+description = "Run pre-push checks"
+run = "hk run pre-push"

@@ -1,0 +1,16 @@
+{
+  "name": "@autograph/agent-reference-resolution",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "scripts": {
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "vp test --run __tests__"
+  },
+  "devDependencies": {
+    "@autograph/typescript-config": "workspace:*",
+    "vitest": "catalog:"
+  }
+}

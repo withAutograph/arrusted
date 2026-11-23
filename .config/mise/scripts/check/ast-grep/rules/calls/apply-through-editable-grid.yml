@@ -1,0 +1,125 @@
+id: apply-through-editable-grid-ts
+language: TypeScript
+severity: error
+message: direct /api/apply calls belong to editable-grid apply orchestration
+note: Stage client edits through @modules/editable-grid instead of introducing a parallel save path.
+files:
+  - packages/domain-libs/**/*.ts
+  - packages/**/*.ts
+  - packages/domain-libs/**/*.mts
+  - packages/**/*.mts
+  - packages/domain-libs/**/*.cts
+  - packages/**/*.cts
+ignores:
+  - packages/modules/editable-grid/**
+rule:
+  any:
+    - pattern: fetch($URL)
+    - pattern: fetch($URL, $$$ARGS)
+    - pattern: $CLIENT.fetch($URL)
+    - pattern: $CLIENT.fetch($URL, $$$ARGS)
+    - pattern: $CLIENT["fetch"]($URL)
+    - pattern: $CLIENT["fetch"]($URL, $$$ARGS)
+    - pattern: $CLIENT['fetch']($URL)
+    - pattern: $CLIENT['fetch']($URL, $$$ARGS)
+    - pattern: $CLIENT[`fetch`]($URL)
+    - pattern: $CLIENT[`fetch`]($URL, $$$ARGS)
+    - pattern: $CLIENT.fetch?.($URL)
+    - pattern: $CLIENT.fetch?.($URL, $$$ARGS)
+    - pattern: $CLIENT?.fetch($URL)
+    - pattern: $CLIENT?.fetch($URL, $$$ARGS)
+    - pattern: $CLIENT?.fetch?.($URL)
+    - pattern: $CLIENT?.fetch?.($URL, $$$ARGS)
+    - pattern: postJson($URL)
+    - pattern: postJson($URL, $$$ARGS)
+    - pattern: postJson<$TYPE>($URL)
+    - pattern: postJson<$TYPE>($URL, $$$ARGS)
+    - pattern: $CLIENT.postJson($URL)
+    - pattern: $CLIENT.postJson($URL, $$$ARGS)
+    - pattern: $CLIENT.postJson<$TYPE>($URL)
+    - pattern: $CLIENT.postJson<$TYPE>($URL, $$$ARGS)
+constraints:
+  URL:
+    regex: ^["'\x60]/api/apply["'\x60]$
+---
+id: apply-through-editable-grid-tsx
+language: Tsx
+severity: error
+message: direct /api/apply calls belong to editable-grid apply orchestration
+note: Stage client edits through @modules/editable-grid instead of introducing a parallel save path.
+files:
+  - packages/domain-libs/**/*.tsx
+  - packages/**/*.tsx
+ignores:
+  - packages/modules/editable-grid/**
+rule:
+  any:
+    - pattern: fetch($URL)
+    - pattern: fetch($URL, $$$ARGS)
+    - pattern: $CLIENT.fetch($URL)
+    - pattern: $CLIENT.fetch($URL, $$$ARGS)
+    - pattern: $CLIENT["fetch"]($URL)
+    - pattern: $CLIENT["fetch"]($URL, $$$ARGS)
+    - pattern: $CLIENT['fetch']($URL)
+    - pattern: $CLIENT['fetch']($URL, $$$ARGS)
+    - pattern: $CLIENT[`fetch`]($URL)
+    - pattern: $CLIENT[`fetch`]($URL, $$$ARGS)
+    - pattern: $CLIENT.fetch?.($URL)
+    - pattern: $CLIENT.fetch?.($URL, $$$ARGS)
+    - pattern: $CLIENT?.fetch($URL)
+    - pattern: $CLIENT?.fetch($URL, $$$ARGS)
+    - pattern: $CLIENT?.fetch?.($URL)
+    - pattern: $CLIENT?.fetch?.($URL, $$$ARGS)
+    - pattern: postJson($URL)
+    - pattern: postJson($URL, $$$ARGS)
+    - pattern: postJson<$TYPE>($URL)
+    - pattern: postJson<$TYPE>($URL, $$$ARGS)
+    - pattern: $CLIENT.postJson($URL)
+    - pattern: $CLIENT.postJson($URL, $$$ARGS)
+    - pattern: $CLIENT.postJson<$TYPE>($URL)
+    - pattern: $CLIENT.postJson<$TYPE>($URL, $$$ARGS)
+constraints:
+  URL:
+    regex: ^["'\x60]/api/apply["'\x60]$
+---
+id: apply-through-editable-grid-js
+language: JavaScript
+severity: error
+message: direct /api/apply calls belong to editable-grid apply orchestration
+note: Stage client edits through @modules/editable-grid instead of introducing a parallel save path.
+files:
+  - packages/domain-libs/**/*.js
+  - packages/domain-libs/**/*.jsx
+  - packages/domain-libs/**/*.mjs
+  - packages/domain-libs/**/*.cjs
+  - packages/**/*.js
+  - packages/**/*.jsx
+  - packages/**/*.mjs
+  - packages/**/*.cjs
+ignores:
+  - packages/modules/editable-grid/**
+rule:
+  any:
+    - pattern: fetch($URL)
+    - pattern: fetch($URL, $$$ARGS)
+    - pattern: $CLIENT.fetch($URL)
+    - pattern: $CLIENT.fetch($URL, $$$ARGS)
+    - pattern: $CLIENT["fetch"]($URL)
+    - pattern: $CLIENT["fetch"]($URL, $$$ARGS)
+    - pattern: $CLIENT['fetch']($URL)
+    - pattern: $CLIENT['fetch']($URL, $$$ARGS)
+    - pattern: $CLIENT[`fetch`]($URL)
+    - pattern: $CLIENT[`fetch`]($URL, $$$ARGS)
+    - pattern: $CLIENT.fetch?.($URL)
+    - pattern: $CLIENT.fetch?.($URL, $$$ARGS)
+    - pattern: $CLIENT?.fetch($URL)
+    - pattern: $CLIENT?.fetch($URL, $$$ARGS)
+    - pattern: $CLIENT?.fetch?.($URL)
+    - pattern: $CLIENT?.fetch?.($URL, $$$ARGS)
+    - pattern: postJson($URL)
+    - pattern: postJson($URL, $$$ARGS)
+    - pattern: $CLIENT.postJson($URL)
+    - pattern: $CLIENT.postJson($URL, $$$ARGS)
+constraints:
+  URL:
+    regex: ^["'\x60]/api/apply["'\x60]$

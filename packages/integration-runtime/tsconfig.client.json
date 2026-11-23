@@ -1,0 +1,4 @@
+{
+  "extends": "../../.config/typescript/workspace-paths.json",
+  "include": ["app-client.tsx", "__tests__/app-client.test.tsx"]
+}

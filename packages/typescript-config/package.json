@@ -1,0 +1,13 @@
+{
+  "name": "@autograph/typescript-config",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./base.json": "./base.json",
+    "./nextjs.json": "./nextjs.json",
+    "./vitest.json": "./vitest.json"
+  },
+  "scripts": {
+    "check": "node -e \"for (const preset of ['@autograph/typescript-config/base.json', '@autograph/typescript-config/nextjs.json', '@autograph/typescript-config/vitest.json']) require.resolve(preset)\""
+  }
+}

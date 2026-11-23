@@ -1,0 +1,5 @@
+# Validation's caller prepares dependencies before invoking Turbo. Preserve this
+# policy through nested app-owned Mise tasks without skipping task dependencies
+# or preventing an explicit `mise deps install bun` / locked package install.
+[deps.bun]
+auto = false

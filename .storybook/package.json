@@ -1,0 +1,18 @@
+{
+  "name": "@autograph/storybook",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "storybook dev --config-dir .",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "build": "storybook build --config-dir ."
+  },
+  "devDependencies": {
+    "@storybook/react-vite": "10.5.5",
+    "@tailwindcss/vite": "4.3.3",
+    "storybook": "10.5.5",
+    "typescript": "7.0.2",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.3.1",
+    "vite-plus": "0.3.1"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "@autograph/generated-app-runtime",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./server": "./server.ts",
+    "./data": "./data.ts",
+    "./work-sessions": "./work-sessions.ts",
+    "./source": "./source.ts",
+    "./release-verification": "./release-verification.ts",
+    "./postgres": "./postgres.ts",
+    "./artifact-helpers": "./artifact-helpers.ts",
+    "./errors": "./errors.ts",
+    "./protected-installer": "./protected-installer.ts",
+    "./protected-export": "./protected-export.ts",
+    "./protected-export-contract": "./protected-export-contract.ts",
+    "./actor-binding": "./actor-binding.ts"
+  },
+  "scripts": {
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "mise run --no-deps test:data-plane"
+  },
+  "dependencies": {
+    "@libpg-query/parser": "catalog:",
+    "pg": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
+  }
+}

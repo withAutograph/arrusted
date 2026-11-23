@@ -1,0 +1,51 @@
+{
+  "action": "read",
+  "consumerRef": "user-123",
+  "consumerName": "Autograph Sandbox User",
+  "groupRef": "customer-sandbox:quickbooks:00000000-0000-4000-8000-000000000011",
+  "groupName": "Autograph Sandbox Customer",
+  "installationId": "00000000-0000-4000-8000-000000000001",
+  "installationUpdateTime": "2026-07-02T21:00:00Z",
+  "objectName": "vendor",
+  "operationId": "00000000-0000-4000-8000-000000000101",
+  "operationTime": "2026-07-02T21:05:00Z",
+  "projectId": "ampersand-project-id",
+  "provider": "quickbooksSandbox",
+  "rawObjectName": "vendor",
+  "readType": "triggered",
+  "workspace": "quickbooks-sandbox-company",
+  "resultInfo": {
+    "type": "inline",
+    "numRecords": 1
+  },
+  "result": [
+    {
+      "mappedFields": {
+        "source_record_id": "42",
+        "name": "Acme Software LLC",
+        "status": true,
+        "entity_name": "Acme Software LLC"
+      },
+      "raw": {
+        "Id": "42",
+        "SyncToken": "0",
+        "DisplayName": "Acme Software LLC",
+        "CompanyName": "Acme Software LLC",
+        "PrintOnCheckName": "Acme Software LLC",
+        "Active": true,
+        "Balance": 1250.0,
+        "CurrencyRef": {
+          "value": "USD",
+          "name": "United States Dollar"
+        },
+        "PrimaryEmailAddr": {
+          "Address": "billing@example.invalid"
+        },
+        "MetaData": {
+          "CreateTime": "2026-07-02T16:30:00-04:00",
+          "LastUpdatedTime": "2026-07-02T16:45:00-04:00"
+        }
+      }
+    }
+  ]
+}

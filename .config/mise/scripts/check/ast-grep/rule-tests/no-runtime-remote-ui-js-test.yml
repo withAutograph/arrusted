@@ -1,0 +1,25 @@
+id: no-runtime-remote-ui-js
+valid:
+  - 'const module = import("./client.js");'
+  - 'const node = document.createElement("section");'
+invalid:
+  - "const run = Function(source);"
+  - 'node["innerHTML"] = html;'
+  - "node.outerHTML = html;"
+  - 'node.insertAdjacentHTML("beforeend", html);'
+  - "document.write(html);"
+  - "export const Frame = ({ html }) => <iframe srcDoc={html} />;"
+  - "export const Frame = ({ html }) => <iframe srcdoc={html} />;"
+  - "frame.srcdoc = html;"
+  - "export const Runtime = ({ source }) => <script>{source}</script>;"
+  - "const script = document.createElement('script');"
+  - 'const script = document.createElement("ScRiPt");'
+  - 'const script = React.createElement("script", { src: rendererUrl });'
+  - 'const stylesheet = document.createElement("link");'
+  - 'const stylesheet = document.createElement("LINK");'
+  - "const renderer = import(rendererUrl);"
+  - 'export const Styles = ({ href }) => <link href={href} rel="stylesheet" />;'
+  - 'export const Styles = () => <link rel="stylesheet" href="/vendor/api/ui.css" />;'
+  - "export const Runtime = ({ src }) => <script src={src} />;"
+  - 'export const Runtime = () => <Script src="//apps.example.com/renderer.js" />;'
+  - 'export const Runtime = () => <script src="/reviewed.js" />;'

@@ -1,0 +1,304 @@
+{
+  "$schema": "../node_modules/konsistent/konsistent.schema.json",
+  "version": "v1",
+  "conventions": [
+    {
+      "name": "contracts-imports-are-type-only",
+      "description": "Shared TypeScript contracts cannot execute value imports; runtime behavior belongs in clients or applications.",
+      "paths": "packages/contracts/**/*.{ts,tsx,mts,cts}",
+      "must": {
+        "importValuesFromCurrentDir": false,
+        "importValuesFromParents": false,
+        "importValuesFromExternals": false
+      }
+    },
+    {
+      "name": "modules-direct-import-boundary",
+      "description": "Reusable modules accept runtime clients, authentication, and integrations from applications and consume shared contracts as types.",
+      "paths": "packages/modules/**/*.{ts,tsx,mts,cts}",
+      "mustNot": {
+        "importValuesFrom": [
+          "@contracts",
+          "@contracts/*",
+          "@agent-foundation",
+          "@agent-foundation/*",
+          "@autograph/integrations",
+          "@autograph/integrations/*",
+          "@autograph/auth",
+          "@autograph/auth/*",
+          "@kernel-client",
+          "@kernel-client/*",
+          "@domain-libs/*",
+          "@hc-client",
+          "@hc-client/*",
+          "@autograph/hc/*",
+          "@vendor-client",
+          "@vendor-client/*",
+          "@autograph/vendor/*",
+          "@autograph/vite-config",
+          "@autograph/vite-config/*",
+          "@autograph/agent-reference-resolution",
+          "@autograph/agent-reference-resolution/*"
+        ],
+        "importTypesFrom": [
+          "@autograph/integrations",
+          "@autograph/integrations/*",
+          "@autograph/auth",
+          "@autograph/auth/*",
+          "@kernel-client",
+          "@kernel-client/*",
+          "@domain-libs/*",
+          "@hc-client",
+          "@hc-client/*",
+          "@autograph/hc/*",
+          "@vendor-client",
+          "@vendor-client/*",
+          "@autograph/vendor/*",
+          "@autograph/vite-config",
+          "@autograph/vite-config/*",
+          "@autograph/agent-reference-resolution",
+          "@autograph/agent-reference-resolution/*"
+        ]
+      }
+    },
+    {
+      "name": "engines-direct-import-boundary",
+      "description": "Pure engines cannot directly import modules or the runtime kernel client.",
+      "paths": "packages/engines/**/*.{ts,tsx,mts,cts}",
+      "mustNot": {
+        "importValuesFrom": [
+          "@modules/*",
+          "@kernel-client",
+          "@kernel-client/*",
+          "@autograph/components",
+          "@autograph/compositions",
+          "@autograph/icons"
+        ],
+        "importTypesFrom": [
+          "@modules/*",
+          "@kernel-client",
+          "@kernel-client/*",
+          "@autograph/components",
+          "@autograph/compositions",
+          "@autograph/icons"
+        ]
+      }
+    },
+    {
+      "name": "compositions-direct-import-boundary",
+      "description": "Reusable compositions receive clients through props instead of importing the kernel client.",
+      "paths": [
+        "packages/design-systems/*/compositions/**/*.{ts,tsx,mts,cts}"
+      ],
+      "mustNot": {
+        "importValuesFrom": [
+          "@kernel-client",
+          "@kernel-client/*"
+        ],
+        "importTypesFrom": [
+          "@kernel-client",
+          "@kernel-client/*"
+        ]
+      }
+    },
+    {
+      "name": "app-runtime-direct-import-boundary",
+      "description": "The shared app runtime consumes contract declarations as types and cannot import the runtime kernel client.",
+      "paths": "packages/app-runtime/**/*.{ts,tsx,mts,cts}",
+      "mustNot": {
+        "importValuesFrom": [
+          "@contracts",
+          "@contracts/*",
+          "@kernel-client",
+          "@kernel-client/*"
+        ],
+        "importTypesFrom": [
+          "@kernel-client",
+          "@kernel-client/*"
+        ]
+      }
+    },
+    {
+      "name": "agent-foundation-direct-import-boundary",
+      "description": "Agent foundation consumes shared contracts as types and cannot import domain libraries directly.",
+      "paths": "packages/agent-foundation/**/*.{ts,tsx,mts,cts}",
+      "mustNot": {
+        "importValuesFrom": [
+          "@contracts",
+          "@contracts/*",
+          "@domain-libs/*"
+        ],
+        "importTypesFrom": [
+          "@domain-libs/*"
+        ]
+      }
+    },
+    {
+      "name": "work-session-tools-direct-import-boundary",
+      "description": "The work-session tool core is provider-neutral: it reaches data only through the generated runtime clients and imports no app, authentication, hosting, model-provider or UI surface; shared contracts and agent foundation are types only.",
+      "paths": [
+        "packages/work-session-tools/**/*.{ts,tsx,mts,cts}",
+        "!packages/work-session-tools/node_modules/**"
+      ],
+      "mustNot": {
+        "importValuesFrom": [
+          "@contracts",
+          "@contracts/*",
+          "@agent-foundation",
+          "@agent-foundation/*",
+          "@kernel-client",
+          "@kernel-client/*",
+          "@autograph/auth",
+          "@autograph/auth/*",
+          "@autograph/platform-microfrontends",
+          "@autograph/platform-microfrontends/*",
+          "@autograph/components",
+          "@autograph/components/*",
+          "@autograph/compositions",
+          "@autograph/compositions/*",
+          "@autograph/icons",
+          "@autograph/icons/*",
+          "@modules/*",
+          "@domain-libs/*",
+          "@hc-client",
+          "@hc-client/*",
+          "@autograph/hc/*",
+          "@vendor-client",
+          "@vendor-client/*",
+          "@autograph/vendor/*",
+          "apps/*",
+          "ai",
+          "ai/*"
+        ],
+        "importTypesFrom": [
+          "@kernel-client",
+          "@kernel-client/*",
+          "@autograph/auth",
+          "@autograph/auth/*",
+          "@autograph/platform-microfrontends",
+          "@autograph/platform-microfrontends/*",
+          "@autograph/components",
+          "@autograph/components/*",
+          "@autograph/compositions",
+          "@autograph/compositions/*",
+          "@autograph/icons",
+          "@autograph/icons/*",
+          "@modules/*",
+          "@domain-libs/*",
+          "@hc-client",
+          "@hc-client/*",
+          "@autograph/hc/*",
+          "@vendor-client",
+          "@vendor-client/*",
+          "@autograph/vendor/*",
+          "apps/*",
+          "ai",
+          "ai/*"
+        ]
+      }
+    },
+    {
+      "name": "auth-direct-import-boundary",
+      "description": "Authentication consumes shared contracts as types and cannot import the runtime kernel client.",
+      "paths": "packages/auth/**/*.{ts,tsx,mts,cts}",
+      "mustNot": {
+        "importValuesFrom": [
+          "@contracts",
+          "@contracts/*",
+          "@kernel-client",
+          "@kernel-client/*"
+        ],
+        "importTypesFrom": [
+          "@kernel-client",
+          "@kernel-client/*"
+        ]
+      }
+    },
+    {
+      "name": "domain-libs-direct-import-boundary",
+      "description": "Domain libraries cannot directly import agent-foundation orchestration.",
+      "paths": "packages/domain-libs/**/*.{ts,tsx,mts,cts}",
+      "mustNot": {
+        "importValuesFrom": [
+          "@agent-foundation",
+          "@agent-foundation/*",
+          "@autograph/components",
+          "@autograph/compositions",
+          "@autograph/icons",
+          "@autograph/auth",
+          "@autograph/auth/*",
+          "@autograph/integrations",
+          "@autograph/integrations/*",
+          "@kernel-client",
+          "@kernel-client/*",
+          "@modules/*",
+          "@source-import",
+          "@source-import/*"
+        ],
+        "importTypesFrom": [
+          "@agent-foundation",
+          "@agent-foundation/*",
+          "@autograph/components",
+          "@autograph/compositions",
+          "@autograph/icons",
+          "@autograph/auth",
+          "@autograph/auth/*",
+          "@autograph/integrations",
+          "@autograph/integrations/*",
+          "@kernel-client",
+          "@kernel-client/*",
+          "@modules/*",
+          "@source-import",
+          "@source-import/*"
+        ]
+      }
+    },
+    {
+      "name": "kernel-client-direct-import-boundary",
+      "description": "The kernel client cannot directly import UI, modules, orchestration, integrations, or application clients.",
+      "paths": "packages/kernel-client/**/*.{ts,tsx,mts,cts}",
+      "mustNot": {
+        "importValuesFrom": [
+          "@agent-foundation",
+          "@agent-foundation/*",
+          "@autograph/components",
+          "@autograph/compositions",
+          "@autograph/icons",
+          "@autograph/auth",
+          "@autograph/auth/*",
+          "@autograph/integrations",
+          "@autograph/integrations/*",
+          "@domain-libs/*",
+          "@hc-client",
+          "@hc-client/*",
+          "@autograph/hc/*",
+          "@modules/*",
+          "@source-import",
+          "@source-import/*",
+          "@vendor-client",
+          "@vendor-client/*"
+        ],
+        "importTypesFrom": [
+          "@agent-foundation",
+          "@agent-foundation/*",
+          "@autograph/components",
+          "@autograph/compositions",
+          "@autograph/icons",
+          "@autograph/auth",
+          "@autograph/auth/*",
+          "@autograph/integrations",
+          "@autograph/integrations/*",
+          "@domain-libs/*",
+          "@hc-client",
+          "@hc-client/*",
+          "@autograph/hc/*",
+          "@modules/*",
+          "@source-import",
+          "@source-import/*",
+          "@vendor-client",
+          "@vendor-client/*"
+        ]
+      }
+    }
+  ]
+}

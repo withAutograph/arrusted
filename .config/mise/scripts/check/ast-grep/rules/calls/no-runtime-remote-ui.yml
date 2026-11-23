@@ -1,0 +1,203 @@
+id: no-runtime-remote-ui-ts
+language: TypeScript
+severity: error
+message: production app UI must not execute or inject runtime-provided code or HTML
+note: Compile reviewed app UI into the Next deployment; treat remote responses as validated data.
+files:
+  - packages/**/*.ts
+  - packages/**/*.mts
+  - packages/**/*.cts
+ignores:
+  - packages/**/__tests__/**
+  - packages/**/generated/**
+rule:
+  any:
+    - pattern: eval($$$ARGS)
+    - pattern: $OBJECT.eval($$$ARGS)
+    - pattern: Function($$$ARGS)
+    - pattern: new Function($$$ARGS)
+    - pattern: $OBJECT.Function($$$ARGS)
+    - pattern: new $OBJECT.Function($$$ARGS)
+    - pattern: $OBJECT.innerHTML = $VALUE
+    - pattern: $OBJECT["innerHTML"] = $VALUE
+    - pattern: $OBJECT['innerHTML'] = $VALUE
+    - pattern: $OBJECT.outerHTML = $VALUE
+    - pattern: $OBJECT["outerHTML"] = $VALUE
+    - pattern: $OBJECT['outerHTML'] = $VALUE
+    - pattern: $OBJECT.srcdoc = $VALUE
+    - pattern: $OBJECT["srcdoc"] = $VALUE
+    - pattern: $OBJECT['srcdoc'] = $VALUE
+    - pattern: $OBJECT.insertAdjacentHTML($$$ARGS)
+    - pattern: document.write($$$ARGS)
+    - pattern: document.writeln($$$ARGS)
+    - pattern: $OBJECT.document.write($$$ARGS)
+    - pattern: $OBJECT.document.writeln($$$ARGS)
+    - pattern: $OBJECT.setAttribute("srcdoc", $VALUE)
+    - pattern: $OBJECT.setAttribute('srcdoc', $VALUE)
+    - pattern: $OBJECT.setAttribute("srcDoc", $VALUE)
+    - pattern: $OBJECT.setAttribute('srcDoc', $VALUE)
+    - pattern: $OBJECT.createElement($TAG)
+    - pattern: $OBJECT.createElement($TAG, $$$ARGS)
+    - pattern: import($SOURCE)
+constraints:
+  TAG:
+    regex: '(?i)^["''](?:script|link)["'']$'
+  SOURCE:
+    any:
+      - regex: '^[''"\x60](?:https?:)?//'
+      - not: { any: [{ kind: string }, { kind: template_string }] }
+      - all: [{ kind: template_string }, { regex: '\$\{' }]
+---
+id: no-runtime-remote-ui-tsx
+language: Tsx
+severity: error
+message: production app UI must not execute or inject runtime-provided code or HTML
+note: Compile reviewed app UI into the Next deployment; treat remote responses as validated data.
+files:
+  - packages/**/*.tsx
+ignores:
+  - packages/**/__tests__/**
+  - packages/**/generated/**
+rule:
+  any:
+    - pattern: eval($$$ARGS)
+    - pattern: $OBJECT.eval($$$ARGS)
+    - pattern: Function($$$ARGS)
+    - pattern: new Function($$$ARGS)
+    - pattern: $OBJECT.Function($$$ARGS)
+    - pattern: new $OBJECT.Function($$$ARGS)
+    - pattern: $OBJECT.innerHTML = $VALUE
+    - pattern: $OBJECT["innerHTML"] = $VALUE
+    - pattern: $OBJECT['innerHTML'] = $VALUE
+    - pattern: $OBJECT.outerHTML = $VALUE
+    - pattern: $OBJECT["outerHTML"] = $VALUE
+    - pattern: $OBJECT['outerHTML'] = $VALUE
+    - pattern: $OBJECT.srcdoc = $VALUE
+    - pattern: $OBJECT["srcdoc"] = $VALUE
+    - pattern: $OBJECT['srcdoc'] = $VALUE
+    - pattern: $OBJECT.insertAdjacentHTML($$$ARGS)
+    - pattern: document.write($$$ARGS)
+    - pattern: document.writeln($$$ARGS)
+    - pattern: $OBJECT.document.write($$$ARGS)
+    - pattern: $OBJECT.document.writeln($$$ARGS)
+    - pattern: $OBJECT.setAttribute("srcdoc", $VALUE)
+    - pattern: $OBJECT.setAttribute('srcdoc', $VALUE)
+    - pattern: $OBJECT.setAttribute("srcDoc", $VALUE)
+    - pattern: $OBJECT.setAttribute('srcDoc', $VALUE)
+    - pattern: $OBJECT.createElement($TAG)
+    - pattern: $OBJECT.createElement($TAG, $$$ARGS)
+    - pattern: import($SOURCE)
+    - kind: jsx_attribute
+      regex: '^dangerouslySetInnerHTML\b'
+    - kind: jsx_attribute
+      regex: '(?i)^srcdoc\b'
+    - kind: jsx_element
+      regex: '^<(?:script|Script)\b'
+    - all:
+        - kind: jsx_self_closing_element
+        - has:
+            kind: jsx_attribute
+            regex: '^rel\s*=\s*["'']stylesheet["'']$'
+            stopBy: end
+    - all:
+        - kind: jsx_element
+        - has:
+            kind: jsx_attribute
+            regex: '^rel\s*=\s*["'']stylesheet["'']$'
+            stopBy: end
+    - kind: jsx_self_closing_element
+      regex: '^<(?:script|Script)\b'
+constraints:
+  TAG:
+    regex: '(?i)^["''](?:script|link)["'']$'
+  SOURCE:
+    any:
+      - regex: '^[''"\x60](?:https?:)?//'
+      - not: { any: [{ kind: string }, { kind: template_string }] }
+      - all: [{ kind: template_string }, { regex: '\$\{' }]
+---
+id: no-runtime-remote-ui-js
+language: JavaScript
+severity: error
+message: production app UI must not execute or inject runtime-provided code or HTML
+note: Compile reviewed app UI into the Next deployment; treat remote responses as validated data.
+files:
+  - packages/**/*.js
+  - packages/**/*.jsx
+  - packages/**/*.mjs
+  - packages/**/*.cjs
+ignores:
+  - packages/**/__tests__/**
+  - packages/**/generated/**
+rule:
+  any:
+    - pattern: eval($$$ARGS)
+    - pattern: $OBJECT.eval($$$ARGS)
+    - pattern: Function($$$ARGS)
+    - pattern: new Function($$$ARGS)
+    - pattern: $OBJECT.Function($$$ARGS)
+    - pattern: new $OBJECT.Function($$$ARGS)
+    - pattern: $OBJECT.innerHTML = $VALUE
+    - pattern: $OBJECT["innerHTML"] = $VALUE
+    - pattern: $OBJECT['innerHTML'] = $VALUE
+    - pattern: $OBJECT.outerHTML = $VALUE
+    - pattern: $OBJECT["outerHTML"] = $VALUE
+    - pattern: $OBJECT['outerHTML'] = $VALUE
+    - pattern: $OBJECT.srcdoc = $VALUE
+    - pattern: $OBJECT["srcdoc"] = $VALUE
+    - pattern: $OBJECT['srcdoc'] = $VALUE
+    - pattern: $OBJECT.insertAdjacentHTML($$$ARGS)
+    - pattern: document.write($$$ARGS)
+    - pattern: document.writeln($$$ARGS)
+    - pattern: $OBJECT.document.write($$$ARGS)
+    - pattern: $OBJECT.document.writeln($$$ARGS)
+    - pattern: $OBJECT.setAttribute("srcdoc", $VALUE)
+    - pattern: $OBJECT.setAttribute('srcdoc', $VALUE)
+    - pattern: $OBJECT.setAttribute("srcDoc", $VALUE)
+    - pattern: $OBJECT.setAttribute('srcDoc', $VALUE)
+    - pattern: $OBJECT.createElement($TAG)
+    - pattern: $OBJECT.createElement($TAG, $$$ARGS)
+    - pattern: import($SOURCE)
+    - kind: jsx_attribute
+      regex: '^dangerouslySetInnerHTML\b'
+    - kind: jsx_attribute
+      regex: '(?i)^srcdoc\b'
+    - kind: jsx_element
+      regex: '^<(?:script|Script)\b'
+    - all:
+        - kind: jsx_self_closing_element
+        - has:
+            kind: jsx_attribute
+            regex: '^rel\s*=\s*["'']stylesheet["'']$'
+            stopBy: end
+    - all:
+        - kind: jsx_element
+        - has:
+            kind: jsx_attribute
+            regex: '^rel\s*=\s*["'']stylesheet["'']$'
+            stopBy: end
+    - kind: jsx_self_closing_element
+      regex: '^<(?:script|Script)\b'
+constraints:
+  TAG:
+    regex: '(?i)^["''](?:script|link)["'']$'
+  SOURCE:
+    any:
+      - regex: '^[''"\x60](?:https?:)?//'
+      - not: { any: [{ kind: string }, { kind: template_string }] }
+      - all: [{ kind: template_string }, { regex: '\$\{' }]
+---
+id: no-runtime-remote-ui-css
+language: Css
+severity: error
+message: production app styles must not import remote stylesheets
+note: Bundle reviewed styles into the app build instead of fetching runtime presentation.
+files:
+  - packages/**/*.css
+ignores:
+  - packages/**/generated/**
+rule:
+  pattern: '@import $SOURCE'
+constraints:
+  SOURCE:
+    regex: '(?:https?:)?//|(?:^|\()\s*["'']?/'

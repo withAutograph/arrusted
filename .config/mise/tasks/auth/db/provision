@@ -1,0 +1,6 @@
+#!/bin/sh
+#MISE description="Provision shared Better Auth schema and organizations"
+set -eu
+
+cd "$MISE_MONOREPO_ROOT"
+.config/mise/scripts/auth/db-provision "$@"

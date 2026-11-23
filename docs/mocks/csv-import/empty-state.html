@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CSV Import — Empty State (mock v3)</title>
+    <style>
+      :root {
+        --color-bg-page: #fafafa;
+        --color-bg-surface: #ffffff;
+        --color-bg-muted: #f4f4f5;
+        --color-bg-hover: #f4f4f5;
+        --color-bg-accent-subtle: #eef2ff;
+        --color-border-subtle: #e4e4e7;
+        --color-border-strong: #d4d4d8;
+        --color-border-accent: #6366f1;
+        --color-text-primary: #18181b;
+        --color-text-secondary: #52525b;
+        --color-text-muted: #a1a1aa;
+        --color-text-accent: #4f46e5;
+        --color-text-warning: #b45309;
+        --color-status-success: #047857;
+        --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+        --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+        --radius-sm: 4px; --radius-md: 6px; --radius-lg: 10px; --radius-pill: 999px;
+        --text-caption: 12px; --text-body: 14px;
+        --text-heading-sm: 16px; --text-heading-lg: 24px;
+        --font-weight-medium: 500; --font-weight-semibold: 600;
+        --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; height: 100%; }
+      body { font-family: var(--font-sans); font-size: var(--text-body); color: var(--color-text-primary); background: var(--color-bg-page); line-height: 1.5; }
+      .shell { display: flex; flex-direction: column; height: 100vh; }
+      .topbar { display: flex; align-items: center; gap: var(--space-4); background: var(--color-bg-surface); border-bottom: 1px solid var(--color-border-subtle); padding: 0 var(--space-6); height: 56px; flex-shrink: 0; }
+      .topbar-brand { font-weight: var(--font-weight-semibold); }
+      .topbar-eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-size: var(--text-caption); color: var(--color-text-muted); font-weight: var(--font-weight-medium); }
+      .main { flex: 1; overflow-y: auto; padding: var(--space-8); }
+      .main-container { max-width: 720px; margin: 0 auto; }
+      .page-header { margin-bottom: var(--space-6); }
+      .page-title { font-size: var(--text-heading-lg); font-weight: var(--font-weight-semibold); margin: 0; }
+      .page-subtitle { color: var(--color-text-secondary); margin: var(--space-1) 0 0 0; }
+      .drop-zone { background: var(--color-bg-surface); border: 2px dashed var(--color-border-strong); border-radius: var(--radius-lg); padding: var(--space-10); text-align: center; display: flex; flex-direction: column; align-items: center; gap: var(--space-3); transition: border-color 120ms; }
+      .drop-zone:hover { border-color: var(--color-border-accent); }
+      .drop-icon { width: 44px; height: 44px; border-radius: var(--radius-md); background: var(--color-bg-accent-subtle); display: grid; place-items: center; color: var(--color-text-accent); font-size: 20px; font-weight: var(--font-weight-semibold); }
+      .drop-headline { font-size: var(--text-heading-sm); font-weight: var(--font-weight-semibold); margin: 0; }
+      .drop-sublines { color: var(--color-text-secondary); max-width: 480px; margin: 0; }
+      .btn { appearance: none; border: 1px solid var(--color-border-strong); background: var(--color-bg-surface); color: var(--color-text-primary); padding: var(--space-2) var(--space-4); border-radius: var(--radius-md); font-size: var(--text-body); font-weight: var(--font-weight-medium); cursor: pointer; }
+      .btn:hover { background: var(--color-bg-hover); }
+      .btn-primary { background: var(--color-text-accent); color: white; border-color: var(--color-text-accent); }
+      .btn-primary:hover { background: #4338ca; }
+      .agent-tip { margin-top: var(--space-3); font-size: var(--text-caption); color: var(--color-text-muted); }
+      .section { margin-top: var(--space-8); }
+      .section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-3); }
+      .section-title { font-weight: var(--font-weight-semibold); font-size: var(--text-heading-sm); margin: 0; }
+      .section-subtitle { color: var(--color-text-muted); font-size: var(--text-caption); }
+      .recent-list { background: var(--color-bg-surface); border: 1px solid var(--color-border-subtle); border-radius: var(--radius-md); overflow: hidden; }
+      .recent-item { display: grid; grid-template-columns: 1fr auto auto; gap: var(--space-3); align-items: center; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-border-subtle); }
+      .recent-item:last-child { border-bottom: none; }
+      .recent-item:hover { background: var(--color-bg-muted); cursor: pointer; }
+      .recent-name { font-weight: var(--font-weight-medium); }
+      .recent-meta { color: var(--color-text-muted); font-size: var(--text-caption); }
+      .recent-status { font-size: var(--text-caption); font-weight: var(--font-weight-medium); }
+      .recent-status.saved { color: var(--color-status-success); }
+      .recent-status.draft { color: var(--color-text-warning); }
+      .connections-empty { background: var(--color-bg-surface); border: 1px dashed var(--color-border-strong); border-radius: var(--radius-md); padding: var(--space-5); text-align: center; color: var(--color-text-secondary); }
+      .connections-empty .small { color: var(--color-text-muted); font-size: var(--text-caption); margin-top: var(--space-1); display: block; }
+      .meta-note { margin-top: var(--space-8); font-size: var(--text-caption); color: var(--color-text-muted); }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="topbar-brand">Autograph</div>
+        <span style="color: var(--color-text-muted)">/</span>
+        <div>
+          <div class="topbar-eyebrow">HEADCOUNT · DATA SOURCES</div>
+          <div style="font-weight: var(--font-weight-medium)">Import data</div>
+        </div>
+      </header>
+      <main class="main">
+        <div class="main-container">
+          <div class="page-header">
+            <h1 class="page-title">Import data</h1>
+            <p class="page-subtitle">Drop a CSV. The agent reads it, asks if anything's unclear, and gets a set of drafts ready for you to review.</p>
+          </div>
+          <section class="drop-zone" aria-label="Source artifact drop zone">
+            <div class="drop-icon" aria-hidden="true">↓</div>
+            <h2 class="drop-headline">Drop a CSV here</h2>
+            <p class="drop-sublines">Or click to choose a file from your computer.</p>
+            <button class="btn btn-primary">Choose file</button>
+            <p class="agent-tip">CSV import agent · won't write anything until you save</p>
+          </section>
+          <section class="section" aria-label="Recent imports">
+            <div class="section-header">
+              <h3 class="section-title">Recent imports</h3>
+              <a class="btn" href="#" style="border: none; background: transparent; color: var(--color-text-accent); padding: 0; font-size: var(--text-caption)">View all</a>
+            </div>
+            <div class="recent-list">
+              <div class="recent-item" role="button" tabindex="0">
+                <div>
+                  <div class="recent-name">Q1 2026 headcount snapshot</div>
+                  <div class="recent-meta">headcount-q1-2026.csv · 47 rows · 1h ago</div>
+                </div>
+                <span class="recent-meta">43 saved · 4 to review</span>
+                <span class="recent-status saved">✓ saved</span>
+              </div>
+              <div class="recent-item" role="button" tabindex="0">
+                <div>
+                  <div class="recent-name">Engineering rehire batch</div>
+                  <div class="recent-meta">rehires-may.csv · 8 rows · 2d ago</div>
+                </div>
+                <span class="recent-meta">8 saved</span>
+                <span class="recent-status saved">✓ published</span>
+              </div>
+              <div class="recent-item" role="button" tabindex="0">
+                <div>
+                  <div class="recent-name">Lattice employees export</div>
+                  <div class="recent-meta">lattice-export-q1.csv · 124 rows · 6d ago</div>
+                </div>
+                <span class="recent-meta">3 questions waiting on you</span>
+                <span class="recent-status draft">○ in progress</span>
+              </div>
+            </div>
+          </section>
+          <section class="section" aria-label="Connected sources">
+            <div class="section-header">
+              <h3 class="section-title">Connected sources</h3>
+              <span class="section-subtitle">Coming when integrations land</span>
+            </div>
+            <div class="connections-empty">
+              No active connections.
+              <span class="small">Once integrations are wired up, each connection shows here with its sync status. Independent from one-off CSV uploads above.</span>
+            </div>
+          </section>
+          <p class="meta-note">Mock: <strong>empty-state.html</strong> · file upload only · friendlier copy throughout · no left sidebar</p>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,19 @@
+id: apply-through-editable-grid-ts
+valid:
+  - 'fetch("/api/schema", { method: "GET" });'
+  - 'window.fetch("/api/schema", { method: "GET" });'
+  - applyEditsThroughGrid(rows);
+invalid:
+  - 'fetch("/api/apply", { method: "POST" });'
+  - 'window.fetch("/api/apply", { method: "POST" });'
+  - 'globalThis.fetch("/api/apply");'
+  - 'window["fetch"]("/api/apply");'
+  - "window['fetch']('/api/apply');"
+  - 'globalThis.fetch?.("/api/apply");'
+  - 'window?.fetch("/api/apply");'
+  - "window?.fetch?.('/api/apply');"
+  - postJson("/api/apply", payload);
+  - client.postJson("/api/apply", payload);
+  - postJson<AppliedChangeSet>("/api/apply", payload);
+  - client.postJson<AppliedChangeSet>("/api/apply", payload);
+  - 'fetch(`/api/apply`, { method: "POST" });'

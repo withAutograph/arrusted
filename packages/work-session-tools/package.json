@@ -1,0 +1,32 @@
+{
+  "name": "@autograph/work-session-tools",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./labels": "./labels.ts",
+    "./mcp": "./mcp.ts",
+    "./chat": "./chat.ts",
+    "./layout": "./layout.ts",
+    "./records": "./records.ts"
+  },
+  "scripts": {
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "mise run --no-deps test:work-session-tools"
+  },
+  "dependencies": {
+    "@autograph/generated-app-runtime": "workspace:*",
+    "@modelcontextprotocol/server": "2.3.1",
+    "zod": "catalog:",
+    "@autograph/csv-workspace": "workspace:*"
+  },
+  "devDependencies": {
+    "@autograph/typescript-config": "workspace:*",
+    "@autograph/vite-config": "workspace:*",
+    "@modelcontextprotocol/client": "catalog:",
+    "pg": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
+  }
+}

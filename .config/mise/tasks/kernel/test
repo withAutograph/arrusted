@@ -1,0 +1,5 @@
+#!/bin/sh
+#MISE description="Run Rust workspace tests"
+set -eu
+
+sh "$(dirname "$0")/test-workspace"

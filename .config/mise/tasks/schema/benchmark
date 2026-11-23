@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+#MISE description="Run the managed Neon generated lookup scale benchmark"
+set -euo pipefail
+
+readonly psql_bin="${PSQL_BIN:-psql}"
+if [[ -z "${KERNEL_TEST_DATABASE_URL:-}" ]]; then
+  echo "schema:benchmark requires KERNEL_TEST_DATABASE_URL for the isolated benchmark database" >&2
+  exit 64
+fi
+if ! command -v "${psql_bin}" >/dev/null 2>&1; then
+  echo "schema:benchmark requires the PostgreSQL client: ${psql_bin}" >&2
+  exit 69
+fi
+
+readonly database_name="$("${psql_bin}" "${KERNEL_TEST_DATABASE_URL}" --no-psqlrc --set=ON_ERROR_STOP=1 --quiet --tuples-only --no-align --command 'select current_database()')"
+if [[ "${database_name}" != "a462_benchmark" ]]; then
+  echo "schema:benchmark only runs against the isolated a462_benchmark database" >&2
+  exit 64
+fi
+readonly server_version="$("${psql_bin}" "${KERNEL_TEST_DATABASE_URL}" --no-psqlrc --set=ON_ERROR_STOP=1 --quiet --tuples-only --no-align --command 'show server_version_num')"
+if [[ "${server_version}" -lt 170000 ]]; then
+  echo "schema:benchmark requires PostgreSQL 17 or newer" >&2
+  exit 64
+fi
+
+exec cargo test --locked -p schema-compiler --test sql_runtime_lookup_scale -- --nocapture --test-threads=1

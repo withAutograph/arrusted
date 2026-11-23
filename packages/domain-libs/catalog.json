@@ -1,0 +1,4773 @@
+{
+  "domain_catalog": {
+    "version": 1,
+    "model_count": 38,
+    "models": {
+      "chart_account": {
+        "id": "chart_account",
+        "source_package": "@domain-libs/accounting",
+        "kind": "entity",
+        "label": "Chart Account",
+        "field_order": ["id", "code", "name", "parent", "account_type", "known_aliases"],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Chart Account ID",
+            "is_unique": true
+          },
+          "code": {
+            "type": "text",
+            "label": "Account Code"
+          },
+          "name": {
+            "type": "text",
+            "label": "Account Name"
+          },
+          "parent": {
+            "type": "relation",
+            "label": "Parent Chart Account",
+            "target_model": "chart_account"
+          },
+          "account_type": {
+            "type": "text",
+            "label": "Source Account Type"
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Known Aliases"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "exchange_rate": {
+        "id": "exchange_rate",
+        "source_package": "@domain-libs/accounting",
+        "kind": "entity",
+        "label": "Exchange Rate",
+        "field_order": ["source_currency", "target_currency", "rate", "origin", "observation_date"],
+        "field_groups": [],
+        "fields": {
+          "source_currency": {
+            "type": "iso_currency",
+            "label": "Source Currency"
+          },
+          "target_currency": {
+            "type": "iso_currency",
+            "label": "Target Currency"
+          },
+          "rate": {
+            "type": "number",
+            "label": "Rate",
+            "notes": "Positive target units per source unit. Null on a custom version returns the pair to automatic rates. Write through the currency-rate adapter, which validates this invariant."
+          },
+          "origin": {
+            "type": "enum",
+            "label": "Origin",
+            "option_set": [
+              {
+                "id": "custom",
+                "label": "Custom",
+                "aliases": []
+              },
+              {
+                "id": "frankfurter",
+                "label": "Frankfurter",
+                "aliases": []
+              }
+            ]
+          },
+          "observation_date": {
+            "type": "date",
+            "label": "Observation Date",
+            "notes": "Optional provider observation provenance, distinct from the effective date."
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "department": {
+        "id": "department",
+        "source_package": "@domain-libs/_shared",
+        "kind": "lookup",
+        "label": "Department",
+        "field_order": ["name", "known_aliases", "lead", "executive"],
+        "field_groups": [],
+        "fields": {
+          "name": {
+            "type": "text",
+            "label": "Name",
+            "is_unique": true
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Aliases"
+          },
+          "lead": {
+            "type": "relation",
+            "label": "Department Lead",
+            "target_model": "employee"
+          },
+          "executive": {
+            "type": "relation",
+            "label": "Executive Sponsor",
+            "target_model": "employee"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": [
+          {
+            "external_key": "engineering",
+            "values": {
+              "name": "Engineering",
+              "known_aliases": ["eng"]
+            }
+          },
+          {
+            "external_key": "product",
+            "values": {
+              "name": "Product",
+              "known_aliases": ["prod"]
+            }
+          },
+          {
+            "external_key": "design",
+            "values": {
+              "name": "Design",
+              "known_aliases": ["creative"]
+            }
+          },
+          {
+            "external_key": "sales",
+            "values": {
+              "name": "Sales",
+              "known_aliases": ["gtm"]
+            }
+          },
+          {
+            "external_key": "operations",
+            "values": {
+              "name": "Operations",
+              "known_aliases": ["ops"]
+            }
+          }
+        ]
+      },
+      "location": {
+        "id": "location",
+        "source_package": "@domain-libs/_shared",
+        "kind": "lookup",
+        "label": "Location",
+        "field_order": ["name", "known_aliases", "country", "geography", "comp_zone"],
+        "field_groups": [],
+        "fields": {
+          "name": {
+            "type": "text",
+            "label": "Name",
+            "is_unique": true
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Aliases"
+          },
+          "country": {
+            "type": "iso_country",
+            "label": "Country"
+          },
+          "geography": {
+            "type": "relation",
+            "label": "Geo / Region",
+            "target_model": "geography"
+          },
+          "comp_zone": {
+            "type": "relation",
+            "label": "Compensation Zone",
+            "target_model": "comp_zone"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": [
+          {
+            "external_key": "san_francisco_ca",
+            "values": {
+              "name": "San Francisco, CA",
+              "known_aliases": ["SF HQ"]
+            }
+          },
+          {
+            "external_key": "new_york_ny",
+            "values": {
+              "name": "New York, NY",
+              "known_aliases": ["NYC"]
+            }
+          },
+          {
+            "external_key": "remote_us",
+            "values": {
+              "name": "Remote (US)",
+              "known_aliases": ["Remote - US"]
+            }
+          },
+          {
+            "external_key": "chicago_il",
+            "values": {
+              "name": "Chicago, IL",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "austin_tx",
+            "values": {
+              "name": "Austin, TX",
+              "known_aliases": []
+            }
+          }
+        ]
+      },
+      "pnl_category": {
+        "id": "pnl_category",
+        "source_package": "@domain-libs/_shared",
+        "kind": "lookup",
+        "label": "P&L Category",
+        "field_order": ["name", "known_aliases"],
+        "field_groups": [],
+        "fields": {
+          "name": {
+            "type": "text",
+            "label": "Name",
+            "is_unique": true
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Aliases"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": [
+          {
+            "external_key": "cogs",
+            "values": {
+              "name": "Cost of Goods Sold",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "r_and_d",
+            "values": {
+              "name": "R&D",
+              "known_aliases": ["r-and-d"]
+            }
+          },
+          {
+            "external_key": "sales_marketing",
+            "values": {
+              "name": "Sales & Marketing",
+              "known_aliases": ["sales-marketing"]
+            }
+          },
+          {
+            "external_key": "g_and_a",
+            "values": {
+              "name": "General & Administrative",
+              "known_aliases": ["g-and-a"]
+            }
+          }
+        ]
+      },
+      "geography": {
+        "id": "geography",
+        "source_package": "@domain-libs/_shared",
+        "kind": "lookup",
+        "label": "Geo / Region",
+        "field_order": ["name", "known_aliases"],
+        "field_groups": [],
+        "fields": {
+          "name": {
+            "type": "text",
+            "label": "Name",
+            "is_unique": true
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Aliases"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "business_unit": {
+        "id": "business_unit",
+        "source_package": "@domain-libs/_shared",
+        "kind": "lookup",
+        "label": "Business Unit",
+        "field_order": ["name", "known_aliases"],
+        "field_groups": [],
+        "fields": {
+          "name": {
+            "type": "text",
+            "label": "Name",
+            "is_unique": true
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Aliases"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": [
+          {
+            "external_key": "product_engineering",
+            "values": {
+              "name": "Product & Engineering",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "go_to_market",
+            "values": {
+              "name": "Go To Market",
+              "known_aliases": ["GTM"]
+            }
+          },
+          {
+            "external_key": "operations",
+            "values": {
+              "name": "Operations",
+              "known_aliases": ["Ops"]
+            }
+          },
+          {
+            "external_key": "core_product",
+            "values": {
+              "name": "Core Product",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "platform",
+            "values": {
+              "name": "Platform",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "enterprise",
+            "values": {
+              "name": "Enterprise",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "smb",
+            "values": {
+              "name": "SMB",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "corporate",
+            "values": {
+              "name": "Corporate",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "growth",
+            "values": {
+              "name": "Growth",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "infrastructure",
+            "values": {
+              "name": "Infrastructure",
+              "known_aliases": []
+            }
+          }
+        ]
+      },
+      "job_family": {
+        "id": "job_family",
+        "source_package": "@domain-libs/compensation",
+        "kind": "lookup",
+        "label": "Job Family",
+        "field_order": ["name", "known_aliases", "commissioned", "notes"],
+        "field_groups": [],
+        "fields": {
+          "name": {
+            "type": "text",
+            "label": "Name",
+            "is_unique": true
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Aliases"
+          },
+          "commissioned": {
+            "type": "bool",
+            "label": "Commissioned?"
+          },
+          "notes": {
+            "type": "text",
+            "label": "Notes"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": [
+          {
+            "external_key": "sales",
+            "values": {
+              "name": "Sales",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "cx",
+            "values": {
+              "name": "Customer Success",
+              "known_aliases": ["Customer Service"]
+            }
+          },
+          {
+            "external_key": "marketing",
+            "values": {
+              "name": "Marketing",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "engineering",
+            "values": {
+              "name": "Engineering",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "product",
+            "values": {
+              "name": "Product",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "design",
+            "values": {
+              "name": "Design",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "finance",
+            "values": {
+              "name": "Finance",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "legal",
+            "values": {
+              "name": "Legal",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "hr",
+            "values": {
+              "name": "HR",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "operations",
+            "values": {
+              "name": "Operations",
+              "known_aliases": []
+            }
+          },
+          {
+            "external_key": "talent",
+            "values": {
+              "name": "Talent",
+              "known_aliases": ["Recruiting"]
+            }
+          }
+        ]
+      },
+      "level": {
+        "id": "level",
+        "source_package": "@domain-libs/compensation",
+        "kind": "lookup",
+        "label": "Level",
+        "field_order": [
+          "name",
+          "known_aliases",
+          "job_family",
+          "base_low",
+          "base_target",
+          "base_high",
+          "tc_high",
+          "tc_target",
+          "tc_low",
+          "bonus_percent",
+          "ote_target",
+          "ote_low",
+          "ote_high",
+          "variable_portion",
+          "total_share_grant",
+          "annual_equity_value"
+        ],
+        "field_groups": [],
+        "fields": {
+          "name": {
+            "type": "text",
+            "label": "Name",
+            "is_unique": true
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Aliases"
+          },
+          "job_family": {
+            "type": "relation",
+            "label": "Job Family",
+            "target_model": "job_family"
+          },
+          "base_low": {
+            "type": "money_rate",
+            "label": "Base Salary (Low)"
+          },
+          "base_target": {
+            "type": "money_rate",
+            "label": "Base Salary (Target)"
+          },
+          "base_high": {
+            "type": "money_rate",
+            "label": "Base Salary (High)"
+          },
+          "tc_high": {
+            "type": "money_rate",
+            "label": "Total Comp (High)"
+          },
+          "tc_target": {
+            "type": "money_rate",
+            "label": "Total Comp (Target)"
+          },
+          "tc_low": {
+            "type": "money_rate",
+            "label": "Total Comp (Low)"
+          },
+          "bonus_percent": {
+            "type": "number",
+            "label": "Bonus %"
+          },
+          "ote_target": {
+            "type": "money_rate",
+            "label": "On-Target Earnings (Target)"
+          },
+          "ote_low": {
+            "type": "money_rate",
+            "label": "On-Target Earnings (Low)"
+          },
+          "ote_high": {
+            "type": "money_rate",
+            "label": "On-Target Earnings (High)"
+          },
+          "variable_portion": {
+            "type": "number",
+            "label": "Variable Portion"
+          },
+          "total_share_grant": {
+            "type": "number",
+            "label": "Total Share Grant"
+          },
+          "annual_equity_value": {
+            "type": "money_rate",
+            "label": "Annualized Equity Value"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": [
+          {
+            "external_key": "l2",
+            "values": {
+              "name": "L2",
+              "known_aliases": ["IC2"]
+            }
+          },
+          {
+            "external_key": "l3",
+            "values": {
+              "name": "L3",
+              "known_aliases": ["IC3"]
+            }
+          },
+          {
+            "external_key": "l4",
+            "values": {
+              "name": "L4",
+              "known_aliases": ["IC4"]
+            }
+          },
+          {
+            "external_key": "l5",
+            "values": {
+              "name": "L5",
+              "known_aliases": ["IC5"]
+            }
+          },
+          {
+            "external_key": "l6",
+            "values": {
+              "name": "L6",
+              "known_aliases": ["IC6"]
+            }
+          },
+          {
+            "external_key": "l7",
+            "values": {
+              "name": "L7",
+              "known_aliases": ["IC7"]
+            }
+          },
+          {
+            "external_key": "l8",
+            "values": {
+              "name": "L8",
+              "known_aliases": ["IC8"]
+            }
+          },
+          {
+            "external_key": "l9",
+            "values": {
+              "name": "L9",
+              "known_aliases": ["IC9"]
+            }
+          },
+          {
+            "external_key": "l10",
+            "values": {
+              "name": "L10",
+              "known_aliases": ["IC10"]
+            }
+          }
+        ]
+      },
+      "comp_zone": {
+        "id": "comp_zone",
+        "source_package": "@domain-libs/compensation",
+        "kind": "lookup",
+        "label": "Compensation Zones",
+        "field_order": ["name", "known_aliases", "base_adjustment", "notes"],
+        "field_groups": [],
+        "fields": {
+          "name": {
+            "type": "text",
+            "label": "Name",
+            "is_unique": true
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Aliases"
+          },
+          "base_adjustment": {
+            "type": "number",
+            "label": "Base Salary Adjustment (%)"
+          },
+          "notes": {
+            "type": "text",
+            "label": "Notes"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "bonus": {
+        "id": "bonus",
+        "source_package": "@domain-libs/compensation",
+        "kind": "entity",
+        "label": "Bonus Payments",
+        "field_order": ["issuance_date", "recipient", "bonus_reason", "start_date", "end_date"],
+        "field_groups": [],
+        "fields": {
+          "issuance_date": {
+            "type": "date",
+            "label": "Bonus Date"
+          },
+          "recipient": {
+            "type": "relation",
+            "label": "Bonus Recipient",
+            "target_model": "employee"
+          },
+          "bonus_reason": {
+            "type": "enum",
+            "label": "Reason for Bonus",
+            "option_set": [
+              {
+                "id": "unspecified",
+                "label": "Unspecified",
+                "aliases": []
+              }
+            ]
+          },
+          "start_date": {
+            "type": "date",
+            "label": "Bonus Period Start"
+          },
+          "end_date": {
+            "type": "date",
+            "label": "Bonus Period End"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "equity_grant": {
+        "id": "equity_grant",
+        "source_package": "@domain-libs/compensation",
+        "kind": "entity",
+        "label": "Equity Grant",
+        "field_order": [
+          "id",
+          "equity_grant_reason",
+          "equity_grant_type",
+          "equity_grant_status",
+          "equity_target_price",
+          "start_date",
+          "issuance_date",
+          "end_date",
+          "number_of_shares",
+          "recipient",
+          "price_per_share"
+        ],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Grant ID",
+            "is_unique": true
+          },
+          "equity_grant_reason": {
+            "type": "enum",
+            "label": "Reason for Equity Grant",
+            "option_set": [
+              {
+                "id": "unspecified",
+                "label": "Unspecified",
+                "aliases": []
+              }
+            ]
+          },
+          "equity_grant_type": {
+            "type": "enum",
+            "label": "Equity Grant Type",
+            "option_set": [
+              {
+                "id": "unspecified",
+                "label": "Unspecified",
+                "aliases": []
+              }
+            ]
+          },
+          "equity_grant_status": {
+            "type": "enum",
+            "label": "Equity Grant Status",
+            "option_set": [
+              {
+                "id": "unspecified",
+                "label": "Unspecified",
+                "aliases": []
+              }
+            ]
+          },
+          "equity_target_price": {
+            "type": "enum",
+            "label": "Equity Target Price",
+            "option_set": [
+              {
+                "id": "unspecified",
+                "label": "Unspecified",
+                "aliases": []
+              }
+            ]
+          },
+          "start_date": {
+            "type": "date",
+            "label": "Vesting Start Date"
+          },
+          "issuance_date": {
+            "type": "date",
+            "label": "Issuance Date"
+          },
+          "end_date": {
+            "type": "date",
+            "label": "Vesting End Date"
+          },
+          "number_of_shares": {
+            "type": "number",
+            "label": "Number of Shares"
+          },
+          "recipient": {
+            "type": "relation",
+            "label": "Recipient",
+            "target_model": "employee"
+          },
+          "price_per_share": {
+            "type": "number",
+            "label": "Purchase Price / Share"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "benefits_policy": {
+        "id": "benefits_policy",
+        "source_package": "@domain-libs/compensation",
+        "kind": "entity",
+        "label": "Benefits Policy",
+        "field_order": ["id", "name", "country", "annual_amount", "notes"],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Benefits Policy ID",
+            "is_unique": true
+          },
+          "name": {
+            "type": "text",
+            "label": "Policy Name"
+          },
+          "country": {
+            "type": "iso_country",
+            "label": "Country",
+            "is_unique": true
+          },
+          "annual_amount": {
+            "type": "money_rate",
+            "label": "Annual Benefits Cost"
+          },
+          "notes": {
+            "type": "text",
+            "label": "Notes"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "employer_tax_policy": {
+        "id": "employer_tax_policy",
+        "source_package": "@domain-libs/compensation",
+        "kind": "entity",
+        "label": "Employer Tax Policy",
+        "field_order": ["id", "name", "country", "rate_pct", "annual_cap", "notes"],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Employer Tax Policy ID",
+            "is_unique": true
+          },
+          "name": {
+            "type": "text",
+            "label": "Policy Name"
+          },
+          "country": {
+            "type": "iso_country",
+            "label": "Country",
+            "is_unique": true
+          },
+          "rate_pct": {
+            "type": "number",
+            "label": "Payroll Tax Rate (%)"
+          },
+          "annual_cap": {
+            "type": "money_rate",
+            "label": "Annual Cap"
+          },
+          "notes": {
+            "type": "text",
+            "label": "Notes"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "contractor": {
+        "id": "contractor",
+        "source_package": "@domain-libs/contractor",
+        "kind": "entity",
+        "label": "Contractor",
+        "field_order": [
+          "id",
+          "name",
+          "title",
+          "pay",
+          "start_date",
+          "end_date",
+          "department",
+          "name_last",
+          "name_first",
+          "name_display",
+          "reports_to",
+          "type",
+          "location",
+          "annualized_cost"
+        ],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Contractor ID",
+            "is_unique": true
+          },
+          "name": {
+            "type": "text",
+            "label": "Full Legal Name"
+          },
+          "title": {
+            "type": "text",
+            "label": "Title"
+          },
+          "pay": {
+            "type": "money_rate",
+            "label": "Payment Rate"
+          },
+          "start_date": {
+            "type": "date",
+            "label": "Start Date"
+          },
+          "end_date": {
+            "type": "date",
+            "label": "End Date"
+          },
+          "department": {
+            "type": "relation",
+            "label": "Department",
+            "target_model": "department"
+          },
+          "name_last": {
+            "type": "text",
+            "label": "Last Name"
+          },
+          "name_first": {
+            "type": "text",
+            "label": "First Name"
+          },
+          "name_display": {
+            "type": "text",
+            "label": "Display Name"
+          },
+          "reports_to": {
+            "type": "relation",
+            "label": "Manager",
+            "target_model": "employee"
+          },
+          "type": {
+            "type": "enum",
+            "label": "Contractor Type",
+            "option_set": [
+              {
+                "id": "consultant",
+                "label": "Consultant",
+                "aliases": []
+              },
+              {
+                "id": "freelancer",
+                "label": "Freelancer",
+                "aliases": []
+              },
+              {
+                "id": "agency",
+                "label": "Agency",
+                "aliases": []
+              },
+              {
+                "id": "temp",
+                "label": "Temp",
+                "aliases": []
+              }
+            ]
+          },
+          "location": {
+            "type": "relation",
+            "label": "Work location",
+            "target_model": "location"
+          },
+          "annualized_cost": {
+            "type": "money_rate",
+            "label": "Annualized Cost"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "cx_capacity_template": {
+        "id": "cx_capacity_template",
+        "source_package": "@domain-libs/employee",
+        "kind": "lookup",
+        "label": "CX Capacity Template",
+        "field_order": ["name", "known_aliases", "segment", "customer_count"],
+        "field_groups": [],
+        "fields": {
+          "name": {
+            "type": "text",
+            "label": "Name",
+            "is_unique": true
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Aliases"
+          },
+          "segment": {
+            "type": "relation",
+            "label": "Customer Segment",
+            "target_model": "segment"
+          },
+          "customer_count": {
+            "type": "number",
+            "label": "Customer Count"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "quota_capacity_template": {
+        "id": "quota_capacity_template",
+        "source_package": "@domain-libs/employee",
+        "kind": "lookup",
+        "label": "Quota Capacity Template",
+        "field_order": [
+          "name",
+          "known_aliases",
+          "segment",
+          "default_quota",
+          "default_ramp_time_mos"
+        ],
+        "field_groups": [],
+        "fields": {
+          "name": {
+            "type": "text",
+            "label": "Name",
+            "is_unique": true
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Aliases"
+          },
+          "segment": {
+            "type": "relation",
+            "label": "Market Segment",
+            "target_model": "segment"
+          },
+          "default_quota": {
+            "type": "money_rate",
+            "label": "Default Quota"
+          },
+          "default_ramp_time_mos": {
+            "type": "number",
+            "label": "Default Ramp Time (mos)"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "initiative": {
+        "id": "initiative",
+        "source_package": "@domain-libs/employee",
+        "kind": "lookup",
+        "label": "Initiative",
+        "field_order": [
+          "name",
+          "known_aliases",
+          "start_date",
+          "end_date",
+          "department",
+          "owner",
+          "budget",
+          "parent_initiative"
+        ],
+        "field_groups": [],
+        "fields": {
+          "name": {
+            "type": "text",
+            "label": "Name",
+            "is_unique": true
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Aliases"
+          },
+          "start_date": {
+            "type": "date",
+            "label": "Start Date"
+          },
+          "end_date": {
+            "type": "date",
+            "label": "End Date"
+          },
+          "department": {
+            "type": "relation",
+            "label": "Department",
+            "target_model": "department"
+          },
+          "owner": {
+            "type": "relation",
+            "label": "Owner",
+            "target_model": "employee"
+          },
+          "budget": {
+            "type": "money_rate",
+            "label": "Budget"
+          },
+          "parent_initiative": {
+            "type": "relation",
+            "label": "Parent Initiative",
+            "target_model": "initiative"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "segment": {
+        "id": "segment",
+        "source_package": "@domain-libs/employee",
+        "kind": "lookup",
+        "label": "Segment",
+        "field_order": ["name", "known_aliases"],
+        "field_groups": [],
+        "fields": {
+          "name": {
+            "type": "text",
+            "label": "Name",
+            "is_unique": true
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Aliases"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "entity": {
+        "id": "entity",
+        "source_package": "@domain-libs/employee",
+        "kind": "lookup",
+        "label": "Entity",
+        "field_order": ["name", "known_aliases", "entity_name", "parent_entity"],
+        "field_groups": [],
+        "fields": {
+          "name": {
+            "type": "text",
+            "label": "Name",
+            "is_unique": true
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Aliases"
+          },
+          "entity_name": {
+            "type": "text",
+            "label": "Legal Name"
+          },
+          "parent_entity": {
+            "type": "relation",
+            "label": "Parent",
+            "target_model": "entity"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "employee": {
+        "id": "employee",
+        "source_package": "@domain-libs/employee",
+        "kind": "entity",
+        "label": "Employee",
+        "field_order": [
+          "ref",
+          "name",
+          "known_aliases",
+          "employment_status",
+          "title",
+          "department",
+          "location",
+          "start_date",
+          "end_date",
+          "base_salary",
+          "target_bonus",
+          "target_commission",
+          "name_last",
+          "name_first",
+          "country",
+          "birth_date",
+          "name_display",
+          "comp_zone",
+          "compa_ratio_base",
+          "compa_ratio_total",
+          "job_family",
+          "gender",
+          "cost_center",
+          "wfh_policy",
+          "avatar",
+          "work_email",
+          "personal_email",
+          "mobile_phone",
+          "home_location",
+          "ethnicity",
+          "marital_status",
+          "termination_reason",
+          "termination_notes",
+          "regrettable_classification",
+          "pay_frequency",
+          "geography",
+          "severance_amount",
+          "severance_notes",
+          "business_unit",
+          "team",
+          "employment_type",
+          "hide_employee_info",
+          "entity",
+          "flsa_status",
+          "total_share_grant",
+          "total_shares_vested",
+          "total_cash",
+          "annual_equity_value",
+          "total_comp",
+          "annualized_cost",
+          "benefits_actual",
+          "benefits_cost",
+          "taxes_actual",
+          "taxes_cost",
+          "last_promoted",
+          "voluntary_classification",
+          "skills",
+          "cx_capacity",
+          "quota_capacity",
+          "ramp_date",
+          "segment",
+          "initiative",
+          "performance_rating_free",
+          "performance_rating_structured",
+          "mobility_notes",
+          "reviewer",
+          "pnl_category",
+          "level"
+        ],
+        "field_groups": [
+          {
+            "id": "summary",
+            "label": "Summary",
+            "fields": ["ref", "name", "known_aliases", "employment_status", "title"]
+          },
+          {
+            "id": "organization",
+            "label": "Organization",
+            "fields": [
+              "department",
+              "location",
+              "country",
+              "job_family",
+              "cost_center",
+              "geography",
+              "business_unit",
+              "team",
+              "entity",
+              "pnl_category",
+              "level"
+            ]
+          },
+          {
+            "id": "employment",
+            "label": "Employment",
+            "fields": [
+              "start_date",
+              "employment_type",
+              "flsa_status",
+              "wfh_policy",
+              "pay_frequency"
+            ]
+          },
+          {
+            "id": "compensation",
+            "label": "Compensation",
+            "fields": [
+              "base_salary",
+              "target_bonus",
+              "target_commission",
+              "comp_zone",
+              "compa_ratio_base",
+              "compa_ratio_total",
+              "total_share_grant",
+              "total_shares_vested",
+              "total_cash",
+              "annual_equity_value",
+              "total_comp",
+              "annualized_cost",
+              "benefits_actual",
+              "benefits_cost",
+              "taxes_actual",
+              "taxes_cost"
+            ]
+          },
+          {
+            "id": "personal",
+            "label": "Personal",
+            "fields": [
+              "name_last",
+              "name_first",
+              "birth_date",
+              "name_display",
+              "gender",
+              "avatar",
+              "work_email",
+              "personal_email",
+              "mobile_phone",
+              "home_location",
+              "ethnicity",
+              "marital_status",
+              "hide_employee_info"
+            ]
+          },
+          {
+            "id": "departure",
+            "label": "Departure",
+            "fields": [
+              "end_date",
+              "termination_reason",
+              "termination_notes",
+              "regrettable_classification",
+              "severance_amount",
+              "severance_notes",
+              "voluntary_classification"
+            ]
+          },
+          {
+            "id": "performance_capacity",
+            "label": "Performance & capacity",
+            "fields": [
+              "skills",
+              "last_promoted",
+              "cx_capacity",
+              "quota_capacity",
+              "ramp_date",
+              "segment",
+              "initiative",
+              "performance_rating_free",
+              "performance_rating_structured",
+              "mobility_notes",
+              "reviewer"
+            ]
+          }
+        ],
+        "fields": {
+          "ref": {
+            "type": "text",
+            "label": "Employee Ref",
+            "notes": "Unique employee reference. Often an internal HRIS number like EMP-001 or alphanumeric ID.",
+            "is_unique": true
+          },
+          "name": {
+            "type": "text",
+            "label": "Full Name",
+            "notes": "Employee's full display name, typically \"First Last\"."
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Known Aliases",
+            "notes": "Confirmed alternate employee names used for deterministic import matching."
+          },
+          "employment_status": {
+            "type": "enum",
+            "label": "Employment Status",
+            "notes": "Current employment state: active, terminated, on leave, etc.",
+            "option_set": [
+              {
+                "id": "active",
+                "label": "Active",
+                "aliases": ["Current"]
+              },
+              {
+                "id": "pending",
+                "label": "Pending",
+                "aliases": ["Onboarding", "Prehire"]
+              },
+              {
+                "id": "inactive",
+                "label": "Inactive",
+                "aliases": ["Terminated", "Retired"]
+              },
+              {
+                "id": "on_leave",
+                "label": "On Leave",
+                "aliases": ["Leave", "PTO"]
+              }
+            ]
+          },
+          "title": {
+            "type": "text",
+            "label": "Job Title",
+            "notes": "The employee's current job title, e.g. \"Senior Software Engineer\", \"VP Sales\"."
+          },
+          "department": {
+            "type": "relation",
+            "label": "Department",
+            "target_model": "department",
+            "notes": "Organizational department the employee belongs to: Engineering, Sales, Marketing, etc."
+          },
+          "location": {
+            "type": "relation",
+            "label": "Work Location",
+            "target_model": "location",
+            "notes": "Office or work site. Often a city or office name like \"SF HQ\", \"Remote - US\", \"New York\""
+          },
+          "start_date": {
+            "type": "date",
+            "label": "Start Date",
+            "notes": "Hire date or employment start date."
+          },
+          "end_date": {
+            "type": "date",
+            "label": "Termination Date",
+            "notes": "Last day of employment. Null if currently active."
+          },
+          "base_salary": {
+            "type": "money_rate",
+            "label": "Base Salary",
+            "notes": "Annual base salary. Currency amount, often with $ or /yr."
+          },
+          "target_bonus": {
+            "type": "money_rate",
+            "label": "Target Bonus",
+            "notes": "Annual target bonus amount or percentage of base."
+          },
+          "target_commission": {
+            "type": "money_rate",
+            "label": "Target Commission",
+            "notes": "Annual target commission amount. Typically for sales roles."
+          },
+          "name_last": {
+            "type": "text",
+            "label": "Last Name",
+            "notes": "Employee's family/surname."
+          },
+          "name_first": {
+            "type": "text",
+            "label": "First Name",
+            "notes": "Employee's given/first name."
+          },
+          "country": {
+            "type": "iso_country",
+            "label": "Country",
+            "notes": "Country of employment as an ISO 3166-1 alpha-2 code."
+          },
+          "birth_date": {
+            "type": "date",
+            "label": "Date of Birth",
+            "notes": "Employee's date of birth. Expect values on or before 2008."
+          },
+          "name_display": {
+            "type": "text",
+            "label": "Preferred Name",
+            "notes": "Preferred or display name if different from legal name."
+          },
+          "comp_zone": {
+            "type": "relation",
+            "label": "Compensation Zone",
+            "target_model": "comp_zone",
+            "notes": "Geographic compensation zone for pay banding."
+          },
+          "compa_ratio_base": {
+            "type": "number",
+            "label": "Compa‑Ratio (Base)"
+          },
+          "compa_ratio_total": {
+            "type": "number",
+            "label": "Compa‑Ratio (Total)"
+          },
+          "job_family": {
+            "type": "relation",
+            "label": "Job Family",
+            "target_model": "job_family",
+            "notes": "Job family grouping: Engineering, Design, Sales, Operations, etc."
+          },
+          "gender": {
+            "type": "enum",
+            "label": "Gender",
+            "notes": "Male, Female, Non-binary, or other gender identifiers.",
+            "option_set": [
+              {
+                "id": "m",
+                "label": "Male",
+                "aliases": ["male", "M"]
+              },
+              {
+                "id": "f",
+                "label": "Female",
+                "aliases": ["female", "F"]
+              },
+              {
+                "id": "o",
+                "label": "Other",
+                "aliases": ["other", "O"]
+              },
+              {
+                "id": "nb",
+                "label": "Non-binary",
+                "aliases": ["non-binary", "NB"]
+              },
+              {
+                "id": "nd",
+                "label": "Not disclosed",
+                "aliases": ["undisclosed", "prefer_not_to_disclose"]
+              }
+            ]
+          },
+          "cost_center": {
+            "type": "enum",
+            "label": "Cost Center",
+            "notes": "Financial cost center code for budgeting. Often a numeric code.",
+            "option_set": [
+              {
+                "id": "unspecified",
+                "label": "Unspecified",
+                "aliases": []
+              }
+            ]
+          },
+          "wfh_policy": {
+            "type": "enum",
+            "label": "Work From Home Status",
+            "notes": "Remote work policy: Remote, Hybrid, In-Office, etc.",
+            "option_set": [
+              {
+                "id": "full_remote",
+                "label": "Fully Remote",
+                "aliases": []
+              },
+              {
+                "id": "hybrid",
+                "label": "Hybrid (2-3 days office)",
+                "aliases": []
+              },
+              {
+                "id": "office",
+                "label": "Office Required",
+                "aliases": []
+              },
+              {
+                "id": "flexible",
+                "label": "Flexible",
+                "aliases": []
+              }
+            ]
+          },
+          "avatar": {
+            "type": "text",
+            "label": "Profile Photo"
+          },
+          "work_email": {
+            "type": "text",
+            "label": "Work Email",
+            "notes": "Corporate email address.",
+            "is_unique": true
+          },
+          "personal_email": {
+            "type": "text",
+            "label": "Personal Email Address",
+            "notes": "Personal/non-work email.",
+            "is_unique": true
+          },
+          "mobile_phone": {
+            "type": "text",
+            "label": "Mobile Phone Number",
+            "notes": "Personal or work mobile number."
+          },
+          "home_location": {
+            "type": "text",
+            "label": "Home Address",
+            "notes": "Home/residential address."
+          },
+          "ethnicity": {
+            "type": "enum",
+            "label": "Ethnicity",
+            "notes": "EEO/diversity classification.",
+            "option_set": [
+              {
+                "id": "hispanic",
+                "label": "Hispanic or Latino",
+                "aliases": ["hispanic", "latino"]
+              },
+              {
+                "id": "white",
+                "label": "White",
+                "aliases": ["white", "caucasian"]
+              },
+              {
+                "id": "asian",
+                "label": "Asian",
+                "aliases": ["asian"]
+              },
+              {
+                "id": "black",
+                "label": "Black or African American",
+                "aliases": ["black", "african_american"]
+              },
+              {
+                "id": "multiracial",
+                "label": "Two or More Races",
+                "aliases": ["multiracial", "mixed"]
+              },
+              {
+                "id": "native",
+                "label": "American Indian or Alaska Native",
+                "aliases": ["native_american", "indigenous", "american_indian", "alaska_native"]
+              },
+              {
+                "id": "pacific",
+                "label": "Native Hawaiian or Other Pacific Islander",
+                "aliases": ["pacific_islander", "native_hawaiian"]
+              }
+            ]
+          },
+          "marital_status": {
+            "type": "enum",
+            "label": "Marital Status",
+            "notes": "Single, Married, Domestic Partner, etc.",
+            "option_set": [
+              {
+                "id": "single",
+                "label": "Single",
+                "aliases": []
+              },
+              {
+                "id": "married",
+                "label": "Married",
+                "aliases": []
+              },
+              {
+                "id": "divorced",
+                "label": "Divorced",
+                "aliases": []
+              },
+              {
+                "id": "widowed",
+                "label": "Widowed",
+                "aliases": []
+              },
+              {
+                "id": "separated",
+                "label": "Separated",
+                "aliases": []
+              },
+              {
+                "id": "domestic_partnership",
+                "label": "Domestic Partnership",
+                "aliases": ["domestic_partner"]
+              }
+            ]
+          },
+          "termination_reason": {
+            "type": "enum",
+            "label": "Reason for Termination",
+            "notes": "Voluntary, Involuntary, Retirement, Layoff, etc.",
+            "option_set": [
+              {
+                "id": "unspecified",
+                "label": "Unspecified",
+                "aliases": []
+              }
+            ]
+          },
+          "termination_notes": {
+            "type": "text",
+            "label": "Termination Notes",
+            "notes": "Free-text notes about the termination."
+          },
+          "regrettable_classification": {
+            "type": "enum",
+            "label": "Regrettable Classification",
+            "notes": "Whether the departure was regrettable or non-regrettable.",
+            "option_set": [
+              {
+                "id": "unspecified",
+                "label": "Unspecified",
+                "aliases": []
+              }
+            ]
+          },
+          "pay_frequency": {
+            "type": "enum",
+            "label": "Pay Frequency",
+            "notes": "How often paid: Monthly, Bi-weekly, Semi-monthly, Weekly.",
+            "option_set": [
+              {
+                "id": "unspecified",
+                "label": "Unspecified",
+                "aliases": []
+              }
+            ]
+          },
+          "geography": {
+            "type": "relation",
+            "label": "Location Geo",
+            "target_model": "geography",
+            "notes": "Geographic region: AMER, EMEA, APAC, etc."
+          },
+          "severance_amount": {
+            "type": "money_rate",
+            "label": "Severance Amount",
+            "notes": "Severance payment amount."
+          },
+          "severance_notes": {
+            "type": "text",
+            "label": "Severance Notes",
+            "notes": "Free-text notes about severance terms."
+          },
+          "business_unit": {
+            "type": "relation",
+            "label": "Business Unit",
+            "target_model": "business_unit",
+            "notes": "Division or business unit within the organization. \"EMEA\", a product line, a geographical region."
+          },
+          "team": {
+            "type": "enum",
+            "label": "Team",
+            "notes": "Sub-team or secondary department grouping. Alternative if department is not present.",
+            "option_set": [
+              {
+                "id": "unspecified",
+                "label": "Unspecified",
+                "aliases": []
+              }
+            ]
+          },
+          "employment_type": {
+            "type": "enum",
+            "label": "Employment Type",
+            "notes": "Full-time, Part-time, Contract, Intern, etc.",
+            "option_set": [
+              {
+                "id": "full_time",
+                "label": "Full Time",
+                "aliases": ["full_time", "FT"]
+              },
+              {
+                "id": "part_time",
+                "label": "Part Time",
+                "aliases": ["part_time", "PT"]
+              },
+              {
+                "id": "intern",
+                "label": "Intern",
+                "aliases": ["intern", "internship"]
+              },
+              {
+                "id": "temp",
+                "label": "Temporary",
+                "aliases": ["temporary", "temp"]
+              }
+            ]
+          },
+          "hide_employee_info": {
+            "type": "bool",
+            "label": "Hide Employee's Info?"
+          },
+          "entity": {
+            "type": "relation",
+            "label": "Legal Entity",
+            "target_model": "entity",
+            "notes": "Legal employing entity for multi-entity organizations."
+          },
+          "flsa_status": {
+            "type": "enum",
+            "label": "FLSA Status (Exempt / Nonexempt)",
+            "notes": "Exempt or Non-exempt under Fair Labor Standards Act. US-specific.",
+            "option_set": [
+              {
+                "id": "unspecified",
+                "label": "Unspecified",
+                "aliases": []
+              }
+            ]
+          },
+          "total_share_grant": {
+            "type": "number",
+            "label": "Total Shares Granted",
+            "notes": "Total equity shares granted to the employee."
+          },
+          "total_shares_vested": {
+            "type": "number",
+            "label": "Total Vested Shares",
+            "notes": "Number of shares that have vested."
+          },
+          "total_cash": {
+            "type": "money_rate",
+            "label": "Total Cash Compensation"
+          },
+          "annual_equity_value": {
+            "type": "money_rate",
+            "label": "Annual Equity Award Value",
+            "notes": "Annual equity grant value in dollars."
+          },
+          "total_comp": {
+            "type": "money_rate",
+            "label": "Total Compensation"
+          },
+          "annualized_cost": {
+            "type": "money_rate",
+            "label": "Annualized Cost"
+          },
+          "benefits_actual": {
+            "type": "money_rate",
+            "label": "Benefits Actual",
+            "notes": "Actual benefits cost amount."
+          },
+          "benefits_cost": {
+            "type": "money_rate",
+            "label": "Benefits Cost"
+          },
+          "taxes_actual": {
+            "type": "money_rate",
+            "label": "Employer Taxes Actual",
+            "notes": "Actual employer tax burden amount."
+          },
+          "taxes_cost": {
+            "type": "money_rate",
+            "label": "Employer Tax Cost"
+          },
+          "last_promoted": {
+            "type": "date",
+            "label": "Last Promotion Date",
+            "notes": "Date of most recent promotion."
+          },
+          "voluntary_classification": {
+            "type": "enum",
+            "label": "Voluntary Classification",
+            "notes": "Whether termination was voluntary or involuntary.",
+            "option_set": [
+              {
+                "id": "unspecified",
+                "label": "Unspecified",
+                "aliases": []
+              }
+            ]
+          },
+          "skills": {
+            "type": "enum",
+            "label": "Skills",
+            "notes": "Employee skill tags.",
+            "option_set": [
+              {
+                "id": "unspecified",
+                "label": "Unspecified",
+                "aliases": []
+              }
+            ]
+          },
+          "cx_capacity": {
+            "type": "number",
+            "label": "Account Capacity",
+            "notes": "Number of accounts the employee can manage. Sales/CS metric."
+          },
+          "quota_capacity": {
+            "type": "money_rate",
+            "label": "Quota-carrying Capacity",
+            "notes": "Revenue quota capacity for sales roles."
+          },
+          "ramp_date": {
+            "type": "date",
+            "label": "Fully-Ramped Date",
+            "notes": "Date when employee reaches full productivity/quota."
+          },
+          "segment": {
+            "type": "relation",
+            "label": "Segment",
+            "target_model": "segment",
+            "notes": "Customer or market segment assignment."
+          },
+          "initiative": {
+            "type": "relation",
+            "label": "Initiative",
+            "target_model": "initiative",
+            "notes": "Strategic initiative the employee is mapped to."
+          },
+          "performance_rating_free": {
+            "type": "text",
+            "label": "Performance Rating (Free-form)",
+            "notes": "Free-text performance rating (e.g. \"Exceeds Expectations\")."
+          },
+          "performance_rating_structured": {
+            "type": "enum",
+            "label": "Performance Rating (Structured)",
+            "notes": "Structured rating from a defined scale.",
+            "option_set": [
+              {
+                "id": "exceeds",
+                "label": "Exceeds Expectations",
+                "aliases": ["exceeds", "exceeds_expectations"]
+              },
+              {
+                "id": "meets",
+                "label": "Meets Expectations",
+                "aliases": ["meets", "meets_expectations"]
+              },
+              {
+                "id": "needs_improvement",
+                "label": "Needs Improvement",
+                "aliases": ["needs_improvement", "needs-improvement"]
+              },
+              {
+                "id": "unsatisfactory",
+                "label": "Unsatisfactory",
+                "aliases": ["unsatisfactory"]
+              }
+            ]
+          },
+          "mobility_notes": {
+            "type": "text",
+            "label": "Mobility Notes",
+            "notes": "Notes about employee's willingness/ability to relocate."
+          },
+          "reviewer": {
+            "type": "relation",
+            "label": "Reviewer",
+            "target_model": "employee",
+            "notes": "Person responsible for this employee's performance review."
+          },
+          "pnl_category": {
+            "type": "relation",
+            "label": "P&L Category",
+            "target_model": "pnl_category",
+            "notes": "Profit & loss line item classification."
+          },
+          "level": {
+            "type": "relation",
+            "label": "Compensation Level",
+            "target_model": "level",
+            "notes": "Job level for compensation bands: L1, L2, IC3, M1, etc."
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "org_assignment": {
+        "id": "org_assignment",
+        "source_package": "@domain-libs/org-assignment",
+        "kind": "entity",
+        "label": "Org Assignment",
+        "field_order": [
+          "employee",
+          "position",
+          "reports_to_employee",
+          "reports_to_position",
+          "start_date",
+          "end_date"
+        ],
+        "field_groups": [
+          {
+            "id": "assignment",
+            "label": "Assignment",
+            "fields": ["employee", "position"]
+          },
+          {
+            "id": "reporting",
+            "label": "Reporting",
+            "fields": ["reports_to_employee", "reports_to_position"]
+          },
+          {
+            "id": "timing",
+            "label": "Timing",
+            "fields": ["start_date", "end_date"]
+          }
+        ],
+        "fields": {
+          "employee": {
+            "type": "relation",
+            "label": "Employee",
+            "target_model": "employee",
+            "notes": "Employee occupying or participating in the assignment."
+          },
+          "position": {
+            "type": "relation",
+            "label": "Position",
+            "target_model": "position",
+            "notes": "Position occupied or planned by the assignment."
+          },
+          "reports_to_employee": {
+            "type": "relation",
+            "label": "Manager",
+            "target_model": "employee",
+            "notes": "Preferred manager target when a human manager is known."
+          },
+          "reports_to_position": {
+            "type": "relation",
+            "label": "Reports To Position",
+            "target_model": "position",
+            "notes": "Fallback manager target for empty-org planning."
+          },
+          "start_date": {
+            "type": "date",
+            "label": "Assignment Start"
+          },
+          "end_date": {
+            "type": "date",
+            "label": "Assignment End"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "position": {
+        "id": "position",
+        "source_package": "@domain-libs/position",
+        "kind": "entity",
+        "label": "Position",
+        "field_order": [
+          "ref",
+          "name",
+          "known_aliases",
+          "position_status",
+          "base_salary",
+          "target_bonus",
+          "target_commission",
+          "start_date",
+          "end_date",
+          "department",
+          "location",
+          "total_cash",
+          "business_unit",
+          "job_family",
+          "level",
+          "annual_equity_value",
+          "total_comp",
+          "annualized_cost",
+          "actual_annualized_cost",
+          "annualized_cost_variance",
+          "benefits_actual",
+          "benefits_cost",
+          "taxes_actual",
+          "taxes_cost",
+          "pnl_category"
+        ],
+        "field_groups": [
+          {
+            "id": "summary",
+            "label": "Summary",
+            "fields": ["ref", "name", "known_aliases", "position_status"]
+          },
+          {
+            "id": "organization",
+            "label": "Organization",
+            "fields": [
+              "department",
+              "location",
+              "business_unit",
+              "job_family",
+              "level",
+              "pnl_category"
+            ]
+          },
+          {
+            "id": "timing",
+            "label": "Timing",
+            "fields": ["start_date", "end_date"]
+          },
+          {
+            "id": "budget",
+            "label": "Budget",
+            "fields": [
+              "base_salary",
+              "target_bonus",
+              "target_commission",
+              "total_cash",
+              "annual_equity_value",
+              "total_comp",
+              "annualized_cost",
+              "actual_annualized_cost",
+              "annualized_cost_variance",
+              "benefits_actual",
+              "benefits_cost",
+              "taxes_actual",
+              "taxes_cost"
+            ]
+          }
+        ],
+        "fields": {
+          "ref": {
+            "type": "text",
+            "label": "Position Ref",
+            "notes": "Unique position reference. Often a code like POS-001 or an alphanumeric ID.",
+            "is_unique": true
+          },
+          "name": {
+            "type": "text",
+            "label": "Position Name",
+            "notes": "Descriptive name for the budgeted position. \"Senior Engineer\", \"Marketing Manager\", etc."
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Known Aliases",
+            "notes": "Confirmed alternate position names used for deterministic import matching."
+          },
+          "position_status": {
+            "type": "enum",
+            "label": "Position Status",
+            "notes": "Open, Filled, Frozen, Eliminated, Hiring, etc.",
+            "option_set": [
+              {
+                "id": "pending",
+                "label": "Pending",
+                "aliases": ["requested", "unapproved"]
+              },
+              {
+                "id": "open",
+                "label": "Open",
+                "aliases": ["open"]
+              },
+              {
+                "id": "filled",
+                "label": "Filled",
+                "aliases": ["filled"]
+              },
+              {
+                "id": "paused",
+                "label": "Paused",
+                "aliases": ["on_hold", "on-hold", "paused"]
+              },
+              {
+                "id": "closed",
+                "label": "Closed",
+                "aliases": ["closed", "archived", "eliminated"]
+              }
+            ]
+          },
+          "base_salary": {
+            "type": "money_rate",
+            "label": "Budgeted Base",
+            "notes": "Budgeted base salary for the position. Currency amount."
+          },
+          "target_bonus": {
+            "type": "money_rate",
+            "label": "Budgeted Bonus",
+            "notes": "Budgeted target bonus amount."
+          },
+          "target_commission": {
+            "type": "money_rate",
+            "label": "Budgeted Commission",
+            "notes": "Budgeted target commission amount."
+          },
+          "start_date": {
+            "type": "date",
+            "label": "Budget Start",
+            "notes": "Expected start date for the position."
+          },
+          "end_date": {
+            "type": "date",
+            "label": "Budget End",
+            "notes": "Expected end date for the position."
+          },
+          "department": {
+            "type": "relation",
+            "label": "Department",
+            "target_model": "department",
+            "notes": "Department the position is budgeted under."
+          },
+          "location": {
+            "type": "relation",
+            "label": "Work Location",
+            "target_model": "location",
+            "notes": "Office, city or site for the position."
+          },
+          "total_cash": {
+            "type": "money_rate",
+            "label": "Total Cash Comp"
+          },
+          "business_unit": {
+            "type": "relation",
+            "label": "Business Unit",
+            "target_model": "business_unit",
+            "notes": "Business unit the position belongs to."
+          },
+          "job_family": {
+            "type": "relation",
+            "label": "Job Family",
+            "target_model": "job_family",
+            "notes": "Job family grouping for the position."
+          },
+          "level": {
+            "type": "relation",
+            "label": "Level",
+            "target_model": "level",
+            "notes": "Job or compensation level for the position."
+          },
+          "annual_equity_value": {
+            "type": "money_rate",
+            "label": "Equity Budget ($)",
+            "notes": "Budgeted annual equity value."
+          },
+          "total_comp": {
+            "type": "money_rate",
+            "label": "Total Compensation"
+          },
+          "annualized_cost": {
+            "type": "money_rate",
+            "label": "Annualized Cost"
+          },
+          "actual_annualized_cost": {
+            "type": "money_rate",
+            "label": "Actual Annualized Cost"
+          },
+          "annualized_cost_variance": {
+            "type": "money_rate",
+            "label": "Annualized Cost Variance"
+          },
+          "benefits_actual": {
+            "type": "money_rate",
+            "label": "Benefits Actual",
+            "notes": "Actual benefits cost for the position."
+          },
+          "benefits_cost": {
+            "type": "money_rate",
+            "label": "Benefits Cost"
+          },
+          "taxes_actual": {
+            "type": "money_rate",
+            "label": "Employer Taxes Actual",
+            "notes": "Actual employer tax cost."
+          },
+          "taxes_cost": {
+            "type": "money_rate",
+            "label": "Employer Tax Cost"
+          },
+          "pnl_category": {
+            "type": "relation",
+            "label": "P&L Category",
+            "target_model": "pnl_category",
+            "notes": "P&L line item classification for this position's cost."
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "job": {
+        "id": "job",
+        "source_package": "@domain-libs/recruiting",
+        "kind": "entity",
+        "label": "Job",
+        "field_order": [
+          "id",
+          "name",
+          "description",
+          "code",
+          "status",
+          "title",
+          "department",
+          "job_opening",
+          "external_id",
+          "location",
+          "reports_to",
+          "type"
+        ],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "ID",
+            "is_unique": true
+          },
+          "name": {
+            "type": "text",
+            "label": "Job Name"
+          },
+          "description": {
+            "type": "text",
+            "label": "Description"
+          },
+          "code": {
+            "type": "text",
+            "label": "Code"
+          },
+          "status": {
+            "type": "enum",
+            "label": "Status",
+            "option_set": [
+              {
+                "id": "open",
+                "label": "Open",
+                "aliases": ["active"]
+              },
+              {
+                "id": "archived",
+                "label": "Archived",
+                "aliases": ["closed"]
+              }
+            ]
+          },
+          "title": {
+            "type": "text",
+            "label": "Title"
+          },
+          "department": {
+            "type": "relation",
+            "label": "Department",
+            "target_model": "department"
+          },
+          "job_opening": {
+            "type": "relation",
+            "label": "Openings",
+            "target_model": "job_opening",
+            "is_multi_value": true
+          },
+          "external_id": {
+            "type": "text",
+            "label": "External ID"
+          },
+          "location": {
+            "type": "relation",
+            "label": "Work Location",
+            "target_model": "location"
+          },
+          "reports_to": {
+            "type": "relation",
+            "label": "Hiring Manager",
+            "target_model": "employee"
+          },
+          "type": {
+            "type": "text",
+            "label": "Type"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "job_opening": {
+        "id": "job_opening",
+        "source_package": "@domain-libs/recruiting",
+        "kind": "entity",
+        "label": "Job Opening",
+        "field_order": [
+          "id",
+          "name",
+          "title",
+          "job",
+          "status",
+          "start_date",
+          "target_start_date",
+          "filled_candidate_name",
+          "end_date",
+          "content"
+        ],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Reference ID",
+            "notes": "Unique job opening identifier.",
+            "is_unique": true
+          },
+          "name": {
+            "type": "text",
+            "label": "Opening Reference (Human-readable)",
+            "notes": "Human-readable reference for the opening."
+          },
+          "title": {
+            "type": "text",
+            "label": "Title",
+            "notes": "Job posting title as shown to candidates."
+          },
+          "job": {
+            "type": "relation",
+            "label": "Job",
+            "target_model": "job",
+            "notes": "The job template this opening is for."
+          },
+          "status": {
+            "type": "enum",
+            "label": "Opening Status",
+            "notes": "Open, Closed, Filled, Cancelled, etc.",
+            "option_set": [
+              {
+                "id": "open",
+                "label": "Open",
+                "aliases": ["active"]
+              },
+              {
+                "id": "closed",
+                "label": "Closed",
+                "aliases": ["filled", "closed"]
+              },
+              {
+                "id": "draft",
+                "label": "Draft",
+                "aliases": ["draft"]
+              },
+              {
+                "id": "archived",
+                "label": "Archived",
+                "aliases": ["archived"]
+              },
+              {
+                "id": "pending",
+                "label": "Pending",
+                "aliases": ["pending"]
+              }
+            ]
+          },
+          "start_date": {
+            "type": "date",
+            "label": "Date Opened",
+            "notes": "When the opening was created/published."
+          },
+          "target_start_date": {
+            "type": "date",
+            "label": "Target Start Date",
+            "notes": "Target start date for the hire."
+          },
+          "filled_candidate_name": {
+            "type": "text",
+            "label": "Candidate Name",
+            "notes": "Name of the hired candidate once filled."
+          },
+          "end_date": {
+            "type": "date",
+            "label": "Close Date",
+            "notes": "When the opening was closed."
+          },
+          "content": {
+            "type": "text",
+            "label": "Content",
+            "notes": "Job posting body/description text."
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "candidate": {
+        "id": "candidate",
+        "source_package": "@domain-libs/recruiting",
+        "kind": "entity",
+        "label": "Candidate",
+        "field_order": [
+          "id",
+          "name",
+          "status",
+          "source",
+          "primary_email",
+          "company",
+          "title",
+          "applications",
+          "external_id",
+          "name_first",
+          "name_last",
+          "name_display",
+          "email_addresses",
+          "phone_numbers",
+          "addresses",
+          "website_addresses",
+          "social_media_addresses",
+          "locations",
+          "urls",
+          "tags",
+          "photo_url",
+          "is_private",
+          "can_email",
+          "created_at",
+          "updated_at",
+          "last_activity_at",
+          "last_interaction_at",
+          "recruiter",
+          "coordinator",
+          "attachments",
+          "linked_user_ids",
+          "custom_fields",
+          "keyed_custom_fields",
+          "remote_id",
+          "remote_template_id",
+          "remote_created_at",
+          "remote_updated_at",
+          "remote_was_deleted",
+          "field_mappings",
+          "remote_data",
+          "integration_params",
+          "linked_account_params"
+        ],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Candidate ID",
+            "is_unique": true
+          },
+          "name": {
+            "type": "text",
+            "label": "Full Name"
+          },
+          "status": {
+            "type": "enum",
+            "label": "Status",
+            "option_set": [
+              {
+                "id": "prospect",
+                "label": "Prospect",
+                "aliases": ["prospect"]
+              },
+              {
+                "id": "active",
+                "label": "Active",
+                "aliases": ["active"]
+              },
+              {
+                "id": "hired",
+                "label": "Hired",
+                "aliases": ["hired"]
+              },
+              {
+                "id": "rejected",
+                "label": "Rejected",
+                "aliases": ["rejected"]
+              },
+              {
+                "id": "withdrawn",
+                "label": "Withdrawn",
+                "aliases": ["withdrawn"]
+              }
+            ]
+          },
+          "source": {
+            "type": "enum",
+            "label": "Source",
+            "option_set": [
+              {
+                "id": "inbound",
+                "label": "Inbound",
+                "aliases": ["inbound"]
+              },
+              {
+                "id": "referral",
+                "label": "Referral",
+                "aliases": ["referral"]
+              },
+              {
+                "id": "outbound",
+                "label": "Outbound",
+                "aliases": ["outbound"]
+              },
+              {
+                "id": "agency",
+                "label": "Agency",
+                "aliases": ["agency"]
+              },
+              {
+                "id": "job_board",
+                "label": "Job Board",
+                "aliases": ["job_board", "job-board"]
+              },
+              {
+                "id": "campus",
+                "label": "Campus",
+                "aliases": ["campus"]
+              }
+            ]
+          },
+          "primary_email": {
+            "type": "text",
+            "label": "Primary Email"
+          },
+          "company": {
+            "type": "text",
+            "label": "Company"
+          },
+          "title": {
+            "type": "text",
+            "label": "Title"
+          },
+          "applications": {
+            "type": "relation",
+            "label": "Applications",
+            "target_model": "application",
+            "is_multi_value": true
+          },
+          "external_id": {
+            "type": "text",
+            "label": "External ID"
+          },
+          "name_first": {
+            "type": "text",
+            "label": "First Name"
+          },
+          "name_last": {
+            "type": "text",
+            "label": "Last Name"
+          },
+          "name_display": {
+            "type": "text",
+            "label": "Preferred Name"
+          },
+          "email_addresses": {
+            "type": "json",
+            "label": "Email Addresses"
+          },
+          "phone_numbers": {
+            "type": "json",
+            "label": "Phone Numbers"
+          },
+          "addresses": {
+            "type": "json",
+            "label": "Addresses"
+          },
+          "website_addresses": {
+            "type": "json",
+            "label": "Website Addresses"
+          },
+          "social_media_addresses": {
+            "type": "json",
+            "label": "Social Media Addresses"
+          },
+          "locations": {
+            "type": "json",
+            "label": "Locations"
+          },
+          "urls": {
+            "type": "json",
+            "label": "URLs"
+          },
+          "tags": {
+            "type": "text_list",
+            "label": "Tags"
+          },
+          "photo_url": {
+            "type": "text",
+            "label": "Photo URL"
+          },
+          "is_private": {
+            "type": "bool",
+            "label": "Private"
+          },
+          "can_email": {
+            "type": "bool",
+            "label": "Can Email"
+          },
+          "created_at": {
+            "type": "datetime",
+            "label": "Created At"
+          },
+          "updated_at": {
+            "type": "datetime",
+            "label": "Updated At"
+          },
+          "last_activity_at": {
+            "type": "datetime",
+            "label": "Last Activity At"
+          },
+          "last_interaction_at": {
+            "type": "datetime",
+            "label": "Last Interaction At"
+          },
+          "recruiter": {
+            "type": "json",
+            "label": "Recruiter"
+          },
+          "coordinator": {
+            "type": "json",
+            "label": "Coordinator"
+          },
+          "attachments": {
+            "type": "json",
+            "label": "Attachments"
+          },
+          "linked_user_ids": {
+            "type": "text_list",
+            "label": "Linked User IDs"
+          },
+          "custom_fields": {
+            "type": "json",
+            "label": "Custom Fields"
+          },
+          "keyed_custom_fields": {
+            "type": "json",
+            "label": "Keyed Custom Fields"
+          },
+          "remote_id": {
+            "type": "text",
+            "label": "Remote ID"
+          },
+          "remote_template_id": {
+            "type": "text",
+            "label": "Remote Template ID"
+          },
+          "remote_created_at": {
+            "type": "datetime",
+            "label": "Remote Created At"
+          },
+          "remote_updated_at": {
+            "type": "datetime",
+            "label": "Remote Updated At"
+          },
+          "remote_was_deleted": {
+            "type": "bool",
+            "label": "Remote Was Deleted"
+          },
+          "field_mappings": {
+            "type": "json",
+            "label": "Field Mappings"
+          },
+          "remote_data": {
+            "type": "json",
+            "label": "Remote Data"
+          },
+          "integration_params": {
+            "type": "json",
+            "label": "Integration Params"
+          },
+          "linked_account_params": {
+            "type": "json",
+            "label": "Linked Account Params"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "application": {
+        "id": "application",
+        "source_package": "@domain-libs/recruiting",
+        "kind": "entity",
+        "label": "Application",
+        "field_order": [
+          "id",
+          "candidate",
+          "requisition",
+          "job_opening",
+          "job",
+          "status",
+          "current_stage",
+          "created_at",
+          "updated_at",
+          "applied_at",
+          "rejected_at",
+          "last_activity_at",
+          "stage_entered_at",
+          "source",
+          "assigned_recruiter",
+          "is_prospect",
+          "rejection_reason",
+          "external_id",
+          "source_raw",
+          "credited_to",
+          "recruiter",
+          "coordinator",
+          "referrer",
+          "location",
+          "job_post_id",
+          "jobs",
+          "rejection_details",
+          "screening_question_answers",
+          "answers",
+          "attachments",
+          "offers",
+          "custom_fields",
+          "keyed_custom_fields",
+          "prospect_detail",
+          "prospective_department",
+          "prospective_office",
+          "remote_id",
+          "remote_template_id",
+          "remote_user_id",
+          "remote_created_at",
+          "remote_updated_at",
+          "remote_was_deleted",
+          "field_mappings",
+          "remote_data",
+          "integration_params",
+          "linked_account_params"
+        ],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Application ID",
+            "is_unique": true
+          },
+          "candidate": {
+            "type": "relation",
+            "label": "Candidate",
+            "target_model": "candidate"
+          },
+          "requisition": {
+            "type": "relation",
+            "label": "Requisition",
+            "target_model": "requisition"
+          },
+          "job_opening": {
+            "type": "relation",
+            "label": "Job Opening",
+            "target_model": "job_opening"
+          },
+          "job": {
+            "type": "relation",
+            "label": "Job",
+            "target_model": "job"
+          },
+          "status": {
+            "type": "enum",
+            "label": "Status",
+            "option_set": [
+              {
+                "id": "active",
+                "label": "Active",
+                "aliases": ["active"]
+              },
+              {
+                "id": "rejected",
+                "label": "Rejected",
+                "aliases": ["rejected"]
+              },
+              {
+                "id": "hired",
+                "label": "Hired",
+                "aliases": ["hired"]
+              },
+              {
+                "id": "withdrawn",
+                "label": "Withdrawn",
+                "aliases": ["withdrawn"]
+              }
+            ]
+          },
+          "current_stage": {
+            "type": "enum",
+            "label": "Current Stage",
+            "option_set": [
+              {
+                "id": "applied",
+                "label": "Applied",
+                "aliases": ["applied"]
+              },
+              {
+                "id": "screen",
+                "label": "Screen",
+                "aliases": ["screen", "screening"]
+              },
+              {
+                "id": "interview",
+                "label": "Interview",
+                "aliases": ["interview"]
+              },
+              {
+                "id": "decision",
+                "label": "Decision",
+                "aliases": ["decision"]
+              },
+              {
+                "id": "offer",
+                "label": "Offer",
+                "aliases": ["offer"]
+              },
+              {
+                "id": "hired",
+                "label": "Hired",
+                "aliases": ["hired"]
+              },
+              {
+                "id": "rejected",
+                "label": "Rejected",
+                "aliases": ["rejected"]
+              }
+            ]
+          },
+          "created_at": {
+            "type": "datetime",
+            "label": "Created At"
+          },
+          "updated_at": {
+            "type": "datetime",
+            "label": "Updated At"
+          },
+          "applied_at": {
+            "type": "datetime",
+            "label": "Applied At"
+          },
+          "rejected_at": {
+            "type": "datetime",
+            "label": "Rejected At"
+          },
+          "last_activity_at": {
+            "type": "datetime",
+            "label": "Last Activity At"
+          },
+          "stage_entered_at": {
+            "type": "datetime",
+            "label": "Stage Entered At",
+            "notes": "Prefer ATS timestamps when available; otherwise derive from Timeline on current_stage."
+          },
+          "source": {
+            "type": "enum",
+            "label": "Source",
+            "option_set": [
+              {
+                "id": "inbound",
+                "label": "Inbound",
+                "aliases": ["inbound"]
+              },
+              {
+                "id": "referral",
+                "label": "Referral",
+                "aliases": ["referral"]
+              },
+              {
+                "id": "outbound",
+                "label": "Outbound",
+                "aliases": ["outbound"]
+              },
+              {
+                "id": "agency",
+                "label": "Agency",
+                "aliases": ["agency"]
+              },
+              {
+                "id": "job_board",
+                "label": "Job Board",
+                "aliases": ["job_board", "job-board"]
+              },
+              {
+                "id": "campus",
+                "label": "Campus",
+                "aliases": ["campus"]
+              }
+            ]
+          },
+          "assigned_recruiter": {
+            "type": "relation",
+            "label": "Assigned Recruiter",
+            "target_model": "employee"
+          },
+          "is_prospect": {
+            "type": "bool",
+            "label": "Prospect"
+          },
+          "rejection_reason": {
+            "type": "enum",
+            "label": "Rejection Reason",
+            "option_set": [
+              {
+                "id": "experience",
+                "label": "Experience Mismatch",
+                "aliases": ["experience", "experience_mismatch"]
+              },
+              {
+                "id": "compensation",
+                "label": "Compensation",
+                "aliases": ["compensation", "salary"]
+              },
+              {
+                "id": "location",
+                "label": "Location",
+                "aliases": ["location"]
+              },
+              {
+                "id": "culture",
+                "label": "Culture Fit",
+                "aliases": ["culture", "culture_fit"]
+              },
+              {
+                "id": "other",
+                "label": "Other",
+                "aliases": ["other"]
+              }
+            ]
+          },
+          "external_id": {
+            "type": "text",
+            "label": "External ID"
+          },
+          "source_raw": {
+            "type": "json",
+            "label": "Source (Raw)"
+          },
+          "credited_to": {
+            "type": "json",
+            "label": "Credited To"
+          },
+          "recruiter": {
+            "type": "json",
+            "label": "Recruiter"
+          },
+          "coordinator": {
+            "type": "json",
+            "label": "Coordinator"
+          },
+          "referrer": {
+            "type": "json",
+            "label": "Referrer"
+          },
+          "location": {
+            "type": "json",
+            "label": "Location"
+          },
+          "job_post_id": {
+            "type": "text",
+            "label": "Job Post ID"
+          },
+          "jobs": {
+            "type": "json",
+            "label": "Jobs"
+          },
+          "rejection_details": {
+            "type": "json",
+            "label": "Rejection Details"
+          },
+          "screening_question_answers": {
+            "type": "json",
+            "label": "Screening Question Answers"
+          },
+          "answers": {
+            "type": "json",
+            "label": "Answers"
+          },
+          "attachments": {
+            "type": "json",
+            "label": "Attachments"
+          },
+          "offers": {
+            "type": "json",
+            "label": "Offers"
+          },
+          "custom_fields": {
+            "type": "json",
+            "label": "Custom Fields"
+          },
+          "keyed_custom_fields": {
+            "type": "json",
+            "label": "Keyed Custom Fields"
+          },
+          "prospect_detail": {
+            "type": "json",
+            "label": "Prospect Detail"
+          },
+          "prospective_department": {
+            "type": "json",
+            "label": "Prospective Department"
+          },
+          "prospective_office": {
+            "type": "json",
+            "label": "Prospective Office"
+          },
+          "remote_id": {
+            "type": "text",
+            "label": "Remote ID"
+          },
+          "remote_template_id": {
+            "type": "text",
+            "label": "Remote Template ID"
+          },
+          "remote_user_id": {
+            "type": "text",
+            "label": "Remote User ID"
+          },
+          "remote_created_at": {
+            "type": "datetime",
+            "label": "Remote Created At"
+          },
+          "remote_updated_at": {
+            "type": "datetime",
+            "label": "Remote Updated At"
+          },
+          "remote_was_deleted": {
+            "type": "bool",
+            "label": "Remote Was Deleted"
+          },
+          "field_mappings": {
+            "type": "json",
+            "label": "Field Mappings"
+          },
+          "remote_data": {
+            "type": "json",
+            "label": "Remote Data"
+          },
+          "integration_params": {
+            "type": "json",
+            "label": "Integration Params"
+          },
+          "linked_account_params": {
+            "type": "json",
+            "label": "Linked Account Params"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "interview": {
+        "id": "interview",
+        "source_package": "@domain-libs/recruiting",
+        "kind": "entity",
+        "label": "Interview",
+        "field_order": [
+          "id",
+          "application",
+          "status",
+          "stage",
+          "type",
+          "created_at",
+          "updated_at",
+          "start_at",
+          "end_at",
+          "location",
+          "external_id",
+          "start_date",
+          "end_date",
+          "interviewers",
+          "organizer",
+          "interview",
+          "video_conferencing_url",
+          "external_event_id",
+          "feedback",
+          "remote_id",
+          "remote_created_at",
+          "remote_updated_at",
+          "remote_was_deleted",
+          "field_mappings",
+          "remote_data",
+          "integration_params",
+          "linked_account_params"
+        ],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Interview ID",
+            "is_unique": true
+          },
+          "application": {
+            "type": "relation",
+            "label": "Application",
+            "target_model": "application"
+          },
+          "status": {
+            "type": "enum",
+            "label": "Status",
+            "option_set": [
+              {
+                "id": "scheduled",
+                "label": "Scheduled",
+                "aliases": ["scheduled"]
+              },
+              {
+                "id": "completed",
+                "label": "Completed",
+                "aliases": ["completed"]
+              },
+              {
+                "id": "cancelled",
+                "label": "Cancelled",
+                "aliases": ["cancelled"]
+              },
+              {
+                "id": "no_show",
+                "label": "No Show",
+                "aliases": ["no_show"]
+              }
+            ]
+          },
+          "stage": {
+            "type": "enum",
+            "label": "Stage",
+            "option_set": [
+              {
+                "id": "screen",
+                "label": "Screen",
+                "aliases": ["screen", "screening"]
+              },
+              {
+                "id": "technical",
+                "label": "Technical",
+                "aliases": ["technical"]
+              },
+              {
+                "id": "onsite",
+                "label": "Onsite",
+                "aliases": ["onsite"]
+              },
+              {
+                "id": "final",
+                "label": "Final",
+                "aliases": ["final"]
+              }
+            ]
+          },
+          "type": {
+            "type": "enum",
+            "label": "Interview Type",
+            "option_set": [
+              {
+                "id": "phone",
+                "label": "Phone",
+                "aliases": ["phone"]
+              },
+              {
+                "id": "video",
+                "label": "Video",
+                "aliases": ["video"]
+              },
+              {
+                "id": "onsite",
+                "label": "Onsite",
+                "aliases": ["onsite"]
+              },
+              {
+                "id": "take_home",
+                "label": "Take Home",
+                "aliases": ["take_home"]
+              }
+            ]
+          },
+          "created_at": {
+            "type": "datetime",
+            "label": "Created At"
+          },
+          "updated_at": {
+            "type": "datetime",
+            "label": "Updated At"
+          },
+          "start_at": {
+            "type": "datetime",
+            "label": "Start At"
+          },
+          "end_at": {
+            "type": "datetime",
+            "label": "End At"
+          },
+          "location": {
+            "type": "text",
+            "label": "Location"
+          },
+          "external_id": {
+            "type": "text",
+            "label": "External ID"
+          },
+          "start_date": {
+            "type": "date",
+            "label": "Start Date"
+          },
+          "end_date": {
+            "type": "date",
+            "label": "End Date"
+          },
+          "interviewers": {
+            "type": "json",
+            "label": "Interviewers"
+          },
+          "organizer": {
+            "type": "json",
+            "label": "Organizer"
+          },
+          "interview": {
+            "type": "json",
+            "label": "Interview"
+          },
+          "video_conferencing_url": {
+            "type": "text",
+            "label": "Video Conferencing URL"
+          },
+          "external_event_id": {
+            "type": "text",
+            "label": "External Event ID"
+          },
+          "feedback": {
+            "type": "text",
+            "label": "Feedback"
+          },
+          "remote_id": {
+            "type": "text",
+            "label": "Remote ID"
+          },
+          "remote_created_at": {
+            "type": "datetime",
+            "label": "Remote Created At"
+          },
+          "remote_updated_at": {
+            "type": "datetime",
+            "label": "Remote Updated At"
+          },
+          "remote_was_deleted": {
+            "type": "bool",
+            "label": "Remote Was Deleted"
+          },
+          "field_mappings": {
+            "type": "json",
+            "label": "Field Mappings"
+          },
+          "remote_data": {
+            "type": "json",
+            "label": "Remote Data"
+          },
+          "integration_params": {
+            "type": "json",
+            "label": "Integration Params"
+          },
+          "linked_account_params": {
+            "type": "json",
+            "label": "Linked Account Params"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "offer": {
+        "id": "offer",
+        "source_package": "@domain-libs/recruiting",
+        "kind": "entity",
+        "label": "Offer",
+        "field_order": [
+          "id",
+          "application",
+          "status",
+          "target_start_date",
+          "salary",
+          "total_compensation",
+          "bonus",
+          "equity",
+          "currency",
+          "expiration_date",
+          "sent_at",
+          "accepted_at",
+          "declined_at",
+          "created_at",
+          "updated_at",
+          "is_accepted",
+          "external_id",
+          "creator",
+          "offer_letter",
+          "offer_letter_file",
+          "offer_letter_template",
+          "attachments",
+          "custom_fields",
+          "keyed_custom_fields",
+          "remote_id",
+          "remote_created_at",
+          "remote_updated_at",
+          "remote_was_deleted",
+          "field_mappings",
+          "remote_data",
+          "integration_params",
+          "linked_account_params"
+        ],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Offer ID",
+            "is_unique": true
+          },
+          "application": {
+            "type": "relation",
+            "label": "Application",
+            "target_model": "application"
+          },
+          "status": {
+            "type": "enum",
+            "label": "Status",
+            "option_set": [
+              {
+                "id": "draft",
+                "label": "Draft",
+                "aliases": ["draft"]
+              },
+              {
+                "id": "sent",
+                "label": "Sent",
+                "aliases": ["sent"]
+              },
+              {
+                "id": "accepted",
+                "label": "Accepted",
+                "aliases": ["accepted"]
+              },
+              {
+                "id": "declined",
+                "label": "Declined",
+                "aliases": ["declined"]
+              },
+              {
+                "id": "expired",
+                "label": "Expired",
+                "aliases": ["expired"]
+              }
+            ]
+          },
+          "target_start_date": {
+            "type": "date",
+            "label": "Planned Start Date"
+          },
+          "salary": {
+            "type": "money_rate",
+            "label": "Salary"
+          },
+          "total_compensation": {
+            "type": "money_rate",
+            "label": "Total Compensation"
+          },
+          "bonus": {
+            "type": "money_rate",
+            "label": "Bonus"
+          },
+          "equity": {
+            "type": "money_rate",
+            "label": "Equity"
+          },
+          "currency": {
+            "type": "iso_currency",
+            "label": "Currency"
+          },
+          "expiration_date": {
+            "type": "date",
+            "label": "Expiration Date"
+          },
+          "sent_at": {
+            "type": "datetime",
+            "label": "Sent At"
+          },
+          "accepted_at": {
+            "type": "datetime",
+            "label": "Accepted At"
+          },
+          "declined_at": {
+            "type": "datetime",
+            "label": "Declined At"
+          },
+          "created_at": {
+            "type": "datetime",
+            "label": "Created At"
+          },
+          "updated_at": {
+            "type": "datetime",
+            "label": "Updated At"
+          },
+          "is_accepted": {
+            "type": "bool",
+            "label": "Accepted"
+          },
+          "external_id": {
+            "type": "text",
+            "label": "External ID"
+          },
+          "creator": {
+            "type": "json",
+            "label": "Creator"
+          },
+          "offer_letter": {
+            "type": "json",
+            "label": "Offer Letter"
+          },
+          "offer_letter_file": {
+            "type": "json",
+            "label": "Offer Letter File"
+          },
+          "offer_letter_template": {
+            "type": "json",
+            "label": "Offer Letter Template"
+          },
+          "attachments": {
+            "type": "json",
+            "label": "Attachments"
+          },
+          "custom_fields": {
+            "type": "json",
+            "label": "Custom Fields"
+          },
+          "keyed_custom_fields": {
+            "type": "json",
+            "label": "Keyed Custom Fields"
+          },
+          "remote_id": {
+            "type": "text",
+            "label": "Remote ID"
+          },
+          "remote_created_at": {
+            "type": "datetime",
+            "label": "Remote Created At"
+          },
+          "remote_updated_at": {
+            "type": "datetime",
+            "label": "Remote Updated At"
+          },
+          "remote_was_deleted": {
+            "type": "bool",
+            "label": "Remote Was Deleted"
+          },
+          "field_mappings": {
+            "type": "json",
+            "label": "Field Mappings"
+          },
+          "remote_data": {
+            "type": "json",
+            "label": "Remote Data"
+          },
+          "integration_params": {
+            "type": "json",
+            "label": "Integration Params"
+          },
+          "linked_account_params": {
+            "type": "json",
+            "label": "Linked Account Params"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "requisition": {
+        "id": "requisition",
+        "source_package": "@domain-libs/requisition",
+        "kind": "entity",
+        "label": "Requisition",
+        "field_order": [
+          "id",
+          "name",
+          "status",
+          "is_sensitive",
+          "type",
+          "priority",
+          "owner",
+          "requestor",
+          "position",
+          "job_opening",
+          "position_request_status",
+          "is_on_hold",
+          "is_closed",
+          "target_start_date",
+          "department",
+          "location",
+          "reports_to",
+          "justification",
+          "base_salary",
+          "target_bonus",
+          "target_commission",
+          "job_family",
+          "level",
+          "manager_role"
+        ],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Requisition ID",
+            "notes": "Unique req identifier. Often like REQ-001 or an ATS tracking number.",
+            "is_unique": true
+          },
+          "name": {
+            "type": "text",
+            "label": "Requisition Name",
+            "notes": "Working title for the requisition; may differ from final position name"
+          },
+          "status": {
+            "type": "enum",
+            "label": "Status",
+            "option_set": [
+              {
+                "id": "draft",
+                "label": "Draft",
+                "aliases": ["Draft", "New"]
+              },
+              {
+                "id": "approved",
+                "label": "Approved",
+                "aliases": ["Approved"]
+              },
+              {
+                "id": "recruiting",
+                "label": "Recruiting",
+                "aliases": ["Open", "Published", "Active"]
+              },
+              {
+                "id": "filled",
+                "label": "Filled",
+                "aliases": ["Filled", "Hired", "Closed - Filled"]
+              }
+            ]
+          },
+          "is_sensitive": {
+            "type": "bool",
+            "label": "Sensitive",
+            "notes": "Marks this requisition as sensitive/confidential."
+          },
+          "type": {
+            "type": "enum",
+            "label": "Type",
+            "notes": "New Hire, Backfill, Conversion, Transfer, etc.",
+            "option_set": [
+              {
+                "id": "new_headcount",
+                "label": "New Headcount",
+                "aliases": ["New Position", "Growth"]
+              },
+              {
+                "id": "backfill",
+                "label": "Backfill",
+                "aliases": ["Replacement", "Attrition"]
+              },
+              {
+                "id": "conversion",
+                "label": "Conversion",
+                "aliases": ["Contractor to FTE", "Intern Conversion"]
+              },
+              {
+                "id": "upgrade",
+                "label": "Upgrade",
+                "aliases": ["Level Increase", "Promotion Hire"]
+              }
+            ]
+          },
+          "priority": {
+            "type": "enum",
+            "label": "Priority",
+            "notes": "Urgency level: Critical, High, Medium, Low, can also be numbers (e.g., 1, 2, 3, 4 or p1, p2 etc.)",
+            "option_set": [
+              {
+                "id": "low",
+                "label": "Low",
+                "aliases": []
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "aliases": ["Normal", "Standard"]
+              },
+              {
+                "id": "high",
+                "label": "High",
+                "aliases": ["Important"]
+              },
+              {
+                "id": "critical",
+                "label": "Critical",
+                "aliases": ["Urgent", "Emergency"]
+              }
+            ]
+          },
+          "owner": {
+            "type": "relation",
+            "label": "Owner",
+            "target_model": "employee",
+            "notes": "The recruiter or agency responsible for filling this requisition"
+          },
+          "requestor": {
+            "type": "relation",
+            "label": "Requestor",
+            "target_model": "employee",
+            "notes": "The manager who submitted this requisition"
+          },
+          "position": {
+            "type": "relation",
+            "label": "Position",
+            "target_model": "position",
+            "notes": "The approved position for this requisition. Presence = approved; AFV effectiveDate = approval time."
+          },
+          "job_opening": {
+            "type": "relation",
+            "label": "Job Opening",
+            "target_model": "job_opening",
+            "notes": "The active job opening for recruiting. Presence = recruiting; AFV effectiveDate = opening time."
+          },
+          "position_request_status": {
+            "type": "enum",
+            "label": "Position Request Status",
+            "notes": "Position request state: requested | rejected. Null = not yet requested. AFV effectiveDate = request/reject time.",
+            "option_set": [
+              {
+                "id": "requested",
+                "label": "Requested",
+                "aliases": []
+              },
+              {
+                "id": "rejected",
+                "label": "Rejected",
+                "aliases": []
+              }
+            ]
+          },
+          "is_on_hold": {
+            "type": "bool",
+            "label": "On Hold",
+            "notes": "Whether the requisition is paused. AFV effectiveDate = hold/resume time."
+          },
+          "is_closed": {
+            "type": "bool",
+            "label": "Closed",
+            "notes": "Whether the requisition is closed/archived. AFV effectiveDate = close/reopen time."
+          },
+          "target_start_date": {
+            "type": "date",
+            "label": "Requested Start Date",
+            "notes": "Target start date from the requestor; may differ from position.start_date"
+          },
+          "department": {
+            "type": "relation",
+            "label": "Expected Department",
+            "target_model": "department",
+            "notes": "Department the role will sit in."
+          },
+          "location": {
+            "type": "relation",
+            "label": "Expected Location",
+            "target_model": "location",
+            "notes": "Expected work location for the role. Usually an office, \"remote\", or a city."
+          },
+          "reports_to": {
+            "type": "relation",
+            "label": "Hiring Manager",
+            "target_model": "employee",
+            "notes": "Who the new hire will report to"
+          },
+          "justification": {
+            "type": "text",
+            "label": "Business Justification",
+            "notes": "Free-text business case for why the role is needed."
+          },
+          "base_salary": {
+            "type": "money_rate",
+            "label": "Target Base Salary",
+            "notes": "Budget guidance from requestor; position.base_salary is source of truth once approved"
+          },
+          "target_bonus": {
+            "type": "money_rate",
+            "label": "Target Bonus",
+            "notes": "Requested target bonus amount."
+          },
+          "target_commission": {
+            "type": "money_rate",
+            "label": "Target Commission",
+            "notes": "Requested target commission. Typically for sales roles."
+          },
+          "job_family": {
+            "type": "relation",
+            "label": "Expected Job Family",
+            "target_model": "job_family",
+            "notes": "Job family the role falls under."
+          },
+          "level": {
+            "type": "relation",
+            "label": "Expected Compensation Level",
+            "target_model": "level",
+            "notes": "Target comp level for the hire."
+          },
+          "manager_role": {
+            "type": "bool",
+            "label": "Manager Role?",
+            "notes": "Whether this is a people-manager position."
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "product": {
+        "id": "product",
+        "source_package": "@domain-libs/revenue",
+        "kind": "entity",
+        "label": "Product",
+        "field_order": [
+          "id",
+          "object",
+          "name",
+          "active",
+          "default_price",
+          "description",
+          "created_at",
+          "updated_at",
+          "livemode",
+          "images",
+          "marketing_features",
+          "metadata",
+          "package_dimensions",
+          "shippable",
+          "statement_descriptor",
+          "tax_code",
+          "unit_label",
+          "url"
+        ],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Product ID",
+            "is_unique": true
+          },
+          "object": {
+            "type": "text",
+            "label": "Object Type"
+          },
+          "name": {
+            "type": "text",
+            "label": "Product Name"
+          },
+          "active": {
+            "type": "bool",
+            "label": "Active"
+          },
+          "default_price": {
+            "type": "relation",
+            "label": "Default Price",
+            "target_model": "price"
+          },
+          "description": {
+            "type": "text",
+            "label": "Description"
+          },
+          "created_at": {
+            "type": "date",
+            "label": "Created At"
+          },
+          "updated_at": {
+            "type": "date",
+            "label": "Updated At"
+          },
+          "livemode": {
+            "type": "bool",
+            "label": "Live Mode"
+          },
+          "images": {
+            "type": "json",
+            "label": "Images"
+          },
+          "marketing_features": {
+            "type": "json",
+            "label": "Marketing Features"
+          },
+          "metadata": {
+            "type": "json",
+            "label": "Metadata"
+          },
+          "package_dimensions": {
+            "type": "json",
+            "label": "Package Dimensions"
+          },
+          "shippable": {
+            "type": "bool",
+            "label": "Shippable"
+          },
+          "statement_descriptor": {
+            "type": "text",
+            "label": "Statement Descriptor"
+          },
+          "tax_code": {
+            "type": "text",
+            "label": "Tax Code"
+          },
+          "unit_label": {
+            "type": "text",
+            "label": "Unit Label"
+          },
+          "url": {
+            "type": "text",
+            "label": "URL"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "price": {
+        "id": "price",
+        "source_package": "@domain-libs/revenue",
+        "kind": "entity",
+        "label": "Price",
+        "field_order": [
+          "id",
+          "object",
+          "product",
+          "active",
+          "billing_scheme",
+          "currency",
+          "type",
+          "unit_amount",
+          "unit_amount_decimal",
+          "created_at",
+          "livemode",
+          "lookup_key",
+          "nickname",
+          "metadata",
+          "tax_behavior",
+          "currency_options",
+          "custom_unit_amount",
+          "tiers",
+          "tiers_mode",
+          "transform_quantity",
+          "recurring_interval",
+          "recurring_interval_count",
+          "recurring_usage_type",
+          "recurring_meter"
+        ],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Price ID",
+            "is_unique": true
+          },
+          "object": {
+            "type": "text",
+            "label": "Object Type"
+          },
+          "product": {
+            "type": "relation",
+            "label": "Product",
+            "target_model": "product"
+          },
+          "active": {
+            "type": "bool",
+            "label": "Active"
+          },
+          "billing_scheme": {
+            "type": "text",
+            "label": "Billing Scheme"
+          },
+          "currency": {
+            "type": "iso_currency",
+            "label": "Currency"
+          },
+          "type": {
+            "type": "text",
+            "label": "Type",
+            "notes": "one_time or recurring"
+          },
+          "unit_amount": {
+            "type": "money_rate",
+            "label": "Unit Amount"
+          },
+          "unit_amount_decimal": {
+            "type": "text",
+            "label": "Unit Amount Decimal (cents)"
+          },
+          "created_at": {
+            "type": "date",
+            "label": "Created At"
+          },
+          "livemode": {
+            "type": "bool",
+            "label": "Live Mode"
+          },
+          "lookup_key": {
+            "type": "text",
+            "label": "Lookup Key"
+          },
+          "nickname": {
+            "type": "text",
+            "label": "Nickname"
+          },
+          "metadata": {
+            "type": "json",
+            "label": "Metadata"
+          },
+          "tax_behavior": {
+            "type": "text",
+            "label": "Tax Behavior"
+          },
+          "currency_options": {
+            "type": "json",
+            "label": "Currency Options"
+          },
+          "custom_unit_amount": {
+            "type": "json",
+            "label": "Custom Unit Amount"
+          },
+          "tiers": {
+            "type": "json",
+            "label": "Tiers"
+          },
+          "tiers_mode": {
+            "type": "text",
+            "label": "Tiers Mode"
+          },
+          "transform_quantity": {
+            "type": "json",
+            "label": "Transform Quantity"
+          },
+          "recurring_interval": {
+            "type": "text",
+            "label": "Recurring Interval"
+          },
+          "recurring_interval_count": {
+            "type": "number",
+            "label": "Recurring Interval Count"
+          },
+          "recurring_usage_type": {
+            "type": "text",
+            "label": "Recurring Usage Type"
+          },
+          "recurring_meter": {
+            "type": "text",
+            "label": "Recurring Meter"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "customer": {
+        "id": "customer",
+        "source_package": "@domain-libs/revenue",
+        "kind": "entity",
+        "label": "Customer",
+        "field_order": [
+          "id",
+          "object",
+          "name",
+          "email",
+          "currency",
+          "created_at",
+          "livemode",
+          "description",
+          "phone",
+          "metadata",
+          "address",
+          "shipping",
+          "preferred_locales",
+          "default_source",
+          "delinquent",
+          "balance",
+          "tax_exempt",
+          "total_monthly_revenue",
+          "first_subscription_date"
+        ],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Customer ID",
+            "is_unique": true
+          },
+          "object": {
+            "type": "text",
+            "label": "Object Type"
+          },
+          "name": {
+            "type": "text",
+            "label": "Name"
+          },
+          "email": {
+            "type": "text",
+            "label": "Email"
+          },
+          "currency": {
+            "type": "iso_currency",
+            "label": "Currency"
+          },
+          "created_at": {
+            "type": "date",
+            "label": "Created At"
+          },
+          "livemode": {
+            "type": "bool",
+            "label": "Live Mode"
+          },
+          "description": {
+            "type": "text",
+            "label": "Description"
+          },
+          "phone": {
+            "type": "text",
+            "label": "Phone"
+          },
+          "metadata": {
+            "type": "json",
+            "label": "Metadata"
+          },
+          "address": {
+            "type": "json",
+            "label": "Address"
+          },
+          "shipping": {
+            "type": "json",
+            "label": "Shipping"
+          },
+          "preferred_locales": {
+            "type": "json",
+            "label": "Preferred Locales"
+          },
+          "default_source": {
+            "type": "text",
+            "label": "Default Source"
+          },
+          "delinquent": {
+            "type": "bool",
+            "label": "Delinquent"
+          },
+          "balance": {
+            "type": "number",
+            "label": "Balance"
+          },
+          "tax_exempt": {
+            "type": "text",
+            "label": "Tax Exempt"
+          },
+          "total_monthly_revenue": {
+            "type": "money_rate",
+            "label": "Total Monthly Revenue",
+            "notes": "Derived: sum of included USD subscriptions' recurring_monthly_amount"
+          },
+          "first_subscription_date": {
+            "type": "date",
+            "label": "First Subscription",
+            "notes": "Derived: earliest start_date across all subscriptions"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "subscription": {
+        "id": "subscription",
+        "source_package": "@domain-libs/revenue",
+        "kind": "entity",
+        "label": "Subscription",
+        "field_order": [
+          "id",
+          "object",
+          "status",
+          "customer",
+          "currency",
+          "items",
+          "start_date",
+          "current_period_start",
+          "current_period_end",
+          "billing_cycle_anchor",
+          "collection_method",
+          "schedule",
+          "cancel_at",
+          "cancel_at_period_end",
+          "canceled_at",
+          "ended_at",
+          "livemode",
+          "metadata",
+          "description",
+          "recurring_monthly_amount",
+          "annualized_amount",
+          "application",
+          "application_fee_percent",
+          "automatic_tax",
+          "billing_mode",
+          "billing_thresholds",
+          "created_at",
+          "customer_account",
+          "days_until_due",
+          "default_payment_method",
+          "default_source",
+          "default_tax_rates",
+          "discounts",
+          "on_behalf_of",
+          "pause_collection",
+          "payment_settings",
+          "pending_setup_intent",
+          "pending_update",
+          "presentment_details",
+          "test_clock",
+          "transfer_data",
+          "trial_start",
+          "trial_end",
+          "trial_settings",
+          "cancellation_details"
+        ],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Subscription ID",
+            "is_unique": true
+          },
+          "object": {
+            "type": "text",
+            "label": "Object Type"
+          },
+          "status": {
+            "type": "enum",
+            "label": "Status",
+            "option_set": [
+              {
+                "id": "active",
+                "label": "Active",
+                "aliases": []
+              },
+              {
+                "id": "past_due",
+                "label": "Past Due",
+                "aliases": []
+              },
+              {
+                "id": "unpaid",
+                "label": "Unpaid",
+                "aliases": []
+              },
+              {
+                "id": "canceled",
+                "label": "Canceled",
+                "aliases": []
+              },
+              {
+                "id": "incomplete",
+                "label": "Incomplete",
+                "aliases": []
+              },
+              {
+                "id": "incomplete_expired",
+                "label": "Incomplete Expired",
+                "aliases": []
+              },
+              {
+                "id": "trialing",
+                "label": "Trialing",
+                "aliases": []
+              },
+              {
+                "id": "paused",
+                "label": "Paused",
+                "aliases": []
+              }
+            ]
+          },
+          "customer": {
+            "type": "relation",
+            "label": "Customer",
+            "target_model": "customer"
+          },
+          "currency": {
+            "type": "iso_currency",
+            "label": "Currency"
+          },
+          "items": {
+            "type": "relation",
+            "label": "Items",
+            "target_model": "subscription_item",
+            "is_multi_value": true
+          },
+          "start_date": {
+            "type": "date",
+            "label": "Start Date",
+            "notes": "Stripe start_date"
+          },
+          "current_period_start": {
+            "type": "date",
+            "label": "Current Period Start"
+          },
+          "current_period_end": {
+            "type": "date",
+            "label": "Current Period End"
+          },
+          "billing_cycle_anchor": {
+            "type": "date",
+            "label": "Billing Cycle Anchor"
+          },
+          "collection_method": {
+            "type": "text",
+            "label": "Collection Method"
+          },
+          "schedule": {
+            "type": "relation",
+            "label": "Schedule",
+            "target_model": "subscription_schedule"
+          },
+          "cancel_at": {
+            "type": "date",
+            "label": "Cancel At"
+          },
+          "cancel_at_period_end": {
+            "type": "bool",
+            "label": "Cancel at Period End"
+          },
+          "canceled_at": {
+            "type": "date",
+            "label": "Canceled At"
+          },
+          "ended_at": {
+            "type": "date",
+            "label": "Ended At"
+          },
+          "livemode": {
+            "type": "bool",
+            "label": "Live Mode"
+          },
+          "metadata": {
+            "type": "json",
+            "label": "Metadata"
+          },
+          "description": {
+            "type": "text",
+            "label": "Description"
+          },
+          "recurring_monthly_amount": {
+            "type": "money_rate",
+            "label": "Monthly Amount",
+            "notes": "Derived: sum of (item.qty × price.unit_amount) normalized to monthly"
+          },
+          "annualized_amount": {
+            "type": "money_rate",
+            "label": "Annualized Amount",
+            "notes": "Derived: USD recurring_monthly_amount × 12"
+          },
+          "application": {
+            "type": "text",
+            "label": "Application"
+          },
+          "application_fee_percent": {
+            "type": "number",
+            "label": "Application Fee Percent"
+          },
+          "automatic_tax": {
+            "type": "json",
+            "label": "Automatic Tax"
+          },
+          "billing_mode": {
+            "type": "json",
+            "label": "Billing Mode"
+          },
+          "billing_thresholds": {
+            "type": "json",
+            "label": "Billing Thresholds"
+          },
+          "created_at": {
+            "type": "date",
+            "label": "Created At"
+          },
+          "customer_account": {
+            "type": "text",
+            "label": "Customer Account"
+          },
+          "days_until_due": {
+            "type": "number",
+            "label": "Days Until Due"
+          },
+          "default_payment_method": {
+            "type": "text",
+            "label": "Default Payment Method"
+          },
+          "default_source": {
+            "type": "text",
+            "label": "Default Source"
+          },
+          "default_tax_rates": {
+            "type": "json",
+            "label": "Default Tax Rates"
+          },
+          "discounts": {
+            "type": "json",
+            "label": "Discounts"
+          },
+          "on_behalf_of": {
+            "type": "text",
+            "label": "On Behalf Of"
+          },
+          "pause_collection": {
+            "type": "json",
+            "label": "Pause Collection"
+          },
+          "payment_settings": {
+            "type": "json",
+            "label": "Payment Settings"
+          },
+          "pending_setup_intent": {
+            "type": "text",
+            "label": "Pending Setup Intent"
+          },
+          "pending_update": {
+            "type": "json",
+            "label": "Pending Update"
+          },
+          "presentment_details": {
+            "type": "json",
+            "label": "Presentment Details"
+          },
+          "test_clock": {
+            "type": "text",
+            "label": "Test Clock"
+          },
+          "transfer_data": {
+            "type": "json",
+            "label": "Transfer Data"
+          },
+          "trial_start": {
+            "type": "date",
+            "label": "Trial Start"
+          },
+          "trial_end": {
+            "type": "date",
+            "label": "Trial End"
+          },
+          "trial_settings": {
+            "type": "json",
+            "label": "Trial Settings"
+          },
+          "cancellation_details": {
+            "type": "json",
+            "label": "Cancellation Details"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "subscription_item": {
+        "id": "subscription_item",
+        "source_package": "@domain-libs/revenue",
+        "kind": "entity",
+        "label": "Subscription Item",
+        "field_order": [
+          "id",
+          "object",
+          "subscription",
+          "price",
+          "quantity",
+          "current_period_start",
+          "current_period_end",
+          "created_at",
+          "monthly_equivalent",
+          "billing_thresholds",
+          "discounts",
+          "metadata",
+          "tax_rates"
+        ],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Subscription Item ID",
+            "is_unique": true
+          },
+          "object": {
+            "type": "text",
+            "label": "Object Type"
+          },
+          "subscription": {
+            "type": "relation",
+            "label": "Subscription",
+            "target_model": "subscription"
+          },
+          "price": {
+            "type": "relation",
+            "label": "Price",
+            "target_model": "price"
+          },
+          "quantity": {
+            "type": "number",
+            "label": "Quantity"
+          },
+          "current_period_start": {
+            "type": "date",
+            "label": "Current Period Start"
+          },
+          "current_period_end": {
+            "type": "date",
+            "label": "Current Period End"
+          },
+          "created_at": {
+            "type": "date",
+            "label": "Created At"
+          },
+          "monthly_equivalent": {
+            "type": "money_rate",
+            "label": "Monthly Equivalent",
+            "notes": "Derived: quantity × price.unit_amount normalized to monthly"
+          },
+          "billing_thresholds": {
+            "type": "json",
+            "label": "Billing Thresholds"
+          },
+          "discounts": {
+            "type": "json",
+            "label": "Discounts"
+          },
+          "metadata": {
+            "type": "json",
+            "label": "Metadata"
+          },
+          "tax_rates": {
+            "type": "json",
+            "label": "Tax Rates"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "subscription_schedule": {
+        "id": "subscription_schedule",
+        "source_package": "@domain-libs/revenue",
+        "kind": "entity",
+        "label": "Subscription Schedule",
+        "field_order": [
+          "id",
+          "object",
+          "status",
+          "subscription",
+          "customer",
+          "end_behavior",
+          "current_phase_start",
+          "current_phase_end",
+          "phases",
+          "default_settings",
+          "billing_mode",
+          "created_at",
+          "livemode",
+          "application",
+          "customer_account",
+          "metadata",
+          "canceled_at",
+          "completed_at",
+          "released_at",
+          "released_subscription",
+          "test_clock"
+        ],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Schedule ID",
+            "is_unique": true
+          },
+          "object": {
+            "type": "text",
+            "label": "Object Type"
+          },
+          "status": {
+            "type": "text",
+            "label": "Status"
+          },
+          "subscription": {
+            "type": "relation",
+            "label": "Subscription",
+            "target_model": "subscription"
+          },
+          "customer": {
+            "type": "relation",
+            "label": "Customer",
+            "target_model": "customer"
+          },
+          "end_behavior": {
+            "type": "text",
+            "label": "End Behavior"
+          },
+          "current_phase_start": {
+            "type": "date",
+            "label": "Current Phase Start"
+          },
+          "current_phase_end": {
+            "type": "date",
+            "label": "Current Phase End"
+          },
+          "phases": {
+            "type": "json",
+            "label": "Phases"
+          },
+          "default_settings": {
+            "type": "json",
+            "label": "Default Settings"
+          },
+          "billing_mode": {
+            "type": "json",
+            "label": "Billing Mode"
+          },
+          "created_at": {
+            "type": "date",
+            "label": "Created At"
+          },
+          "livemode": {
+            "type": "bool",
+            "label": "Live Mode"
+          },
+          "application": {
+            "type": "text",
+            "label": "Application"
+          },
+          "customer_account": {
+            "type": "text",
+            "label": "Customer Account"
+          },
+          "metadata": {
+            "type": "json",
+            "label": "Metadata"
+          },
+          "canceled_at": {
+            "type": "date",
+            "label": "Canceled At"
+          },
+          "completed_at": {
+            "type": "date",
+            "label": "Completed At"
+          },
+          "released_at": {
+            "type": "date",
+            "label": "Released At"
+          },
+          "released_subscription": {
+            "type": "text",
+            "label": "Released Subscription"
+          },
+          "test_clock": {
+            "type": "text",
+            "label": "Test Clock"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "vendor": {
+        "id": "vendor",
+        "source_package": "@domain-libs/vendor",
+        "kind": "entity",
+        "label": "Vendor",
+        "field_order": [
+          "id",
+          "name",
+          "known_aliases",
+          "status",
+          "type",
+          "department",
+          "owner",
+          "entity_name",
+          "default_chart_account"
+        ],
+        "field_groups": [],
+        "fields": {
+          "id": {
+            "type": "text",
+            "label": "Vendor ID",
+            "is_unique": true
+          },
+          "name": {
+            "type": "text",
+            "label": "Vendor Name"
+          },
+          "known_aliases": {
+            "type": "known_aliases",
+            "label": "Known Aliases"
+          },
+          "status": {
+            "type": "enum",
+            "label": "Vendor Status",
+            "option_set": [
+              {
+                "id": "active",
+                "label": "Active",
+                "aliases": ["current"]
+              },
+              {
+                "id": "inactive",
+                "label": "Inactive",
+                "aliases": ["closed", "terminated"]
+              }
+            ]
+          },
+          "type": {
+            "type": "enum",
+            "label": "Vendor Type",
+            "option_set": [
+              {
+                "id": "software",
+                "label": "Software",
+                "aliases": []
+              },
+              {
+                "id": "professional_services",
+                "label": "Professional Services",
+                "aliases": ["consulting"]
+              },
+              {
+                "id": "contractor",
+                "label": "Contractor",
+                "aliases": ["contingent workforce", "staffing"]
+              },
+              {
+                "id": "supplier",
+                "label": "Supplier",
+                "aliases": ["physical goods", "logistics"]
+              },
+              {
+                "id": "facilities",
+                "label": "Facilities",
+                "aliases": []
+              },
+              {
+                "id": "other",
+                "label": "Other",
+                "aliases": []
+              }
+            ]
+          },
+          "department": {
+            "type": "relation",
+            "label": "Owning Department",
+            "target_model": "department"
+          },
+          "owner": {
+            "type": "relation",
+            "label": "Spend Owned By",
+            "target_model": "employee"
+          },
+          "entity_name": {
+            "type": "text",
+            "label": "Legal Entity Name"
+          },
+          "default_chart_account": {
+            "type": "relation",
+            "label": "Default Chart Account",
+            "target_model": "chart_account"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      },
+      "vendor_spend_transaction": {
+        "id": "vendor_spend_transaction",
+        "source_package": "@domain-libs/vendor",
+        "kind": "entity",
+        "label": "Vendor Spend Transaction",
+        "field_order": [
+          "source_record_ref",
+          "source_record_id",
+          "vendor",
+          "counterparty_name",
+          "document_number",
+          "amount",
+          "currency_code",
+          "transaction_date",
+          "status"
+        ],
+        "field_groups": [],
+        "fields": {
+          "source_record_ref": {
+            "type": "text",
+            "label": "Source Record Ref",
+            "is_unique": true
+          },
+          "source_record_id": {
+            "type": "text",
+            "label": "Source Record ID"
+          },
+          "vendor": {
+            "type": "relation",
+            "label": "Vendor",
+            "target_model": "vendor"
+          },
+          "counterparty_name": {
+            "type": "text",
+            "label": "Counterparty Name"
+          },
+          "document_number": {
+            "type": "text",
+            "label": "Document Number"
+          },
+          "amount": {
+            "type": "number",
+            "label": "Transaction Amount"
+          },
+          "currency_code": {
+            "type": "iso_currency",
+            "label": "Currency"
+          },
+          "transaction_date": {
+            "type": "date",
+            "label": "Transaction Date"
+          },
+          "status": {
+            "type": "text",
+            "label": "Status"
+          }
+        },
+        "inverse_relations": [],
+        "seed_rows": []
+      }
+    }
+  }
+}

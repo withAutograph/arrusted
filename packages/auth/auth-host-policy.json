@@ -1,0 +1,12 @@
+{
+  "production": ["apps.autograph.so"],
+  "vercelPreview": ["apps-autographing.vercel.app", "apps-*-autographing.vercel.app"],
+  "local": [
+    "localhost:*",
+    "127.0.0.1:*",
+    "apps.localhost",
+    "*.apps.localhost",
+    "apps.localhost:8080",
+    "*.apps.localhost:8080"
+  ]
+}

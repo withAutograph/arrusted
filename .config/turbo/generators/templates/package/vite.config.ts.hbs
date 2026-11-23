@@ -1,0 +1,33 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { defineConfig } from "vite-plus";
+
+const packageRoot = path.dirname(fileURLToPath(import.meta.url));
+
+export default defineConfig({
+  root: packageRoot,
+  resolve: {
+    tsconfigPaths: true,
+  },
+  lint: {
+    options: {
+      typeAware: true,
+      typeCheck: true,
+    },
+  },
+{{#if isBuiltPackage}}
+  build: {
+    lib: {
+      entry: path.join(packageRoot, "index.ts"),
+      formats: ["es"],
+      fileName: "index",
+    },
+    outDir: path.join(packageRoot, "dist"),
+    emptyOutDir: true,
+  },
+{{/if}}
+  test: {
+    environment: "node",
+    include: [path.join(packageRoot, "__tests__/**/*.test.ts")],
+  },
+});

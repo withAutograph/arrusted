@@ -1,0 +1,46 @@
+/* AG Grid header chrome — filter funnel + column-menu (meatball) icons stay
+ * hidden until the user hovers the header cell. The default Quartz layout
+ * surfaces both icons in every header, which adds visual noise the user
+ * almost never needs at rest (sort is the dominant header interaction).
+ *
+ * Active-filter and active-sort indicators STAY visible regardless of hover:
+ * AG Grid keeps `.ag-cell-label-container.ag-header-cell-sorted-*` on the
+ * cell when a sort is active, and the `.ag-filter-active` class on the
+ * funnel when a filter is applied. Both bypass the opacity rule below.
+ *
+ * Uses `opacity` (not `display: none`) so the header layout doesn't shift
+ * when the user mouses in/out — the icons stay in their reserved slots,
+ * we just fade them. */
+
+.ag-header-cell .ag-header-cell-menu-button,
+.ag-header-cell .ag-header-icon.ag-header-cell-filter-button,
+.ag-header-cell button.ag-header-cell-filter-button {
+  opacity: 0;
+  transition: opacity 120ms ease-in-out;
+}
+
+.ag-header-cell:hover .ag-header-cell-menu-button,
+.ag-header-cell:hover .ag-header-icon.ag-header-cell-filter-button,
+.ag-header-cell:hover button.ag-header-cell-filter-button,
+.ag-header-cell:focus-within .ag-header-cell-menu-button,
+.ag-header-cell:focus-within .ag-header-icon.ag-header-cell-filter-button,
+.ag-header-cell:focus-within button.ag-header-cell-filter-button {
+  opacity: 1;
+}
+
+/* If a filter is currently applied on the column, leave the funnel icon
+ * always visible — it doubles as the "filter active" indicator. */
+.ag-header-cell.ag-header-cell-filtered .ag-header-cell-filter-button,
+.ag-header-cell.ag-header-cell-filtered .ag-header-icon.ag-header-cell-filter-button {
+  opacity: 1;
+}
+
+/* Group row label + count — quiet the trailing `(N)` count so the group
+ * label reads as the primary content and the count sits as a soft
+ * footnote. The default Quartz format puts them adjacent with the same
+ * weight; visually they compete. */
+.ag-row-group .ag-group-child-count {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
+  margin-left: var(--space-1);
+}

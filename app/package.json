@@ -1,0 +1,32 @@
+{
+  "name": "@autograph/starter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun scripts/compile.ts && bun run --cwd ../packages/canvas-host build && next dev",
+    "build": "bun scripts/compile.ts && bun run --cwd ../packages/canvas-host build && next build",
+    "start": "bun scripts/serve.ts",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "migrate": "bun scripts/migrate.ts apply",
+    "migrate:undo": "bun scripts/migrate.ts undo",
+    "migrate:rehearse": "bun scripts/migrate.ts rehearse",
+    "compile": "bun scripts/compile.ts",
+    "records:import": "bun scripts/records-import.ts"
+  },
+  "dependencies": {
+    "@autograph/auth": "workspace:*",
+    "@autograph/canvas": "workspace:*",
+    "@autograph/canvas-host": "workspace:*",
+    "@autograph/csv-workspace": "workspace:*",
+    "@autograph/generated-app-runtime": "workspace:*",
+    "@autograph/next-config": "workspace:*",
+    "@autograph/work-session-tools": "workspace:*",
+    "@better-auth/oauth-provider": "catalog:",
+    "better-auth": "catalog:",
+    "next": "catalog:",
+    "pg": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "server-only": "0.0.1"
+  }
+}

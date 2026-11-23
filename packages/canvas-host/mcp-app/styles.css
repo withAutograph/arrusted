@@ -1,0 +1,25 @@
+@import "../../design-systems/core/tokens/theme.css";
+
+@source "./**/*.{ts,tsx}";
+@source "../../design-systems/core/**/*.{ts,tsx}";
+@source "../../modules/**/*.{ts,tsx}";
+@source "../../canvas/**/*.{ts,tsx}";
+
+/* Fonts are the host's or the system stack, never inlined. */
+html,
+body,
+#root {
+  margin: 0;
+}
+
+/* Inline, the document is as tall as its content (reported to the host);
+ * full screen, it fills the host's height. */
+html[data-display-mode="fullscreen"],
+html[data-display-mode="fullscreen"] body,
+html[data-display-mode="fullscreen"] #root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg-page);
+}

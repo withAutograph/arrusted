@@ -1,0 +1,70 @@
+id: ag-charts-through-chart-composition-ts
+language: TypeScript
+severity: error
+message: import AG Charts only from the design-system chart composition
+note: Apps and other packages render charts through @autograph/compositions.
+files: [packages/domain-libs/**/*.ts, packages/**/*.ts]
+ignores: [packages/design-systems/core/compositions/charting/**]
+rule:
+  any:
+    - { all: [{ kind: import_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { all: [{ kind: export_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { pattern: require($SOURCE) }
+    - { pattern: import($SOURCE) }
+constraints:
+  SOURCE: { matches: forbidden-source }
+utils:
+  forbidden-source:
+    all:
+      - { any: [{ kind: string }, { kind: template_string }] }
+      - { regex: '^[''"\x60]ag-charts-[^''"\x60]+[''"\x60]$' }
+---
+id: ag-charts-through-chart-composition-tsx
+language: Tsx
+severity: error
+message: import AG Charts only from the design-system chart composition
+note: Apps and other packages render charts through @autograph/compositions.
+files: [packages/domain-libs/**/*.tsx, packages/**/*.tsx]
+ignores: [packages/design-systems/core/compositions/charting/**]
+rule:
+  any:
+    - { all: [{ kind: import_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { all: [{ kind: export_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { pattern: require($SOURCE) }
+    - { pattern: import($SOURCE) }
+constraints:
+  SOURCE: { matches: forbidden-source }
+utils:
+  forbidden-source:
+    all:
+      - { any: [{ kind: string }, { kind: template_string }] }
+      - { regex: '^[''"\x60]ag-charts-[^''"\x60]+[''"\x60]$' }
+---
+id: ag-charts-through-chart-composition-js
+language: JavaScript
+severity: error
+message: import AG Charts only from the design-system chart composition
+note: Apps and other packages render charts through @autograph/compositions.
+files:
+  [
+    packages/domain-libs/**/*.js,
+    packages/domain-libs/**/*.jsx,
+    packages/**/*.js,
+    packages/**/*.jsx,
+    packages/**/*.mjs,
+    packages/**/*.cjs,
+  ]
+ignores: [packages/design-systems/core/compositions/charting/**]
+rule:
+  any:
+    - { all: [{ kind: import_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { all: [{ kind: export_statement }, { has: { field: source, matches: forbidden-source } }] }
+    - { pattern: require($SOURCE) }
+    - { pattern: import($SOURCE) }
+constraints:
+  SOURCE: { matches: forbidden-source }
+utils:
+  forbidden-source:
+    all:
+      - { any: [{ kind: string }, { kind: template_string }] }
+      - { regex: '^[''"\x60]ag-charts-[^''"\x60]+[''"\x60]$' }

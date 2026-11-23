@@ -1,0 +1,6 @@
+#!/bin/bash
+#MISE description="Prove generated SQL parity fails closed without PostgreSQL"
+
+set -euo pipefail
+
+exec /bin/bash packages/schema-compiler/scripts/test-sql-parity-runner.sh

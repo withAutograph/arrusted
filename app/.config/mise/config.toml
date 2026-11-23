@@ -1,0 +1,27 @@
+[tasks.compile]
+description = "Compile the CUE schema and typed data client without a database"
+run = "bun run compile"
+
+[tasks.dev]
+description = "Run the starter locally after migration"
+run = "bun run dev"
+
+[tasks.build]
+description = "Compile the schema and build the starter"
+run = "bun run build"
+
+[tasks.migrate]
+description = "Back up, plan, and transactionally migrate MIGRATION_DATABASE_URL"
+run = "bun run migrate"
+
+[tasks."migrate:undo"]
+description = "Restore rows and the applied-schema record together"
+run = "bun run migrate:undo"
+
+[tasks."migrate:rehearse"]
+description = "Migrate an isolated MIGRATION_DATABASE_URL and check every section list"
+run = "bun run migrate:rehearse"
+
+[tasks."records:import"]
+description = "Import CSV records as the deployment builder"
+run = "bun run records:import"

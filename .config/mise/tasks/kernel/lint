@@ -1,0 +1,5 @@
+#!/bin/sh
+#MISE description="Lint Rust workspace code"
+set -eu
+
+cargo clippy --workspace --all-targets --features kernel/testing -- -D warnings

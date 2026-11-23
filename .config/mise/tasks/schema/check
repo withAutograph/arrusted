@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Verify checked schema catalog and application artifacts are current"
+set -euo pipefail
+
+cd "$MISE_MONOREPO_ROOT"
+exec .config/mise/scripts/repository/schema-artifacts.sh check

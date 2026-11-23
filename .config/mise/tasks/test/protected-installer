@@ -1,0 +1,5 @@
+#!/bin/sh
+#MISE description="Prove trusted generated installation and access ordering on owned disposable PostgreSQL"
+set -eu
+bun .config/mise/scripts/repository/test-protected-generated-installer.ts
+bun .config/mise/scripts/repository/test-protected-http-replay.ts

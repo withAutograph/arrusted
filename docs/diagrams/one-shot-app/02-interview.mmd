@@ -1,0 +1,33 @@
+flowchart LR
+  S1[(S1 Load adapted prototype skill)]
+  U1[/U1 State job to be done/]
+  U2[/U2 Name desired interfaces/]
+  A1[A1 Label facts, evidence, assumptions, and questions]
+  G1{G1 HTML gate: JTBD plus interfaces present?}
+  A2[A2 Inspect relevant Arrusted capabilities and domain context]
+  A3[A3 Choose provisional workflows and realistic sample data]
+  S2[(S2 Generate self-contained clickable HTML)]
+  U3[/U3 Use prototype and give product-language feedback/]
+  A4[A4 Revise prototype and record decisions]
+  A5[A5 Infer integrations and data objects]
+  U4[/U4 Confirm or correct integrations, objects, and relationships/]
+  A6[A6 Derive routes, controls, actions, temporal rules, writes, roles, and agent jobs]
+  S3[(S3 Keep HTML and structured AppSpec synchronized)]
+  G2{G2 Build gate: all blocking decisions confirmed?}
+  U5[/U5 Accept prototype and build-ready AppSpec/]
+  S4[(S4 Pass accepted AppSpec to planning unchanged)]
+
+  S1 --> U1 --> U2 --> A1 --> G1
+  G1 -- No --> U1
+  G1 -- Yes --> A2 --> A3 --> S2 --> U3 --> A4 --> A5 --> U4 --> A6 --> S3 --> G2
+  G2 -- Revise experience --> S2
+  G2 -- Clarify contract --> U4
+  G2 -- Ready --> U5 --> S4
+
+  classDef built fill:#DCFCE7,stroke:#15803D,color:#14532D,stroke-width:2px
+  classDef partial fill:#FEF3C7,stroke:#D97706,color:#78350F,stroke-width:2px
+  classDef missing fill:#FEE2E2,stroke:#DC2626,color:#7F1D1D,stroke-width:2px
+
+  class U1,U2,U3,U4 built
+  class S1,G1,A2,A3,S2,A4,A5,A6,S3,G2,U5,S4 partial
+  class A1 missing

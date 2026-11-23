@@ -1,0 +1,272 @@
+{
+  "schema": {
+    "app_id": "core_app",
+    "customer_id": "customer_enum",
+    "version": "2026-06-24-enum",
+    "models": [
+      {
+        "id": "employee",
+        "kind": "entity",
+        "label": "Employee",
+        "display_field_id": null,
+        "origin": "app",
+        "management": "fixed",
+        "lifecycle": "active",
+        "extensions": {
+          "typed_custom_fields": true,
+          "record_metadata": null
+        },
+        "fields": [
+          {
+            "id": "status",
+            "label": "Status",
+            "type": "enum",
+            "required": false,
+            "is_unique": false,
+            "target_model": null,
+            "option_set": [
+              {
+                "id": "active",
+                "label": "Active",
+                "aliases": ["current"],
+                "origin": "app",
+                "management": "fixed",
+                "lifecycle": "active"
+              },
+              {
+                "id": "inactive",
+                "label": "Inactive",
+                "aliases": [],
+                "origin": "app",
+                "management": "fixed",
+                "lifecycle": "active"
+              }
+            ],
+            "origin": "app",
+            "management": "fixed",
+            "lifecycle": "active"
+          }
+        ],
+        "many_relations": []
+      }
+    ],
+    "custom_fields": [
+      {
+        "id": "employee_tier",
+        "model_id": "employee",
+        "field_id": "tier",
+        "label": "Tier",
+        "type": "enum",
+        "target_model_id": null,
+        "option_set": [
+          {
+            "id": "gold",
+            "label": "Gold",
+            "aliases": ["enterprise"],
+            "origin": "app",
+            "management": "fixed",
+            "lifecycle": "active"
+          },
+          {
+            "id": "silver",
+            "label": "Silver",
+            "aliases": [],
+            "origin": "app",
+            "management": "fixed",
+            "lifecycle": "active"
+          }
+        ],
+        "archived_at": null,
+        "origin": "app",
+        "management": "fixed",
+        "lifecycle": "active"
+      },
+      {
+        "id": "employee_headcount_weight",
+        "model_id": "employee",
+        "field_id": "headcount_weight",
+        "label": "Headcount weight",
+        "type": "number",
+        "target_model_id": null,
+        "option_set": [],
+        "expression": {
+          "type": "multiply",
+          "left": { "type": "literal", "value": { "type": "number", "value": "1" } },
+          "right": { "type": "literal", "value": { "type": "number", "value": "0.5" } }
+        },
+        "archived_at": null,
+        "origin": "app",
+        "management": "fixed",
+        "lifecycle": "active"
+      }
+    ],
+    "change_types": []
+  },
+  "minimal_schema": {
+    "app_id": "core_app",
+    "customer_id": "customer_minimal",
+    "version": "2026-06-24-minimal",
+    "models": [
+      {
+        "id": "record",
+        "kind": "entity",
+        "label": "Record",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          }
+        ]
+      }
+    ],
+    "change_types": []
+  },
+  "minimal_schema_serialized": {
+    "app_id": "core_app",
+    "customer_id": "customer_minimal",
+    "version": "2026-06-24-minimal",
+    "models": [
+      {
+        "id": "record",
+        "kind": "entity",
+        "label": "Record",
+        "display_field_id": null,
+        "origin": "app",
+        "management": "fixed",
+        "lifecycle": "active",
+        "extensions": {
+          "typed_custom_fields": false,
+          "record_metadata": null
+        },
+        "fields": [
+          {
+            "id": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true,
+            "is_unique": false,
+            "target_model": null,
+            "option_set": [],
+            "origin": "app",
+            "management": "fixed",
+            "lifecycle": "active"
+          }
+        ],
+        "many_relations": []
+      }
+    ],
+    "custom_fields": [],
+    "change_types": []
+  },
+  "field_value_enum": {
+    "type": "enum",
+    "value": "active"
+  },
+  "field_values": {
+    "text": {
+      "type": "text",
+      "value": "Example"
+    },
+    "number": {
+      "type": "number",
+      "value": "12.5"
+    },
+    "bool": {
+      "type": "bool",
+      "value": true
+    },
+    "date": {
+      "type": "date",
+      "value": "2026-06-24"
+    },
+    "datetime": {
+      "type": "datetime",
+      "value": "2026-06-24T12:34:56Z"
+    },
+    "relation": {
+      "type": "relation",
+      "value": {
+        "type": "external_key",
+        "value": "record_1"
+      }
+    },
+    "text_list": {
+      "type": "text_list",
+      "value": ["alpha", "beta"]
+    },
+    "json": {
+      "type": "json",
+      "value": {
+        "nested": true
+      }
+    },
+    "enum": {
+      "type": "enum",
+      "value": "active"
+    },
+    "money_rate": {
+      "type": "money_rate",
+      "value": {
+        "amount": "1250.00",
+        "currency": "USD",
+        "period": "annual"
+      }
+    }
+  },
+  "custom_field_value_enum": {
+    "type": "enum",
+    "value": "gold"
+  },
+  "custom_field_values": {
+    "text": {
+      "type": "text",
+      "value": "Example"
+    },
+    "number": {
+      "type": "number",
+      "value": "12.5"
+    },
+    "bool": {
+      "type": "bool",
+      "value": true
+    },
+    "date": {
+      "type": "date",
+      "value": "2026-06-24"
+    },
+    "datetime": {
+      "type": "datetime",
+      "value": "2026-06-24T12:34:56Z"
+    },
+    "relation": {
+      "type": "relation",
+      "value": {
+        "type": "external_key",
+        "value": "record_1"
+      }
+    },
+    "text_list": {
+      "type": "text_list",
+      "value": ["alpha", "beta"]
+    },
+    "enum": {
+      "type": "enum",
+      "value": "gold"
+    },
+    "money_rate": {
+      "type": "money_rate",
+      "value": {
+        "amount": "1250.00",
+        "currency": "USD",
+        "period": "annual"
+      }
+    }
+  },
+  "custom_field_entry_enum": {
+    "field_id": "tier",
+    "type": "enum",
+    "value": "gold"
+  }
+}

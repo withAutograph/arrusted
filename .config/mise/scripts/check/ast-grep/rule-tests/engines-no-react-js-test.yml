@@ -1,0 +1,9 @@
+id: engines-no-react-js
+valid:
+  - const reactPackage = "react";
+  - '// import React from "react";'
+invalid:
+  - import React from "react";
+  - export { createElement } from "react";
+  - const react = require("react");
+  - import("react-dom/client");

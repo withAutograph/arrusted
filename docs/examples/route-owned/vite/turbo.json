@@ -1,0 +1,12 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/**/*"]
+    },
+    "build": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/**/*"],
+      "outputs": ["frontend/dist/**"]
+    }
+  }
+}

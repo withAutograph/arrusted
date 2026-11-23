@@ -1,0 +1,272 @@
+/* NodeCard styles — paired with node-card.tsx.
+ *
+ * All tokens come from packages/design-systems/core/tokens/theme.css.
+ * No raw colors, sizes, or spacing values — semantic tokens only.
+ * State variants (focused, dimmed, empty) drive off data attributes
+ * the TSX sets on the wrapper so the markup stays minimal and the
+ * variant surface is readable here in one place.
+ */
+
+.node-card {
+  /* Box. The chart canvas reads `--size-org-chart-node` so its layout
+   * function packs subtrees against the same width the card renders. */
+  width: var(--size-org-chart-node);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-panel);
+  color: var(--color-text-primary);
+  /* Pin the family even though :root sets it — keeps stories' iframe
+   * cascade defensible if a future decorator stops the inherit chain. */
+  font-family: var(--font-sans);
+  transition:
+    box-shadow 150ms ease-out,
+    border-color 150ms ease-out,
+    opacity 150ms ease-out;
+}
+
+/* ---- Occupant section (top half) ---- */
+.node-card-occupant {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2-5) var(--space-3);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.node-card-occupant-primary {
+  margin: 0;
+  font-size: var(--text-control-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-body);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-card-occupant-empty {
+  margin: 0;
+  font-size: var(--text-control-md);
+  font-style: italic;
+  font-weight: var(--font-weight-normal);
+  line-height: var(--leading-body);
+  color: var(--color-text-muted);
+}
+
+/* ---- Slot section (bottom half) ---- */
+.node-card-slot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2-5) var(--space-3);
+}
+
+.node-card-slot-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.node-card-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-control-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-body);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-card-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-0-5) var(--space-2);
+  font-size: var(--text-micro);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--leading-micro);
+  letter-spacing: var(--tracking-label);
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-pill);
+}
+
+/* ---- Details row (shared by occupant + slot) ----
+ * Up to two detail fields, rendered as a single row. The left detail
+ * gets `flex: 1 1 0` so it takes the available space and truncates
+ * first; the right detail caps to its content width and aligns to
+ * the right edge of the row. */
+.node-card-details {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  color: var(--color-text-muted);
+}
+
+.node-card-detail {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  min-width: 0;
+}
+
+.node-card-detail-left {
+  flex: 1 1 0;
+  justify-content: flex-start;
+}
+
+.node-card-detail-right {
+  flex: 0 1 auto;
+  justify-content: flex-end;
+}
+
+.node-card-detail-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The dot color is read from an inline CSS custom property the detail
+ * span sets via `style`. Callers pass the variable reference via
+ * `accent.color`; absence falls back to the muted text color so the
+ * layout doesn't shift. */
+.node-card-detail-dot {
+  flex: 0 0 auto;
+  width: var(--size-status-dot);
+  height: var(--size-status-dot);
+  border-radius: var(--radius-pill);
+  background: var(--node-card-detail-accent, var(--color-text-muted));
+}
+
+/* ---- State variants ---- */
+
+/* Focused: design-system focus ring + small lift via tinted shadow.
+ * The lavender `--shadow-control` is the same affordance the segmented-
+ * control active pill uses, so focused chart nodes read as the same
+ * "selected" concept across the app.
+ *
+ * Implementation note: an `outline + outline-offset` over the card's
+ * 1px gray border produced a visible double-ring at the offset gap.
+ * Instead, we shift the existing border to the action-primary color
+ * AND extend it 1px outward via a hard box-shadow — total 2px of
+ * solid lavender at the card edge, no gap, no second ring. The
+ * tinted `--shadow-control` rides on top for the lift affordance. */
+.node-card[data-node-state="focused"] {
+  border-color: var(--color-action-primary);
+  box-shadow:
+    0 0 0 1px var(--color-action-primary),
+    var(--shadow-control);
+}
+
+/* Dimmed: a single quiet opacity step. No grayscale / blur tricks —
+ * the layered filter pile reads as gimmick rather than affordance. */
+.node-card[data-node-state="dimmed"] {
+  opacity: 0.4;
+}
+
+/* Current: the card the view is about. A restrained selected tint with
+ * the primary border, no lift — it is a location marker, not a control. */
+.node-card[data-node-state="current"] {
+  border-color: var(--color-action-primary);
+  background: var(--color-bg-selected);
+}
+
+/* Pending: a placeholder while content loads. Dashed and quiet, with a
+ * slow pulse that stops under reduced motion. */
+.node-card[data-node-state="pending"] {
+  border-style: dashed;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-disabled);
+  animation: node-card-pending-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes node-card-pending-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .node-card[data-node-state="pending"] {
+    animation: none;
+  }
+}
+
+/* ---- Label form ----
+ * One block: optional muted caption over an ink main line. The card
+ * fills the box its container gives it (the canvas `nodeSize`), so text
+ * never overflows a guessed width: both lines truncate with an ellipsis
+ * and the full text rides on the card's `title`. */
+.node-card[data-node-variant="label"] {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+}
+
+.node-card-label-caption,
+.node-card-label-primary {
+  margin: 0;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-card-label-caption {
+  font-size: var(--text-caption);
+  line-height: var(--leading-micro);
+  color: var(--color-text-muted);
+}
+
+.node-card-label-primary {
+  font-size: var(--text-control-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--leading-body);
+  color: var(--color-text-primary);
+  text-underline-offset: 2px;
+}
+
+.node-card[data-node-variant="label"][data-node-muted="true"] .node-card-label-primary {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.node-card[data-node-variant="label"][data-node-state="current"] .node-card-label-primary {
+  color: var(--color-action-primary-ink);
+}
+
+.node-card[data-node-variant="label"][data-node-state="pending"] .node-card-label-caption,
+.node-card[data-node-variant="label"][data-node-state="pending"] .node-card-label-primary {
+  color: var(--color-text-disabled);
+}
+
+/* Interactive label cards. The host (the canvas node wrapper) owns the
+ * button role and keyboard handling; the card answers hover with a quiet
+ * background and an underlined main line. Keyboard focus uses the global
+ * focus-visible ring on the wrapper, rounded to the card's corners. */
+[role="button"]:has(> .node-card[data-node-variant="label"]) {
+  border-radius: var(--radius-panel);
+}
+
+[role="button"]:hover > .node-card[data-node-variant="label"]:not([data-node-state="current"]) {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-strong);
+}
+
+[role="button"]:hover > .node-card[data-node-variant="label"] .node-card-label-primary {
+  text-decoration: underline;
+}

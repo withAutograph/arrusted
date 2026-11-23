@@ -1,0 +1,31 @@
+[workspace]
+members = [
+    "packages/platform-http",
+    "packages/kernel",
+    "packages/platform-service-runtime",
+    "packages/protected-installer",
+    "packages/rust-auth",
+    "packages/contracts/typegen",
+    "packages/schema-compiler",
+]
+default-members = [
+    "packages/platform-http",
+    "packages/kernel",
+    "packages/platform-service-runtime",
+    "packages/rust-auth",
+    "packages/contracts/typegen",
+    "packages/schema-compiler",
+]
+resolver = "2"
+
+[workspace.metadata]
+name = "development-workspace"
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.96"
+license = "UNLICENSED"
+publish = false
+
+[workspace.dependencies]
+uuid = { version = "1", default-features = false, features = ["serde", "v4"] }

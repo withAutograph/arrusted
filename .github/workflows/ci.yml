@@ -1,0 +1,254 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [main]
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  MISE_ENV: ci
+  CARGO_TARGET_DIR: ${{ github.workspace }}/.cargo-target
+
+jobs:
+  analyze-react:
+    name: Quality (React advisory)
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: millionco/react-doctor@013f7373f91a3b9e68bd1dc7d4d354f4b041b117
+        with:
+          blocking: none
+          version: 0.9.3
+
+  quality-format:
+    name: Quality (Format advisory)
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install_args: bun node rust cue hk actionlint fnox conda:postgresql
+      - run: .config/mise/scripts/repository/run-workspace-check-lane.sh false format:app format:kernel
+
+  quality:
+    name: Quality
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install_args: bun node rust cue hk actionlint fnox conda:postgresql
+      - run: .config/mise/scripts/repository/run-workspace-check-lane.sh false lint:app check:types check:package-manifests check:tooling-layout check:github-actions check:domain-lib-turbo-configs check:konsistent check:konsistent-source check:vite-config-runtime-source check:mise-rust-cache-paths check:mise-rust-toolchain check:rust-validation-orchestration check:git-hook-gates check:test-quality-policy check:boundary-rule-proof check:design-system-branding
+      - run: mise run check:workspace-imports
+
+  packages:
+    name: Platform (Package tests)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install_args: bun node rust cue hk actionlint fnox conda:postgresql
+      - run: mise exec -- turbo run check --filter='./packages/*' --filter='./packages/*/*'
+      - run: mise exec -- playwright install --with-deps chromium
+      - run: mise run test:app
+      - run: mise run build:catalog
+
+  platform-fixtures:
+    name: Platform (${{ matrix.group }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [installer, organization, auth-history, runtime, rust-hooks]
+    env:
+      APP_PLATFORM_FIXTURE_GROUP: ${{ matrix.group }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install_args: bun node rust cue hk actionlint fnox conda:postgresql
+      - run: mise run test:app:platform
+
+  postgres:
+    name: Database acceptance (${{ matrix.task }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [test:work-session-tools, test:data-plane, test:integration-runtime, test:verified-gateway-data-context]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install_args: bun node rust cue hk actionlint fnox conda:postgresql
+      - run: mise run "${{ matrix.task }}"
+
+  canvas-postgres:
+    name: Database (Canvas Host)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install_args: bun node rust cue hk actionlint fnox conda:postgresql
+      - run: CANVAS_HOST_POSTGRES=1 mise exec -- vp test --config packages/canvas-host/vite.config.ts --run
+
+  developer-setup:
+    name: Tooling (Developer setup)
+    runs-on: ubuntu-24.04
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    services:
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: postgres }
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install_args: bun node rust cue hk actionlint fnox conda:postgresql
+      - run: mise exec -- bun install --frozen-lockfile
+      - run: mise run check:package-manifests
+      - run: mise run test:auth-tenant-migration
+
+  security:
+    name: Security
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install_args: bun node rust cue hk actionlint fnox conda:postgresql
+      - run: mise install gitleaks cargo:cargo-audit trivy
+      - run: mise run security:dependencies
+      - run: mise run security:secrets
+      - run: mise run check:supply-chain-fixtures
+
+  kernel:
+    name: Kernel and compiler
+    runs-on: ubuntu-24.04
+    env:
+      KERNEL_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+    services:
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: postgres }
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install_args: bun node rust cue hk actionlint fnox conda:postgresql
+      - run: mise run kernel:check
+      - run: mise run lint:kernel
+      - run: mise run kernel:test-workspace
+
+  parity:
+    name: Database (Parity)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      KERNEL_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      SQL_PARITY_EXCLUDE_TARGETS: sql_runtime_lookup_scale
+    services:
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: postgres }
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install_args: bun node rust cue hk actionlint fnox conda:postgresql
+      - run: mise run schema:test-parity-runner
+      - run: mise run --no-deps schema:test-parity
+
+  scale-parity:
+    name: Database (Scale parity)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      KERNEL_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+      SQL_PARITY_ONLY_TARGETS: sql_runtime_lookup_scale
+    services:
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: postgres }
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install_args: bun node rust cue hk actionlint fnox conda:postgresql
+      - run: mise run --no-deps schema:test-parity
+
+  complete:
+    name: Check
+    needs: [analyze-react, quality-format, quality, packages, platform-fixtures, postgres, canvas-postgres, developer-setup, security, kernel, parity, scale-parity]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require retained validation lanes
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          jq -e 'del(."quality-format", ."analyze-react") | all(.[]; .result == "success")' <<< "$RESULTS"

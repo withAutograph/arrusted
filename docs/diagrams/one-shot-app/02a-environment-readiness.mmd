@@ -1,0 +1,23 @@
+flowchart LR
+  U1[/U1 Facilitator installs mise/]
+  U2[/U2 Facilitator installs and starts PostgreSQL/]
+  S1[(S1 mise install adds pinned tools)]
+  S2[(S2 Dependency setup installs JavaScript and Rust libraries)]
+  S3[(S3 Setup creates Dev, HC, Vendor, and Auth databases)]
+  S4[(S4 Setup migrates Auth and materializes app storage)]
+  S5[(S5 Verify commands, versions, PostgreSQL, databases, schemas, environment, licenses, and ports)]
+  Q{Environment ready?}
+  U3[/U3 Fix missing host prerequisite/]
+  R([Ready for interview and build])
+
+  U1 --> U2 --> S1 --> S2 --> S3 --> S4 --> S5 --> Q
+  Q -- No --> U3 --> S5
+  Q -- Yes --> R
+
+  classDef built fill:#DCFCE7,stroke:#15803D,color:#14532D,stroke-width:2px
+  classDef partial fill:#FEF3C7,stroke:#D97706,color:#78350F,stroke-width:2px
+  classDef outcome fill:#DBEAFE,stroke:#2563EB,color:#1E3A8A,stroke-width:3px
+
+  class S1,S2,S3,S4 built
+  class U1,U2,S5,Q,U3 partial
+  class R outcome

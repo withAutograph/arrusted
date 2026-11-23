@@ -1,0 +1,10 @@
+{
+  "extends": "@autograph/typescript-config/base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "paths": {
+      "@/*": ["${configDir}/*"]
+    }
+  },
+  "include": ["*.ts", "*.tsx"]
+}

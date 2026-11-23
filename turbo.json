@@ -1,0 +1,65 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "futureFlags": {
+    "experimentalCargoWorkspaces": true
+  },
+  "globalDependencies": [
+    "tsconfig.json",
+    "packages/typescript-config/*.json"
+  ],
+  "globalPassThroughEnv": [
+    "MISE_ENV"
+  ],
+  "remoteCache": {
+    "timeout": 5,
+    "uploadTimeout": 10
+  },
+  "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": [
+        "PORT"
+      ]
+    },
+    "test": {
+      "dependsOn": [
+        "^test"
+      ],
+      "passThroughEnv": [
+        "TMPDIR",
+        "SCHEMA_COMPILER_DIAGNOSTICS",
+        "CARGO_TARGET_DIR",
+        "CARGO_HOME",
+        "MISE_CARGO_HOME",
+        "MISE_DATA_DIR",
+        "MISE_RUSTUP_HOME",
+        "RUSTUP_HOME"
+      ]
+    },
+    "check": {
+      "dependsOn": [
+        "^check"
+      ],
+      "passThroughEnv": [
+        "CARGO_HOME",
+        "MISE_CARGO_HOME",
+        "MISE_DATA_DIR",
+        "MISE_RUSTUP_HOME",
+        "RUSTUP_HOME"
+      ]
+    },
+    "build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "dist/**",
+        "**/generated/**"
+      ]
+    }
+  },
+  "globalEnv": [
+    "BUN_OPTIONS"
+  ]
+}

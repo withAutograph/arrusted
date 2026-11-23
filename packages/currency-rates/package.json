@@ -1,0 +1,19 @@
+{
+  "name": "@autograph/currency-rates",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./frankfurter": "./frankfurter.ts"
+  },
+  "scripts": {
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "mise run --no-deps test:currency-rates"
+  },
+  "devDependencies": {
+    "@autograph/typescript-config": "workspace:*",
+    "@autograph/vite-config": "workspace:*",
+    "pg": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

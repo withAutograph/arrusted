@@ -1,0 +1,6 @@
+#!/bin/sh
+#MISE description="Capture Storybook screenshots"
+set -eu
+
+cd "$MISE_MONOREPO_ROOT"
+bun .config/mise/scripts/repository/storybook-screenshots.ts

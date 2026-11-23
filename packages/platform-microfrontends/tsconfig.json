@@ -1,0 +1,7 @@
+{
+  "extends": "../../.config/typescript/workspace-paths.json",
+  "include": [
+    "src/**/*.ts",
+    "__tests__/**/*.ts"
+  ]
+}

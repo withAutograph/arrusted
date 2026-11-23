@@ -1,0 +1,442 @@
+@import "tailwindcss";
+
+@theme {
+  /* Value tokens. Apps may remap these without changing component code. */
+  --color-blue-500: #8192ff;
+  --color-blue-600: #6b7de2;
+  --color-blue-700: #4d5fc2;
+  --color-blue-50: #f5f4ff;
+  --color-ink-900: #292929;
+  --color-ink-700: #4e5253;
+  --color-ink-500: #747778;
+  --color-ink-300: #a9adaf;
+  --color-canvas: #fafaf9;
+  --color-surface: #fefefe;
+  --color-border: rgba(41, 41, 41, 0.08);
+  --color-ink-border-strong: rgba(41, 41, 41, 0.16);
+  --color-success: #17b196;
+  --color-success-bg: #e6fbf7;
+  --color-success-ink: #087463;
+  --color-warning: #eb8526;
+  --color-warning-bg: #ffeede;
+  --color-warning-ink: #9a4a09;
+  --color-danger: #f45d48;
+  --color-danger-bg: #ffebe9;
+  --color-danger-ink: #a72f20;
+  --color-chart-yellow: #f0b24a;
+  --color-chart-green: #17b196;
+  --color-chart-blue: #8192ff;
+  --color-chart-coral: #cf6045;
+
+  /* Semantic tokens. Components reference these, not value tokens. */
+  --color-bg-page: var(--color-canvas);
+  --color-bg-surface: var(--color-surface);
+  --color-bg-subtle: #f8f8f8;
+  --color-bg-selected: var(--color-blue-50);
+  --color-bg-hover: rgba(41, 41, 41, 0.04);
+  --color-bg-muted: rgba(41, 41, 41, 0.06);
+  --color-bg-accent-soft: var(--color-blue-50);
+  --color-bg-pill-subtle: rgba(41, 41, 41, 0.05);
+  --color-bg-skeleton: rgba(41, 41, 41, 0.08);
+  --color-bg-toggle-off: rgba(41, 41, 41, 0.16);
+  --color-bg-overlay: rgba(41, 41, 41, 0.18);
+  --color-bg-canvas-grid: rgba(245, 246, 247, 0.96);
+  --color-canvas-grid-dot: rgba(156, 163, 175, 0.26);
+  --color-bg-translucent-surface: rgba(254, 254, 254, 0.9);
+  --color-text-primary: var(--color-ink-900);
+  --color-text-secondary: var(--color-ink-700);
+  --color-text-muted: var(--color-ink-500);
+  --color-text-disabled: var(--color-ink-300);
+  --color-text-inverse: var(--color-surface);
+  --color-action-primary: var(--color-blue-500);
+  --color-action-primary-hover: var(--color-blue-600);
+  --color-action-primary-ink: var(--color-blue-700);
+  --color-border-subtle: var(--color-border);
+  --color-border-strong: var(--color-ink-border-strong);
+  --color-status-success: var(--color-success);
+  --color-status-success-bg: var(--color-success-bg);
+  --color-status-success-ink: var(--color-success-ink);
+  --color-status-warning: var(--color-warning);
+  --color-status-warning-bg: var(--color-warning-bg);
+  --color-status-warning-ink: var(--color-warning-ink);
+  --color-status-danger: var(--color-danger);
+  --color-status-danger-bg: var(--color-danger-bg);
+  --color-status-danger-ink: var(--color-danger-ink);
+  --color-chart-1: var(--color-chart-blue);
+  --color-chart-2: var(--color-chart-green);
+  --color-chart-3: var(--color-chart-yellow);
+  --color-chart-4: var(--color-chart-coral);
+
+  /* Editable-grid surface tokens. The row-meta strip beneath any row with
+   * stages renders in `edit-strip-bg` (slate, distinct from the lavender of
+   * dirty cells so the eye reads "annotation" not "another dirty cell"); its
+   * left-accent uses `--color-action-primary`.
+   *
+   * The bulk-filter indicator above the grid renders in the warning-flavored
+   * `filter-indicator-*` triplet — different from `--color-status-warning-*`
+   * because the indicator is informational ("you're filtered to this group"),
+   * not a warning state. */
+  --color-bg-edit-strip: #ecf0fb;
+  --color-bg-filter-indicator: #fef9e8;
+  --color-border-filter-indicator: #f0d56b;
+  --color-border-filter-indicator-strong: #d4b85b;
+  --color-text-filter-indicator: #7a5b00;
+  --color-text-filter-indicator-strong: #5a4400;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Menlo", monospace;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --text-micro: 11px;
+  --text-caption: 12px;
+  --text-control-xs: 12px;
+  --text-control-sm: 13px;
+  --text-control-md: 14px;
+  --text-control-lg: 15px;
+  --text-body: 14px;
+  --text-badge-xs: 10px;
+  --text-record-detail-meta: 10px;
+  --text-record-detail-title: 24px;
+  --text-title: 16px;
+  --text-section-title: 18px;
+  /* Matches the "Page Header" text style in Figma. A page title is the one
+     piece of type that has to win against a dashboard full of 32px figures. */
+  --text-page-title: 32px;
+  --text-display-sm: 32px;
+  --leading-micro: 16px;
+  --leading-caption: 20px;
+  --leading-body: 20px;
+  --leading-badge-xs: 12px;
+  --leading-record-detail-meta: 12px;
+  --leading-record-detail-title: 36px;
+  --leading-prose: 24px;
+  --leading-title: 24px;
+  --leading-section-title: 28px;
+  --leading-page-title: 48px;
+  --tracking-normal: 0;
+  --tracking-label: 0.06em;
+  --tracking-micro: 0.08em;
+  --tracking-tight: -0.02em;
+
+  --space-px: 1px;
+  --space-0: 0;
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-1-5: 6px;
+  --space-2: 8px;
+  --space-2-5: 10px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  --radius-xs: 4px;
+  --radius-control: 8px;
+  --radius-panel: 10px;
+  --radius-shell: 12px;
+  --radius-card: 14px;
+  /* Dashboard surfaces sit on a near-white page, so they are rounded further
+     than a panel and lifted by shadow rather than by a border. */
+  --radius-banner: 16px;
+  --radius-card-lg: 20px;
+  --radius-record-detail-panel: 24px;
+  --radius-pill: 9999px;
+  --shadow-raised: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --shadow-control: 0 2px 8px rgba(99, 102, 241, 0.2);
+  --shadow-control-raised: 0 2px 1px rgba(0, 0, 0, 0.06);
+  --shadow-subtle: 0 1px 2px rgba(41, 41, 41, 0.06);
+  --shadow-card: 0 10px 30px rgba(41, 41, 41, 0.08);
+  /* The dashboard shadows are a hairline lift, not a drop: on a page this pale
+     a heavy shadow reads as a modal rather than as a card. */
+  --shadow-card-soft: 0 1px 12px 1px rgba(68, 102, 136, 0.04);
+  --shadow-banner: 0 1px 6px rgba(68, 102, 136, 0.04);
+
+  --size-control-xs: 24px;
+  --size-control-sm: 32px;
+  --size-control-md: 40px;
+  --size-control-lg: 48px;
+  --size-editor-amount: 110px;
+  --size-editor-money-currency: 120px;
+  --size-editor-money-period: 140px;
+  --size-editor-bool-option-min: 60px;
+  --size-editor-value-select-min: 192px;
+  --size-editor-popover-sm: 280px;
+  --size-editor-popover-md: 360px;
+  --size-editor-popover-lg: 520px;
+  --size-editor-money-rate: 420px;
+  --size-editor-options-max-height: 240px;
+  /* Width of the grid-anchored agent chat panel when docked. */
+  --size-agent-panel-width: 380px;
+  --size-input-xs: 28px;
+  --size-input-sm: 32px;
+  --size-input-md: 40px;
+  --size-input-lg: 48px;
+  --size-checkbox: 16px;
+  --size-status-dot: 8px;
+  /* Row-meta strip height. Smaller than the data row so the strip
+   * reads as annotation, not another row. AG Grid's `getRowHeight`
+   * callback returns this for full-width meta rows; data rows fall
+   * back to AG Grid's computed default. */
+  --size-row-meta-height: 28px;
+  /* Indent the row-meta content under the row's data area, not under
+   * the chrome (row-selection checkbox column). Quartz's selection
+   * checkbox column is ~48px; we use a token that matches without
+   * coupling to AG Grid's internal var. */
+  --size-row-meta-indent: 48px;
+  --size-step-index: 36px;
+  --size-form-column-min: 260px;
+  --size-detail-label-column: 140px;
+  --size-record-detail-label-column: 160px;
+  --size-detail-value-column: 160px;
+  --size-toggle-track-width: 44px;
+  --size-toggle-track-height: 24px;
+  --size-toggle-thumb: 16px;
+  --size-divider: 1px;
+  --size-timeline-dot: 10px;
+  --size-chart-bar-height: 12px;
+  --size-chart-control-min-width: 128px;
+  --size-skeleton-line: 12px;
+  --size-skeleton-short: 160px;
+  --size-skeleton-long: 256px;
+  --size-org-chart-node: 240px;
+  --size-nav-side-width: 256px;
+  --size-popover-min-width: 224px;
+  --size-modal-sm: 512px;
+  --size-modal-md: 768px;
+  --size-modal-lg: 1024px;
+  --size-modal-max-height: 90vh;
+  --size-sheet-width: 480px;
+  --size-sheet-max-width: calc(100vw - 2 * var(--space-4));
+  --size-toast-width: 360px;
+  --size-toast-max-width: calc(100vw - 2 * var(--space-4));
+
+  --size-icon-xs: 12px;
+  --size-icon-sm: 14px;
+  --size-icon-md: 16px;
+  --size-icon-lg: 20px;
+  --size-icon-xl: 24px;
+  --size-avatar-md: 40px;
+  --size-avatar-lg: 48px;
+  /* Readiness ring on a scan summary: large enough that the percentage inside
+     it is legible at a glance, which is the only reason the ring is there. */
+  --size-progress-ring: 88px;
+  /* Marker on a progress rail: an icon chip, sized so the 16px glyph inside it
+     keeps its own breathing room. */
+  --size-step-marker: 32px;
+  --size-date-cell: 36px;
+  --size-date-nav-button: 32px;
+  --size-date-action-slot: 64px;
+  --size-date-picker-popover: min(20rem, calc(100vw - 2rem), calc(100vh - 2rem));
+  --size-as-of-date-calendar: min(20rem, calc(100vw - 2rem), calc(100vh - 6rem));
+
+  --z-popover: 40;
+  --z-overlay: 50;
+
+  /* Focus ring — a single design-system definition so buttons, inputs,
+   * segmented controls, sidebar nav entries, and the as-of pill all show
+   * the same affordance on keyboard focus. Applied via `:focus-visible`
+   * outline below; AG Grid's own focus model (`.ag-cell-focus`,
+   * `.ag-header-cell-focus`, etc.) is excluded so the grid keeps its
+   * keyboard-navigation chrome unchanged. */
+  --ring-focus-width: 2px;
+  --ring-focus-offset: 2px;
+
+  --layout-chart-row: 140px 1fr 72px;
+  --layout-filter-row: 1fr 140px 1fr;
+  --layout-date-picker-month: auto 1fr auto;
+
+  --space-control-x: var(--space-3);
+  --space-control-y: var(--space-2);
+}
+
+/* Native details keeps its semantics while modern browsers interpolate the
+ * disclosure content between zero and intrinsic height. The opacity arrives
+ * slightly ahead of the height for a quick, soft reveal. */
+.ds-disclosure[data-caret-motion="right-down"][open] > summary > [data-disclosure-caret] {
+  transform: rotate(90deg);
+}
+
+.ds-disclosure[data-caret-motion="up-down"] > summary > [data-disclosure-caret] {
+  transform: rotate(0deg);
+}
+
+.ds-disclosure[data-caret-motion="up-down"][open] > summary > [data-disclosure-caret] {
+  transform: rotate(180deg);
+}
+
+@supports (interpolate-size: allow-keywords) {
+  :root {
+    interpolate-size: allow-keywords;
+  }
+
+  .ds-disclosure::details-content {
+    block-size: 0;
+    overflow: clip;
+    opacity: 0;
+    transition:
+      block-size 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      opacity 140ms ease-out,
+      content-visibility 220ms allow-discrete;
+  }
+
+  .ds-disclosure[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+
+  @starting-style {
+    .ds-disclosure[open]::details-content {
+      block-size: 0;
+      opacity: 0;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-disclosure::details-content {
+    transition: none;
+  }
+}
+
+:root {
+  color: var(--color-text-primary);
+  background: var(--color-bg-page);
+  font-family: var(--font-sans);
+}
+
+/* Chat mount motion. A single, subtle enter transition for conversation
+ * surfaces (agent/user turns, the settled stage / clarification cards) so a
+ * new turn eases in rather than popping. Consumers apply it via
+ * `motion-safe:animate-[chat-in_150ms_ease-out]` — motion-only, no color, and
+ * gated on `motion-safe` so reduced-motion users see instant mounts. */
+@keyframes chat-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Shimmer text. A moving highlight sweeps across muted text to signal an
+ * in-flight ("thinking" / "running") beat WITHOUT a spinner or dots — the
+ * motion itself is the progress signal (modern agent-chat idiom). The gradient
+ * paints into the glyphs via `background-clip: text`; the animation is gated on
+ * `prefers-reduced-motion: no-preference` so it only runs when motion is
+ * welcome. Reduced-motion users get a static muted caption (no gradient). */
+@keyframes text-shimmer {
+  from {
+    background-position: 200% center;
+  }
+  to {
+    background-position: -200% center;
+  }
+}
+
+.shimmer-text {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-text-muted) 40%,
+    var(--color-text-primary) 50%,
+    var(--color-text-muted) 60%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .shimmer-text {
+    animation: text-shimmer 2.2s linear infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer-text {
+    background: none;
+    color: var(--color-text-muted);
+  }
+}
+
+/* Global keyboard-focus ring. `:focus-visible` (not `:focus`) so mouse
+ * clicks don't trigger the ring; pointer interaction stays visually quiet.
+ *
+ * AG Grid carries its own cell / header focus styling via `.ag-cell-focus`,
+ * `.ag-header-cell-focused`, `.ag-row-focus`, etc.; we exclude those classes
+ * so the grid's keyboard-navigation chrome isn't double-ringed. The rule
+ * lives in theme.css (not a separate file) because the focus-visible
+ * contract is a token consumer like any other — a focus-visible-only file
+ * would just be a one-rule passthrough.
+ */
+:focus-visible:not(.ag-cell):not(.ag-header-cell):not(.ag-row):not(.ag-row-focus) {
+  outline: var(--ring-focus-width) solid var(--color-action-primary);
+  outline-offset: var(--ring-focus-offset);
+}
+
+/* Round checkbox — single shared shape across the app.
+ *
+ * AG Grid Quartz renders its built-in row-selection / filter-list
+ * checkboxes as circles via `.ag-checkbox-input-wrapper`. Our React
+ * `Checkbox` and any inline `<input type="checkbox">` reused that
+ * pattern by accident-of-default and rendered SQUARE, which the user
+ * called out as inconsistent. `.checkbox` is the one place
+ * the round shape lives so every site (Checkbox, ChangesOnlyToggle,
+ * ad-hoc inline inputs) renders the same.
+ *
+ * `appearance: none` strips the native UA chrome so we can paint our
+ * own circle. The checkmark is a centered SVG icon set as a mask on
+ * the `::after` pseudo so the tick color follows `background-color`
+ * (and we avoid font-baseline alignment fights at 16px).
+ */
+.checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: var(--size-checkbox);
+  height: var(--size-checkbox);
+  flex-shrink: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-bg-surface);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  vertical-align: middle;
+  transition:
+    background-color 80ms ease-out,
+    border-color 80ms ease-out;
+}
+
+.checkbox:hover:not(:disabled) {
+  border-color: var(--color-action-primary);
+}
+
+.checkbox:checked {
+  background: var(--color-action-primary);
+  border-color: var(--color-action-primary);
+}
+
+.checkbox:checked::after {
+  content: "";
+  position: absolute;
+  top: 43%;
+  left: 50%;
+  width: 0.28rem;
+  height: 0.52rem;
+  border: solid var(--color-text-inverse);
+  border-width: 0 0.13rem 0.13rem 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

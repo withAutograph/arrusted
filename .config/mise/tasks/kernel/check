@@ -1,0 +1,15 @@
+#!/bin/sh
+#MISE description="Check Rust workspace code and generated contracts"
+set -eu
+
+# Mise runs monorepo tasks from their project directory, while typegen's
+# checked-in output path is repository-relative.
+for name in $(git rev-parse --local-env-vars); do
+  unset "$name"
+done
+unset GIT_INTERNAL_SUPER_PREFIX
+cd "$(git rev-parse --show-toplevel)"
+
+mise run check:rust-dependency-policy
+cargo run -p typegen -- --check
+cargo clippy --workspace --all-targets --features kernel/testing -- -D warnings

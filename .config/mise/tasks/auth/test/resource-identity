@@ -1,0 +1,4 @@
+#!/bin/sh
+#MISE description="Verify Auth resource preflight against owned disposable PostgreSQL"
+set -eu
+bun .config/mise/scripts/repository/test-auth-resource-identity.ts

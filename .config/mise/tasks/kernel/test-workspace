@@ -1,0 +1,12 @@
+#!/bin/sh
+#MISE description="Run Rust workspace tests"
+set -eu
+
+mise install --locked conda:postgresql
+postgres_bin="$(dirname "$(mise which initdb)")"
+export PATH="${postgres_bin}:${PATH}"
+if [ -n "${CI_RUST_CHANGED_FILES:-}" ]; then
+  python3 .config/mise/scripts/repository/run-affected-rust-workspace.py
+else
+  cargo test --workspace --features kernel/testing
+fi

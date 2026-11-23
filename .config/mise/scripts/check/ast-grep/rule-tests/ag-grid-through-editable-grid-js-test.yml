@@ -1,0 +1,9 @@
+id: ag-grid-through-editable-grid-js
+valid:
+  - const gridPackage = "ag-grid-react";
+  - '// import { AgGridReact } from "ag-grid-react";'
+invalid:
+  - import { AgGridReact } from "ag-grid-react";
+  - export { ModuleRegistry } from "ag-grid-community/styles";
+  - const grid = require("ag-grid-enterprise");
+  - import("ag-grid-community");

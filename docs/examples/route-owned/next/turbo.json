@@ -1,0 +1,15 @@
+{
+  "extends": ["//"],
+  "tasks": {
+    "check": {
+      "outputs": []
+    },
+    "test": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/**/*"]
+    },
+    "build": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/**/*"],
+      "outputs": [".next/**", "!.next/cache/**"]
+    }
+  }
+}

@@ -1,0 +1,4 @@
+#!/bin/sh
+#MISE description="Verify public Gateway claims reach current app bindings in an owned PostgreSQL transaction"
+set -eu
+bun .config/mise/scripts/repository/test-verified-gateway-data-context.ts

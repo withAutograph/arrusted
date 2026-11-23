@@ -1,0 +1,11 @@
+{
+  "extends": "../../.config/typescript/workspace-paths.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "types": ["node"],
+    "strict": true,
+    "noEmit": true
+  },
+  "include": ["*.ts"],
+  "exclude": ["*.test.ts"]
+}

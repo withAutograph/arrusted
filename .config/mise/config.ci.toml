@@ -1,0 +1,13 @@
+[settings]
+# Cloud Codex resolves its host language runtimes through the global Mise
+# config. Keeping this setting here would make that independent tool list fail
+# against the repository lockfile during bootstrap. CI sets MISE_ENV=ci and is
+# the boundary that must resolve only checked-in tool versions.
+locked = true
+exec_auto_install = false
+not_found_auto_install = false
+task.run_auto_install = false
+
+[deps.bun]
+auto = true
+run = "bun ci"

@@ -1,0 +1,154 @@
+/* Row-meta strip — full-width row inserted directly beneath any data row
+ * that carries staged edits.
+ *
+ * Visual contract (C6 iteration: integrate with the row above + smaller
+ * height + ✕ inside the centered cluster):
+ *   - Outer `.ag-row-meta` runs at `--size-row-meta-height` (set via AG
+ *     Grid's `getRowHeight` callback in `index.tsx`) so the strip reads
+ *     as annotation, not a peer row. We use `height: 100%` here so the
+ *     content fills whatever AG Grid sets.
+ *   - LEFT INDENT (`margin-left: --size-row-meta-indent`): the strip
+ *     nests under the data area (NOT under the row-selection checkbox
+ *     column), reading as "this annotates the row's content." The 3px
+ *     primary accent is anchored to the indented strip's left edge so
+ *     it still aligns with the dirty cells inside the row.
+ *   - INTEGRATION WITH ROW ABOVE: the data row directly above the meta
+ *     strip suppresses its bottom border (rule below, scoped to
+ *     `.ag-row.ag-row-not-full-width:has(+ .ag-full-width-row)`). With
+ *     the indent + matching bg + suppressed seam, the data row + meta
+ *     read as one fused unit.
+ *   - The pill cluster (`.ag-row-meta-controls`) is centered and now
+ *     INCLUDES the discard ✕ as its trailing member. ✕ is no longer
+ *     absolutely positioned — it's the last child of the cluster so
+ *     tab order Type → Effective → ✕ stays correct AND it visually
+ *     reads as part of the same control group.
+ *
+ * AG Grid full-width row context: `.ag-full-width-row` is AG Grid's host
+ * class for the row container; we stack our padding/background on the
+ * `.ag-row-meta` content host inside it so AG Grid's own row layout
+ * (height, virtualization) still composes correctly.
+ */
+
+.ag-full-width-row .ag-row-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Vertical padding stays small — AG Grid's getRowHeight already
+   * caps the host row at --size-row-meta-height; this keeps the
+   * pills snug against that envelope. */
+  padding: 0 var(--space-3);
+  /* Indent under the data area — sits below the row's content, not
+   * the row-selection chrome. Width of the row-selection column in
+   * Quartz is ~48px; we name the inset as a token so a future change
+   * to that column width can flow through one place. */
+  margin-left: var(--size-row-meta-indent);
+  font-size: var(--text-micro);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-muted);
+  /* 3px left accent anchors the dirty-row cue to the indented strip's
+   * left edge — aligns with the cells inside the data area. */
+  border-left: 3px solid var(--color-action-primary);
+  border-bottom: 1px solid var(--color-border-subtle);
+  height: 100%;
+}
+
+/* Integration with the row above: when a data row is followed by a
+ * full-width row (the meta strip), suppress its bottom border so the
+ * two read as one fused unit. CSS-only — no React state. AG Grid's
+ * row containers ARE DOM siblings in row-index order inside
+ * `.ag-center-cols-container` so the `+ .ag-full-width-row` selector
+ * works. */
+.ag-row.ag-row-not-full-width:has(+ .ag-full-width-row) {
+  border-bottom: 0 !important;
+}
+
+.ag-row-meta-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  /* Long bulk-link names wrap rather than overflow the centered cluster. */
+  flex-wrap: wrap;
+  justify-content: center;
+  min-width: 0;
+}
+
+.ag-row-meta-discard {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-surface);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: var(--text-caption);
+  line-height: 1;
+  padding: 0;
+  /* Slight left margin to visually separate ✕ from the date pill —
+   * reads as "and then close" rather than another peer control. */
+  margin-left: var(--space-1);
+}
+
+.ag-row-meta-discard:hover {
+  color: var(--color-status-danger);
+  border-color: var(--color-status-danger);
+  background: var(--color-status-danger-bg);
+}
+
+.ag-row-meta-control {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-0-5) var(--space-2);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: var(--text-micro);
+}
+
+.ag-row-meta-control:hover {
+  border-color: var(--color-action-primary);
+  color: var(--color-action-primary);
+}
+
+/* Static variant for bulk-grouped rows: type + date are read-only there
+ * (the bulk-action ticket owns rename / re-date for the whole group). */
+.ag-row-meta-control-static {
+  cursor: default;
+}
+
+.ag-row-meta-control-static:hover {
+  border-color: var(--color-border-subtle);
+  color: var(--color-text-secondary);
+}
+
+.ag-row-meta-control b {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.ag-row-meta-label {
+  color: var(--color-text-muted);
+}
+
+.ag-row-meta-bulk-link {
+  color: var(--color-action-primary);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-0-5) var(--space-2);
+  background: var(--color-bg-selected);
+  border: none;
+  border-radius: var(--radius-xs);
+  font-family: inherit;
+  font-size: var(--text-micro);
+}
+
+.ag-row-meta-bulk-link:hover {
+  text-decoration: underline;
+}

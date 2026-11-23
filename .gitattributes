@@ -1,0 +1,2 @@
+# Schema release snapshots are generated and immutable; collapse them in
+# GitHub diffs and leave them out of language stats.

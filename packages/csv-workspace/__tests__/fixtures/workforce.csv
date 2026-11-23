@@ -1,0 +1,4 @@
+Employee Ref,Employee Name,Work Email,Department,Manager,Manager Ref,Assignment Start
+EMP-001,Ada Lovelace,ada@example.test,Eng,Grace Hopper,EMP-GRACE,2026-09-06
+EMP-002,Katherine Johnson,katherine@example.test,Research,Grace Hopper,EMP-GRACE,2026-09-06
+EMP-003,Dorothy Vaughan,dorothy@example.test,Research,Grace Hopper,EMP-GRACE,2026-09-06

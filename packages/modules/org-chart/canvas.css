@@ -1,0 +1,154 @@
+/* Org-chart canvas styles, paired with canvas.tsx. */
+
+/* ---- Outer canvas container ---- */
+.org-chart-canvas {
+  position: relative;
+  flex: 1 1 auto;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-bg-page);
+  cursor: default;
+}
+
+/* A flat chart is content on its host's surface: no fill, no dotted grid. */
+.org-chart-canvas[data-surface="flat"] {
+  background: transparent;
+}
+
+.org-chart-canvas[data-panning="true"] {
+  cursor: grabbing;
+}
+
+/* ---- Dotted background grid ---- */
+.org-chart-canvas-grid {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-bg-canvas-grid);
+  background-image: radial-gradient(circle, var(--color-canvas-grid-dot) 1px, transparent 1.2px);
+  background-position: 0 0;
+  background-size: 18px 18px;
+}
+
+/* ---- Transformed content layer ----
+ * The viewport transform (translate + scale) lives inline on
+ * `style`; this rule just establishes positioning. */
+.org-chart-canvas-content {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+
+/* ---- Connector edges (SVG paths) ---- */
+.org-chart-canvas-edge {
+  fill: none;
+  stroke: var(--color-ink-300);
+  stroke-width: 1.5;
+  transition:
+    d 200ms ease-out,
+    opacity 160ms ease-out,
+    stroke-opacity 160ms ease-out;
+}
+
+/* ---- Per-node wrapper ----
+ * The canvas owns absolute positioning; what `renderNode` returns
+ * is layered into this wrapper. Sets the pan-skip data attribute
+ * unconditionally so wheel/drag events targeted at a card don't pan. */
+.org-chart-node {
+  position: absolute;
+  transition: opacity 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .org-chart-node,
+  .org-chart-canvas-edge {
+    transition: none;
+  }
+}
+
+/* ---- Chart label banner (top-center) ---- */
+.org-chart-label {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 6px;
+  background: var(--color-bg-translucent-surface);
+  box-shadow: var(--shadow-subtle);
+  backdrop-filter: blur(4px);
+  font-family: var(--font-sans);
+  font-size: var(--text-title);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+/* ---- Zoom controls (bottom-left cluster) ---- */
+.org-chart-zoom-cluster {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-subtle);
+}
+
+.org-chart-zoom-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.org-chart-zoom-button:hover {
+  background: var(--color-bg-hover);
+}
+
+.org-chart-zoom-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---- Flat zoom controls ----
+ * Small and unboxed: muted icons on a faint translucent backing, so they
+ * stay legible over a card panned beneath them without reading as chrome. */
+.org-chart-canvas[data-surface="flat"] .org-chart-zoom-cluster {
+  bottom: 8px;
+  left: 8px;
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: var(--color-bg-translucent-surface);
+  box-shadow: none;
+}
+
+.org-chart-canvas[data-surface="flat"] .org-chart-zoom-button {
+  width: 22px;
+  height: 22px;
+  padding: 4px;
+  color: var(--color-text-muted);
+}
+
+.org-chart-canvas[data-surface="flat"] .org-chart-zoom-button:hover {
+  color: var(--color-text-secondary);
+}
+
+.org-chart-canvas[data-surface="flat"] .org-chart-zoom-button svg {
+  width: 14px;
+  height: 14px;
+}

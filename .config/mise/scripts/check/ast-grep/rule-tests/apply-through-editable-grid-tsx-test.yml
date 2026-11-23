@@ -1,0 +1,12 @@
+id: apply-through-editable-grid-tsx
+valid:
+  - export const Save = () => <EditableRowVersionGrid />;
+  - export const Load = () => <button onClick={() => window.fetch("/api/schema")}>Load</button>;
+invalid:
+  - export const Save = () => <button onClick={() => fetch("/api/apply")}>Save</button>;
+  - export const Save = () => <button onClick={() => window.fetch("/api/apply")}>Save</button>;
+  - export const Save = () => <button onClick={() => window["fetch"]("/api/apply")}>Save</button>;
+  - export const Save = () => <button onClick={() => window?.fetch("/api/apply")}>Save</button>;
+  - export const Save = () => <button onClick={() => window?.fetch?.("/api/apply")}>Save</button>;
+  - export const Save = () => <button onClick={() => client.postJson("/api/apply", payload)}>Save</button>;
+  - export const Save = () => <button onClick={() => client.postJson<AppliedChangeSet>("/api/apply", payload)}>Save</button>;

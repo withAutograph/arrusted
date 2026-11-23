@@ -1,0 +1,58 @@
+/* RelationGraph frame styles, paired with relation-graph.tsx.
+ *
+ * A frame is a quiet box around one group's cards. Its border and corner
+ * use NodeCard's token family; the caption reuses NodeCard's label caption
+ * type and sits in the frame's top edge, its background matching the
+ * host surface so the border line stops on either side of the text. The
+ * graph is flat content, so a host on a surface other than
+ * --color-bg-surface sets --relation-graph-surface to match.
+ */
+
+.relation-graph-frame {
+  position: absolute;
+  box-sizing: border-box;
+  /* Cards carry their own fill; the empty frame needs the stronger border
+   * (the one hovered cards use) to read against the host surface. */
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-card);
+  pointer-events: none;
+}
+
+.relation-graph-frame-caption {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  padding: 0 var(--space-1);
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: var(--relation-graph-surface, var(--color-bg-surface));
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--leading-micro);
+  color: var(--color-text-muted);
+  text-align: left;
+}
+
+.relation-graph-frame-caption-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.relation-graph-frame-caption {
+  cursor: pointer;
+}
+
+button.relation-graph-frame-caption:hover {
+  color: var(--color-text-secondary);
+}
+
+button.relation-graph-frame-caption:hover .relation-graph-frame-caption-text {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

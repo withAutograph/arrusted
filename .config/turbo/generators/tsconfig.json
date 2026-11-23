@@ -1,0 +1,10 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {},
+  "include": [
+    "config.ts",
+    "domain-lib-turbo.ts",
+    "__tests__/**/*.ts"
+  ],
+  "exclude": []
+}
