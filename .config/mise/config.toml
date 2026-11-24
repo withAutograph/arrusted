@@ -152,15 +152,7 @@ depends = ["test:app", "test:kernel"]
 
 [tasks."test:app"]
 description = "Run package tests"
-# Some TypeScript setup hooks call the Rust compiler. Building first keeps them
-# from waiting on a cold build's lock until they time out.
-run = """
-set -e
-cargo test --workspace --no-run
-for package in schema-compiler protected-installer; do cargo build -p "$package"; done
-turbo run test --filter='./packages/*' --filter='./packages/*/*' --filter=@autograph/turbo-generators
-vp test --config packages/vite.config.ts --run
-"""
+run = "turbo run test --filter='./packages/*' --filter='./packages/*/*' --filter=@autograph/turbo-generators && vp test --config packages/vite.config.ts --run"
 
 [tasks."test:app:platform"]
 description = "Run retained platform safety fixtures"

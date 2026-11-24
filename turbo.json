@@ -3,13 +3,8 @@
   "futureFlags": {
     "experimentalCargoWorkspaces": true
   },
-  "globalDependencies": [
-    "tsconfig.json",
-    "packages/typescript-config/*.json"
-  ],
-  "globalPassThroughEnv": [
-    "MISE_ENV"
-  ],
+  "globalDependencies": ["tsconfig.json", "packages/typescript-config/*.json"],
+  "globalPassThroughEnv": ["MISE_ENV"],
   "remoteCache": {
     "timeout": 5,
     "uploadTimeout": 10
@@ -18,13 +13,32 @@
     "dev": {
       "cache": false,
       "persistent": true,
-      "passThroughEnv": [
-        "PORT"
-      ]
+      "passThroughEnv": ["PORT"]
     },
     "test": {
+      "dependsOn": ["^test"],
+      "passThroughEnv": [
+        "KERNEL_TEST_DATABASE_URL",
+        "TMPDIR",
+        "SCHEMA_COMPILER_DIAGNOSTICS",
+        "CARGO_TARGET_DIR",
+        "CARGO_HOME",
+        "MISE_CARGO_HOME",
+        "MISE_DATA_DIR",
+        "MISE_RUSTUP_HOME",
+        "RUSTUP_HOME"
+      ]
+    },
+    "@autograph/generated-app-runtime#test": {
       "dependsOn": [
-        "^test"
+        "^test",
+        "http-transport#test",
+        "kernel#test",
+        "platform-service-runtime#test",
+        "protected-installer#test",
+        "rust-auth#test",
+        "schema-compiler#test",
+        "typegen#test"
       ],
       "passThroughEnv": [
         "KERNEL_TEST_DATABASE_URL",
@@ -39,9 +53,7 @@
       ]
     },
     "check": {
-      "dependsOn": [
-        "^check"
-      ],
+      "dependsOn": ["^check"],
       "passThroughEnv": [
         "CARGO_HOME",
         "MISE_CARGO_HOME",
@@ -51,16 +63,9 @@
       ]
     },
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "outputs": [
-        "dist/**",
-        "**/generated/**"
-      ]
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "**/generated/**"]
     }
   },
-  "globalEnv": [
-    "BUN_OPTIONS"
-  ]
+  "globalEnv": ["BUN_OPTIONS"]
 }
