@@ -53,6 +53,8 @@ jobs:
       - uses: ./.github/actions/setup-workspace
         with:
           install_args: bun node rust cue hk actionlint fnox conda:postgresql
+      # The starter's types include its compiled schema, which is not committed.
+      - run: mise exec -- bun run --cwd app compile
       - run: .config/mise/scripts/repository/run-workspace-check-lane.sh false lint:app check:types check:package-manifests check:tooling-layout check:github-actions check:konsistent check:konsistent-source check:vite-config-runtime-source check:mise-rust-cache-paths check:mise-rust-toolchain check:rust-validation-orchestration check:git-hook-gates check:test-quality-policy check:boundary-rule-proof check:design-system-branding
       - run: mise run check:workspace-imports
 
