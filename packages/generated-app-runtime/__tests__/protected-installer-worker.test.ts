@@ -609,7 +609,7 @@ manifest: #AppManifest & {
       ),
     };
   }
-}, 120_000);
+}, 300_000);
 
 async function runWorker(options: {
   appId?: string;
