@@ -18,12 +18,14 @@ import { verifyCheckedRelease } from "@autograph/generated-app-runtime/release-v
 import { agentBearerChallenge, agentResourceIdentifier } from "@autograph/auth/agent-grant-policy";
 import { claudeFrameDomain } from "@autograph/auth/canvas-frame";
 import { definition } from "../../.generated/release/data-operations";
-import { appId, getIdentity, requiredEnv } from "./auth";
+import { appId, getIdentity, reportIdleErrors, requiredEnv } from "./auth";
 
 export { definition };
 let pool: Pool | undefined;
 function dataPool() {
-  return (pool ??= new Pool({ connectionString: requiredEnv("APP_DATABASE_URL"), max: 10 }));
+  return (pool ??= reportIdleErrors(
+    new Pool({ connectionString: requiredEnv("APP_DATABASE_URL"), max: 10 }),
+  ));
 }
 function verifyRelease() {
   verifyCheckedRelease(

@@ -10,11 +10,24 @@ membership from the Auth member row in the same database transaction; there is
 no separate app grant to provision.
 
 From the repository root, install dependencies with the pinned Bun. In `app/`,
-copy `.env.example` to `.env.local` for the runtime connections and random secret.
-Copy `.env.migrate.example` separately to `.env.migrate` for the owner connection.
-Never put owner credentials or Neon API keys in a Next `.env*` file such as
-`.env.local`: Next loads these into the HTTP process. `.env.migrate` is read only
-when explicitly passed to Bun. Do not use the owner as `APP_DATABASE_URL`.
+run `bun run setup:env` for local development. It creates missing values in
+ignored `.env.local` and `.env.migrate` with mode `0600` and prints variable
+names only. Existing values, including empty values, are never overwritten.
+Production runtime values live separately in ignored `app/.env.production.secrets`
+(not auto-loaded by Next or Bun) and `app/.env.production.migrate`, prepared with
+`bun run setup:env --production`. Configure connection hosts and credentials
+privately in a **local editor**; generated local defaults do not provision
+PostgreSQL. Never paste env files, passwords, setup links or invite links into
+agent chat. Never ask an agent to read secret files or browser form values.
+The owner chooses their own password in their browser.
+
+Never put migration credentials (`MIGRATION_DATABASE_URL`) or Neon API keys in
+`.env.local`, `.env.production.secrets`, or Vercel's runtime environment. Use a
+separate restricted login for `APP_DATABASE_URL`. Package scripts wrap explicit
+`--env-file` loading so bare `bun run migrate`, `bun run migrate:undo`,
+`bun run records:import`, `bun run start` use local files while
+`bun run release` (and `--production` on `migrate`, `migrate:undo`,
+`records:import`, `owner:claim`) uses production files.
 
 For a disposable local PostgreSQL server, create the database as its owner:
 
@@ -26,19 +39,74 @@ Set `APP_DATABASE_URL` to a separate runtime login with a generated password of
 at least 32 characters; migrate creates it. Run these from `app/`:
 
 ```sh
-bun scripts/compile.ts
-bun --env-file=.env.local --env-file=.env.migrate scripts/migrate.ts apply
+bun run compile
+bun run migrate
+bun run owner:setup
 bun run dev
+# In another terminal once dev is listening:
+bun run owner:open
 ```
 
 The migrator grants the runtime login only
-the generated kernel capabilities and Auth table access. `bun run build`
-compiles the CUE source without database credentials and builds Next.js.
-`bun --env-file=.env.local --env-file=.env.migrate run start` applies the separate
-migration step before opening the HTTP listener, then removes migration and Neon credentials from the server process.
-A failed migration prevents startup. For hosted deploys, run owner `bun run migrate`
-from the builder's machine, then `vercel deploy --prod`. Disable Git auto-deploy.
-There is no hosted setup/check runner. See the deploy skill for the short flow.
+the generated kernel capabilities and Auth table access (never direct access to
+`autograph_applied_schema`). `bun run build` compiles the CUE source without
+database credentials and builds Next.js. `bun run start` applies pending
+migrations only to loopback databases. For a non-loopback target it checks the
+active release through `kernel_read_runtime_release_observability` and refuses
+startup if migration is pending; migration and Neon credentials are removed
+before the HTTP server starts.
+
+### Production release
+
+`bun run release` is the only supported production deployment entry point. It
+loads `app/.env.production.secrets` and `app/.env.production.migrate`
+automatically. Leave Vercel Git auto-deploy disabled (`app/vercel.json` sets
+`git.deploymentEnabled: false`). There is no hosted setup or release service.
+Run from the clean default branch after the PR has merged and the local checkout
+is updated.
+
+Run `bun run release --check` (no TTY required; connects read-only to read the
+applied schema and compute the plan, makes no changes, and never migrates or
+deploys) to run preflight and print the schema plan.
+
+`bun run release` fetches the remote and requires HEAD to equal its default
+branch, verifies the app- or repo-level Vercel project link and `.vercelignore`
+coverage (refusing if any `.env*` file or `.local/` secret/restore-point path
+would be uploaded), compiles and checks, verifies source commit provenance,
+shows the changes against the previous applied schema, and asks the human to
+type the app's configured name (read from `app/schema/app.cue`).
+It prints progress at each step, creates a restore point, migrates, verifies the
+applied release, deploys to production, and prints the deployment URL.
+Migration failure prevents deployment. Deployment failure leaves the database
+migrated: retry `bun run release` from the same source, or run
+`bun run migrate:undo --production`, restore the reported source commit and
+release it. Undo loses app record edits since the restore point; current Auth
+records survive.
+
+No remote is refused unless explicitly using `--local-only-repo`; the clean
+default branch and human confirmation are still required. Direct non-loopback
+`migrate` / `migrate:undo` / `records:import` also require preflight and
+confirmation. Rehearsal remains ungated but refuses its supplied production
+target. Confirmation requires stdin and stdout to be real TTYs, with no `--yes`
+or environment bypass. A determined agent with a PTY can fake typing: this
+prevents accidents, while branch protection and credential access are the real
+boundary.
+
+**Tunnel limitation:** the loopback check identifies local databases by hostname
+(`localhost`, `127.0.0.1`, `[::1]`). An SSH tunnel or local proxy forwarding to
+a production database looks like loopback and bypasses the local mutation gate;
+never point a local tunnel at production.
+
+Use `bun run secrets:push` to send runtime values from
+`app/.env.production.secrets` to Vercel production after the same human
+confirmation. It refuses loopback hosts and non-`https://` origins, excludes
+migration and Neon credentials, sends values on stdin only (never argv or
+output), and overwrites existing variables with `--force`. Error messages are
+redacted (stripping URL credentials, secret env var values, and setup/invite
+fragments) rather than suppressed, so actionable refusals and PostgreSQL error
+codes remain visible without leaking credentials. Do not troubleshoot by pasting
+raw secret files into chat.
+
 Migration creates a missing restricted SQL login from `APP_DATABASE_URL` (use a
 generated password of at least 32 characters), then grants kernel/Auth access.
 No provider deployment has been exercised.
@@ -76,9 +144,53 @@ keys for repeat imports and copy/fill updates; blank/omitted fields stay unchang
 Without keys, rerunning creates new records. The owner connection stays out of
 the running app's environment.
 
-Public signup is enabled in this example. Set `APP_ALLOW_SIGN_UP=false` after
-onboarding if the instance should accept only existing accounts. There is no
-email delivery, invitation UI, or password-reset sender configured in this spike.
+### Owner setup and invitations
+
+Signup is closed by default. Before any members exist, even open signup requires
+a one-time setup code. Run `bun run owner:setup` (or `bun run owner:setup --production`
+for production): it rotates `APP_OWNER_SETUP_HASH` in `.env.local` (or
+`.env.production.secrets`) and writes a private `0600` link file under
+`app/.local/` without opening a browser or printing the code. Re-running
+`owner:setup` rotates the code deliberately. For production, push with
+`bun run secrets:push` and deploy with `bun run release` first.
+
+Once the app is answering at `BETTER_AUTH_URL`, run `bun run owner:open` (or
+`bun run owner:open --production`). It checks `/api/auth/owner-setup-status`
+(unauthenticated boolean only, plus a constant-time hash-of-hash match check so
+a stale deployed `APP_OWNER_SETUP_HASH` is caught before opening without
+exposing the hash) and opens the local HTML file in the browser (never passing
+the setup URL on argv). If the app does not answer yet or is running an older
+setup hash, it tells you to start or push and release the app first. The link
+file remains on disk until owner setup finishes so reloading the tab cannot lose
+the code; delete it afterwards or re-run `owner:open`, which deletes the file
+automatically once setup is complete. First successful signup becomes owner;
+simultaneous claims serialize, merge into `organization.metadata`, and
+subsequent claims are refused. Missing `APP_OWNER_SETUP_HASH` refuses signup
+with setup instructions.
+
+Owners use `/members` to view members, promote a member to owner, remove members
+(never the last owner; removal revokes browser sessions, OAuth grants/tokens,
+and deactivates the kernel projection), and create or revoke email-bound
+invitation links. Copy the link at creation: only its SHA-256 hash is stored in
+Better Auth's existing invitation row. Links expire in seven days, work once,
+and roll back with failed account creation. Previously removed members can open
+a new invite link and sign in with their existing password to rejoin (no account
+takeover by email alone and no password reset from an invite). No email delivery
+is configured.
+Setup and invitation secrets use URL fragments, which the sign-in page reads and
+clears on load. The sign-in page offers account creation only for a proof link
+or `APP_ALLOW_SIGN_UP=true` (exactly). Open signup still grants only member
+access after initial owner setup. All organization-plugin HTTP endpoints are
+blocked in this deployment (Agent OAuth uses `/agent-grant/*` and `/oauth2/*`);
+its server-only `addMember` is also refused. `autograph_sync_member` projects
+both owners and members to kernel role `member`.
+
+Existing members remain signed in after upgrade. If no owner exists, a human
+runs `bun run owner:claim <existing-member-email>` (or
+`bun run owner:claim --production <existing-member-email>`) and confirms in a
+real terminal. This promotes only an existing member and refuses if an owner
+already exists. There is no automatic promotion at sign-in.
+
 The example currently uses tenant isolation without a declared fine-grained
 schema policy; it does not claim per-field or per-role restrictions.
 

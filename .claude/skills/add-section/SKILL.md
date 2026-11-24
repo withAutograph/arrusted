@@ -19,6 +19,9 @@ compile` turns it into SQL and TypeScript operations under the git-ignored
 SQL or migrations, never edit `app/.generated/`, and never commit it.** Safety
 comes from the compiler and the migrator, not from the builder reading a plan.
 
+Before the first edit, start a branch with the `ship-change` skill. Finishing the
+work is not approval to merge it or put it live.
+
 ## 0. Know what exists
 
 - Read `app/schema/app.cue`, `app/app/(sections)/` and `app/features/`, so you
@@ -105,11 +108,13 @@ uses Deals yet").
 
 ## 5. Apply locally, then rehearse
 
-- Apply to the local database:
-  `bun --env-file=.env.local --env-file=.env.migrate run migrate`.
-  It takes a restore point, applies under a lock, and records the applied
-  schema. Owner credentials live only in `.env.migrate`, never in
-  `.env.local`.
+- Apply to the local database: `bun run migrate` (wraps `.env.local` and
+  `.env.migrate` automatically). It takes a restore point, applies under a
+  lock, and records the applied schema. Owner credentials live only in
+  `.env.migrate`, never in `.env.local`.
+- On a brand-new local database with no users yet, run `bun run owner:setup`,
+  start `bun run dev`, and run `bun run owner:open` so the builder can create
+  the first local owner account in their browser before signing in.
 - Rehearse against an isolated database, never the real database. Set
   `MIGRATION_DATABASE_URL` to its owner connection,
   `APP_DATABASE_URL` to its restricted runtime login, and

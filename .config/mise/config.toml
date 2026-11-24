@@ -185,6 +185,10 @@ done
 description = "Test Auth organization provisioning, identity preservation and idempotence"
 run = "mise run repository:exec -- test-auth-tenant-migration.sh"
 
+[tasks."test:starter-safety"]
+description = "Prove single-organization admission, owner/invite flows, release gate, and redaction against isolated PostgreSQL"
+run = "bun .config/mise/scripts/repository/test-starter-safety.ts"
+
 [tasks."generate:package"]
 description = "Generate a source or built package workspace from the shared Turbo generator"
 usage = '''

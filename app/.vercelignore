@@ -1,0 +1,4 @@
+# Exclude all local/production env files, owner setup links, and local restore points from Vercel uploads.
+.env
+.env.*
+.local/

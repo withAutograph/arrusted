@@ -7,11 +7,15 @@ import path from "node:path";
 import { Pool } from "pg";
 import { compileApp, repositoryRoot } from "./compile";
 import { migrate, undo, rehearse, migrationLock } from "./migrate";
+import { reportError } from "./safe-output";
+import { activeReleaseMatches } from "./serve";
 import { PgDumpRestorePoints } from "./restore-points";
 import { createDataClient, type DataDefinition } from "../../packages/generated-app-runtime/data";
 import { createGeneratedAppRuntime } from "../../packages/generated-app-runtime/server";
 
-const databaseURL = process.env.KERNEL_TEST_DATABASE_URL;
+const databaseURL = process.env.KERNEL_TEST_DATABASE_URL ?? process.env.TEST_DATABASE_URL;
+if (!databaseURL && process.env.CI)
+  throw new Error("KERNEL_TEST_DATABASE_URL (or TEST_DATABASE_URL) is required in CI.");
 const suite = databaseURL ? test : test.skip;
 mkdirSync(path.join(repositoryRoot, "app/.local"), { recursive: true });
 const directory = mkdtempSync(path.join(repositoryRoot, "app/.local", "migration-test-"));
@@ -103,6 +107,10 @@ beforeAll(async () => {
     `${title}, {id: "detail", name: "description", label: "Description", type: "text"}`,
   );
   compile("retire", title);
+  compile(
+    "required_detail",
+    `${title}, {id: "detail", label: "Detail", type: "text", required: true}`,
+  );
   compile("wrongtype", `${title}, {id: "detail", label: "Detail", type: "number"}`);
   compile("interrupted1", `${title}, {id: "one", label: "One", type: "text"}`);
   compile("membership", `${title}, {id: "three", label: "Three", type: "text"}`);
@@ -151,6 +159,28 @@ suite(
         writes: [ops.note!.writes.create({ title: "Preserve", detail: "Keep this data" })],
       });
     });
+    // Real required-constraint refusal lists the failing record ID and survives reportError redaction.
+    const missingRecordId = (
+      await pool.query("select record_id from note_version where detail is null limit 1")
+    ).rows[0].record_id as string;
+    let requiredErr: unknown;
+    try {
+      await migrate(input("required_detail"));
+    } catch (error) {
+      requiredErr = error;
+    }
+    expect(requiredErr).toBeInstanceOf(Error);
+    const reportLines: string[] = [];
+    const prevError = console.error;
+    console.error = (msg) => reportLines.push(String(msg));
+    try {
+      reportError(requiredErr, "Migration", { MIGRATION_DATABASE_URL: connectionString });
+    } finally {
+      console.error = prevError;
+    }
+    expect(reportLines.join("\n")).toContain(missingRecordId);
+    expect(reportLines.join("\n")).not.toContain(connectionString);
+
     await expect(
       rehearse({
         ...input("table"),
@@ -179,7 +209,24 @@ suite(
         }),
       ]),
     );
-    await expect(migrate(input("wrongtype"))).rejects.toThrow(/new field/i);
+    // Real immutable-type schema refusal survives reportError redaction without leaking connection strings.
+    let typeErr: unknown;
+    try {
+      await migrate(input("wrongtype"));
+    } catch (error) {
+      typeErr = error;
+    }
+    expect(typeErr).toBeInstanceOf(Error);
+    const typeLines: string[] = [];
+    const prevErr = console.error;
+    console.error = (msg) => typeLines.push(String(msg));
+    try {
+      reportError(typeErr, "Migration", { MIGRATION_DATABASE_URL: connectionString });
+    } finally {
+      console.error = prevErr;
+    }
+    expect(typeLines.join("\n")).toMatch(/new field/i);
+    expect(typeLines.join("\n")).not.toContain(connectionString);
     await migrate(input("retire"));
     const definition = JSON.parse(
       readFileSync(path.join(releases.get("retire")!, "operation-manifest.json"), "utf8"),
@@ -370,6 +417,15 @@ suite(
       await expect(runtimePool.query("select * from note_version")).rejects.toThrow(
         /permission denied/,
       );
+      await expect(runtimePool.query("select * from autograph_applied_schema")).rejects.toThrow(
+        /permission denied/,
+      );
+      expect(await activeReleaseMatches(runtimeUrl.toString(), releases.get("membership")!)).toBe(
+        true,
+      );
+      expect(
+        await activeReleaseMatches(runtimeUrl.toString(), releases.get("membership-next")!),
+      ).toBe(false);
       await runtimePool.query("begin");
       await runtimePool.query(`delete from member where id='membership-proof'`);
       await runtimePool.query("rollback");

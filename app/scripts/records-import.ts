@@ -1,3 +1,5 @@
+import { productionGate } from "./production-gate";
+import { reportError, SafeError } from "./safe-output";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -54,13 +56,13 @@ export async function importRecords(input: {
     customerId: schema.customer_id,
   });
   try {
-    // The single-organization starter has no owner role; its first signup is the builder.
+    // Preserve the existing import actor convention: the earliest deployment member.
     const members = await owner.query(
       'select "userId" from public.member where "organizationId"=$1 order by "createdAt", id limit 1',
       [schema.customer_id],
     );
     const actorId = members.rows[0]?.userId;
-    if (!actorId) throw new Error("Sign up as the builder before importing records.");
+    if (!actorId) throw new SafeError("Sign up as the builder before importing records.");
     return await applyRecordImport(
       definition,
       runtime.dataContext({
@@ -88,14 +90,40 @@ export async function importRecords(input: {
 }
 
 if (import.meta.main) {
+  let redactEnv: Record<string, string | undefined> = process.env;
   try {
-    const [table, file, flag, key, ...extra] = process.argv.slice(2);
+    const arguments_ = process.argv.slice(2);
+    const localOnly = arguments_.includes("--local-only-repo");
+    const production = arguments_.includes("--production");
+    const [table, file, flag, key, ...extra] = arguments_.filter(
+      (arg) => arg !== "--local-only-repo" && arg !== "--production",
+    );
     if (!table || !file || (flag !== undefined && (flag !== "--key" || !key)) || extra.length)
-      throw new Error("Usage: bun run records:import <table> <file.csv> [--key column]");
-    if (!process.env.MIGRATION_DATABASE_URL)
+      throw new Error(
+        "Usage: bun run records:import [--production] <table> <file.csv> [--key column]",
+      );
+    let databaseUrl = process.env.MIGRATION_DATABASE_URL;
+    if (production) {
+      const { existsSync } = await import("node:fs");
+      const { ENV_PROD_MIGRATE, readEnv } = await import("./local-secrets");
+      const prodMigratePath = path.resolve(import.meta.dirname, "..", ENV_PROD_MIGRATE);
+      if (!existsSync(prodMigratePath))
+        throw new SafeError(
+          `Missing ${ENV_PROD_MIGRATE}. Run bun run setup:env --production and edit it in a local editor first.`,
+        );
+      const prodMigrate = readEnv(prodMigratePath);
+      redactEnv = { ...process.env, ...prodMigrate };
+      databaseUrl = prodMigrate.MIGRATION_DATABASE_URL || undefined;
+    }
+    if (!databaseUrl)
       throw new Error("MIGRATION_DATABASE_URL is required (deployment owner connection).");
+    await productionGate(
+      databaseUrl,
+      "Import CSV records through ordinary writes. Matching external keys update existing records; new keys create records.",
+      localOnly,
+    );
     const result = await importRecords({
-      databaseUrl: process.env.MIGRATION_DATABASE_URL,
+      databaseUrl,
       releaseDirectory: path.resolve(".generated/release"),
       table,
       csv: readFileSync(file, "utf8"),
@@ -103,7 +131,7 @@ if (import.meta.main) {
     });
     console.log(`Imported ${result.count} records (change set ${result.changeSetId}).`);
   } catch (error) {
-    console.error(error instanceof Error ? error.message : "Import failed.");
+    reportError(error, "Import", redactEnv);
     process.exitCode = 1;
   }
 }

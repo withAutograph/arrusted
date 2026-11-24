@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { Pool } from "pg";
@@ -9,6 +9,7 @@ import { authorize, call, register, type Realm } from "./agent-grant-fixture";
 
 // Explicitly opted-in local test server only; every run owns and removes its database.
 const testUrl = process.env.SINGLE_ORG_TEST_DATABASE_URL;
+if (!testUrl && process.env.CI) throw new Error("SINGLE_ORG_TEST_DATABASE_URL is required in CI.");
 describe.skipIf(!testUrl)("single-organization sign-in and OAuth", () => {
   const name = `single_org_${randomUUID().replaceAll("-", "")}`;
   let admin: Pool;
@@ -34,6 +35,7 @@ describe.skipIf(!testUrl)("single-organization sign-in and OAuth", () => {
       organizationId: "team",
       name: "Test team",
       allowSignUp: true,
+      ownerSetupHash: createHash("sha256").update("owner-test-code").digest("hex"),
     });
   });
   afterAll(async () => {
@@ -48,7 +50,11 @@ describe.skipIf(!testUrl)("single-organization sign-in and OAuth", () => {
       const response = await identity.auth.handler(
         new Request("http://127.0.0.1:4555/api/auth/sign-up/email", {
           method: "POST",
-          headers: { "content-type": "application/json", origin: "http://127.0.0.1:4555" },
+          headers: {
+            "content-type": "application/json",
+            origin: "http://127.0.0.1:4555",
+            ...(index === 0 ? { "x-owner-setup": "owner-test-code" } : {}),
+          },
           body: JSON.stringify({
             name: "Member",
             email: `member${index}@example.test`,

@@ -2,7 +2,7 @@ import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getIdentity } from "../data/auth";
+import { appName, getIdentity } from "../data/auth";
 import { definition } from "../data/canvas";
 import { SignOut } from "../auth/sign-out";
 async function SignedIn({ children }: { children: ReactNode }) {
@@ -21,7 +21,7 @@ export default function SectionsLayout({ children }: { children: ReactNode }) {
     <>
       <header className="site-header">
         <Link href="/">
-          <strong>Starter</strong>
+          <strong>{appName}</strong>
         </Link>
         <nav aria-label="Main">
           <Link href="/">Tables</Link>
@@ -30,6 +30,7 @@ export default function SectionsLayout({ children }: { children: ReactNode }) {
               {model.name}
             </Link>
           ))}
+          <Link href="/members">Members</Link>
           <Link href="/overview">Overview</Link>
         </nav>
         <SignOut />

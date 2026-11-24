@@ -2,6 +2,47 @@
 
 The root `app/` single-deployment starter is scoped separately; historical multi-app deployment rules below do not describe that starter.
 
+For that starter, signup is closed unless explicitly opened after first-owner
+setup. Setup and email-bound invitations are checked in Better Auth hooks and
+account creation, credential creation, invitation consumption and membership
+share one PostgreSQL transaction; request method, proof headers, content type,
+body size/time, and pool checkout timeouts are enforced before taking a
+connection, and commits happen only on genuine JSON success. Owner claims
+serialize and merge into `organization.metadata`; Auth owner/member roles both
+project to the fixed kernel member role. All organization-plugin HTTP endpoints
+and server-only `addMember` are disabled (Agent OAuth uses `/agent-grant/*` and
+`/oauth2/*`). `/members` is owner-only management for invitations, promoting
+additional owners, and removing members (never the last owner; removal revokes
+sessions, OAuth tokens/consents/codes, and deactivates kernel membership). A
+valid invitation for an existing memberless user may attach membership only when
+presented by that authenticated user (same email, existing password; never
+account takeover by email alone or password reset).
+Existing members are never automatically promoted; local owner recovery is
+explicit (`owner:claim`). Secrets stay in private `0600` ignored files
+(`.env.local`/`.env.migrate` for local dev, `.env.production.secrets`/`.env.production.migrate`
+for production) or human browser forms, never command output; `owner:setup`
+writes only the hash and link file and `owner:open` verifies the app answers
+with the current setup hash (via constant-time hash-of-hash check, never
+exposing the hash) before opening that file and deletes it when setup completes.
+Errors are redacted rather than
+suppressed so actionable refusals and PostgreSQL codes remain visible without
+leaking credentials. Production delivery uses `bun run release` (with
+`release --check` for non-TTY preflight and read-only applied-schema plan,
+making no database changes and never migrating or deploying): clean
+default-branch source equal to fetched remote default, app- or repo-level Vercel
+project link, `.vercelignore` covering every secret and restore-point path at
+the deploy working directory, compile/check, source provenance,
+`app/vercel.json` disabling Git auto-deploy, schema/data plan, human TTY
+confirmation using the configured app name, restore point, migration,
+applied-release verification, then deployment with progress and URL output. Direct hosted mutation commands use the same gate
+(loopback detection does not protect SSH tunnels or local proxies to production).
+Server startup never applies pending hosted migrations and checks the active
+release via `kernel_read_runtime_release_observability` without granting the
+runtime login direct access to `autograph_applied_schema`. These are accident
+guards; protected branches and credential access remain the security boundary.
+See [starter operations](../app/README.md).
+
+
 The target ownership model
 records the selected Auth, app, resource, and versioned-interface boundaries.
 It keeps Arrusted app code and schemas on one Git main while adopting independent

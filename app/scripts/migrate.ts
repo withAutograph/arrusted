@@ -1,3 +1,5 @@
+import { productionGate } from "./production-gate";
+import { reportError, SafeError } from "./safe-output";
 import { createHash, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -415,6 +417,9 @@ async function bindRuntime(
     const role = (await client.query("select kernel_installer_capability_role('runtime') as role"))
       .rows[0].role;
     await client.query(`grant ${quote(role)} to ${quote(input.runtimeRole)}`);
+    // Serve verifies the active release through kernel_read_runtime_release_observability,
+    // so the restricted runtime login needs no direct grant on autograph_applied_schema.
+    await client.query(`revoke all on autograph_applied_schema from ${quote(input.runtimeRole)}`);
     await kernel(client, "kernel_bind_principal_scope", {
       principal_name: input.runtimeRole,
       capability: "runtime",
@@ -483,7 +488,7 @@ export async function rehearse(
     rehearsal.port === production.port &&
     rehearsal.database === production.database
   )
-    throw new Error(
+    throw new SafeError(
       "MIGRATION_DATABASE_URL must not target the production database during rehearsal.",
     );
   const roles = runtimeRoles(input.databaseUrl, input.runtimeDatabaseUrl);
@@ -531,18 +536,53 @@ export async function rehearse(
 }
 
 if (import.meta.main) {
+  let redactEnv: Record<string, string | undefined> = process.env;
   try {
     const command = process.argv[2] ?? "apply";
-    const databaseUrl = process.env.MIGRATION_DATABASE_URL;
-    if (!databaseUrl) throw new Error("MIGRATION_DATABASE_URL is required.");
-    if (["apply", "rehearse"].includes(command) && !process.env.APP_DATABASE_URL?.trim())
-      throw new Error("APP_DATABASE_URL is required (separate restricted runtime login).");
-    const roles = runtimeRoles(
-      databaseUrl,
-      process.env.APP_DATABASE_URL,
-      process.env.AUTH_DATABASE_URL,
-    );
+    const flags = process.argv.slice(3);
+    const allowedFlags = new Set(["--local-only-repo", "--production"]);
+    if (flags.some((flag) => !allowedFlags.has(flag)) || new Set(flags).size !== flags.length)
+      throw new SafeError("Only --local-only-repo and --production are supported.");
+    const production = flags.includes("--production");
+    let databaseUrl = process.env.MIGRATION_DATABASE_URL;
+    let appUrl = process.env.APP_DATABASE_URL;
+    let authUrl = process.env.AUTH_DATABASE_URL;
+    if (production) {
+      const { existsSync } = await import("node:fs");
+      const { ENV_PROD_MIGRATE, ENV_PROD_SECRETS, readEnv } = await import("./local-secrets");
+      const appDir = path.join(root, "app");
+      const prodSecretsPath = path.join(appDir, ENV_PROD_SECRETS);
+      const prodMigratePath = path.join(appDir, ENV_PROD_MIGRATE);
+      if (!existsSync(prodMigratePath))
+        throw new SafeError(
+          `Missing ${ENV_PROD_MIGRATE}. Run bun run setup:env --production and edit it in a local editor first.`,
+        );
+      const prodRuntime = existsSync(prodSecretsPath) ? readEnv(prodSecretsPath) : {};
+      const prodMigrate = readEnv(prodMigratePath);
+      redactEnv = { ...process.env, ...prodRuntime, ...prodMigrate };
+      databaseUrl = prodMigrate.MIGRATION_DATABASE_URL || undefined;
+      appUrl = prodRuntime.APP_DATABASE_URL || undefined;
+      authUrl = prodRuntime.AUTH_DATABASE_URL || undefined;
+      for (const key of ["NEON_API_KEY", "NEON_PROJECT_ID", "NEON_BRANCH_ID"]) {
+        if (prodMigrate[key] && !(key in process.env)) process.env[key] = prodMigrate[key];
+      }
+    }
+    if (!databaseUrl) throw new SafeError("MIGRATION_DATABASE_URL is required.");
+    if (["apply", "rehearse"].includes(command) && !appUrl?.trim())
+      throw new SafeError("APP_DATABASE_URL is required (separate restricted runtime login).");
+    const roles = runtimeRoles(databaseUrl, appUrl, authUrl);
     const input: MigrationInput = { databaseUrl, ...roles };
+    if (["apply", "undo"].includes(command)) {
+      const { schemaPlan, appliedRelease, compiled } = await import("./release");
+      await productionGate(
+        databaseUrl,
+        async () =>
+          command === "undo"
+            ? "Restore the last restore point. All later app data edits are lost; current Auth accounts and memberships survive."
+            : schemaPlan((await appliedRelease(databaseUrl))?.schema, compiled().schema),
+        flags.includes("--local-only-repo"),
+      );
+    }
     if (command === "undo") {
       const result = await undo(input);
       console.log(
@@ -553,7 +593,7 @@ if (import.meta.main) {
         throw new Error("Rehearsal requires PRODUCTION_APP_DATABASE_URL for target isolation.");
       await rehearse({
         ...input,
-        runtimeDatabaseUrl: process.env.APP_DATABASE_URL!,
+        runtimeDatabaseUrl: appUrl!,
         productionDatabaseUrl: process.env.PRODUCTION_APP_DATABASE_URL,
       });
       console.log("Migration rehearsal and every section list query passed.");
@@ -562,7 +602,7 @@ if (import.meta.main) {
       console.log(result.applied ? "Migration applied." : "Already applied; no changes.");
     } else throw new Error(`Unknown migration command: ${command}`);
   } catch (error) {
-    console.error(error instanceof Error ? error.message : "Migration failed.");
+    reportError(error, "Migration", redactEnv);
     process.exitCode = 1;
   }
 }

@@ -20,6 +20,9 @@ only by trying a version of it. So the order is always:
    to the `add-section` skill to write the schema and point the pages at real
    data.
 
+Before the first edit, start a branch with the `ship-change` skill. Finishing the
+work is not approval to merge it or put it live.
+
 ## How the app is laid out
 
 There is one Next.js app in `app/`. Run commands from `app/`.
@@ -111,8 +114,12 @@ Read `references/information-composition.md` while composing any page and
 ## 3. Run it and iterate
 
 - Run `bun run dev` from `app/` and open the section in the browser pane if
-  one is available. The app needs a local database and sign-in to start (see
-  `app/README.md`); if that is not set up yet, set it up first or say so.
+  one is available. A fresh local app needs a local database, migration, and
+  first-owner setup before anyone can sign in: run `bun run setup:env`,
+  `bun run migrate`, `bun run owner:setup`, start `bun run dev`, then run
+  `bun run owner:open` so the builder creates their own local owner account in
+  the browser (see `app/README.md`). If that is not set up yet, guide them
+  through it or say so.
 - Click through every enabled control yourself before showing it: navigation,
   Back/Forward, forms (validate, submit, cancel), dialogs, filters. A
   successful compile is not proof that it works. Run `bun run check` for type

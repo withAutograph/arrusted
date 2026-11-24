@@ -16,6 +16,7 @@
     "./integration-authority-protocol": "./integration-authority-protocol.ts",
     "./next": "./next.ts",
     "./preview-qa": "./preview-qa.ts",
+    "./redact": "./redact.ts",
     "./schema-readiness": "./schema-readiness.ts",
     "./server": "./server.ts",
     "./server-policy": "./server-policy.ts",
@@ -26,7 +27,7 @@
   },
   "scripts": {
     "check": "tsc -p tsconfig.json --noEmit",
-    "test": "AUTH_AGENT_GRANT_POSTGRES=1 vp test --config vite.config.ts --run"
+    "test": "AUTH_AGENT_GRANT_POSTGRES=1 vp test --config vite.config.ts --run --exclude '__tests__/single-organization*.test.ts'"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",
