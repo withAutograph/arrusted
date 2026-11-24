@@ -164,7 +164,8 @@ fn vendor_catalog_selection_compiles_to_ordered_schema_and_seed_templates() {
 #[test]
 fn vendor_catalog_selection_rejects_unknown_and_unselected_required_fields() {
     let root = repository_root();
-    let source_path = root.join("packages/schema-compiler/tests/fixtures/catalog-selection/selection.cue");
+    let source_path =
+        root.join("packages/schema-compiler/tests/fixtures/catalog-selection/selection.cue");
     let source = fs::read_to_string(&source_path).expect("read Vendor CUE source");
 
     for (name, modified, expression, expected_error) in [
@@ -241,7 +242,8 @@ fn vendor_catalog_selection_rejects_unknown_and_unselected_required_fields() {
 #[test]
 fn vendor_catalog_selection_includes_unrooted_selected_and_local_models() {
     let root = repository_root();
-    let source_path = root.join("packages/schema-compiler/tests/fixtures/catalog-selection/selection.cue");
+    let source_path =
+        root.join("packages/schema-compiler/tests/fixtures/catalog-selection/selection.cue");
     let source = fs::read_to_string(&source_path).expect("read Vendor CUE source");
     let source = source.replacen(
         "\t]\n\tlocal_models:",
@@ -287,7 +289,8 @@ fn vendor_catalog_selection_includes_unrooted_selected_and_local_models() {
 #[test]
 fn catalog_multi_value_fields_compile_as_inverse_scalar_relations() {
     let root = repository_root();
-    let source_path = root.join("packages/schema-compiler/tests/fixtures/catalog-selection/selection.cue");
+    let source_path =
+        root.join("packages/schema-compiler/tests/fixtures/catalog-selection/selection.cue");
     let source = fs::read_to_string(&source_path).expect("read Vendor CUE source");
     let source = source.replacen(
         "\t]\n\tlocal_models:",

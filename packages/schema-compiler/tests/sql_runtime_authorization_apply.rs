@@ -12,9 +12,8 @@ use uuid::Uuid;
 const APP_ID: &str = "policy_apply_fixture";
 const CUSTOMER_ID: &str = "tenant_a";
 const VERSION: &str = "policy-apply-v1";
-const HISTORICAL_HC_RELEASE_BUNDLE: &str = include_str!(
-    "fixtures/historical-sql/2026-09-26.runtime-observability-v52.sql"
-);
+const HISTORICAL_HC_RELEASE_BUNDLE: &str =
+    include_str!("fixtures/historical-sql/2026-09-26.runtime-observability-v52.sql");
 
 struct AuthorizationFixtureCleanup {
     database_url: String,
@@ -143,9 +142,9 @@ fn historical_release_replay_cannot_bypass_actor_membership_fence() {
         assert!(!after_replay.get::<_, bool>("active"));
         assert_eq!(after_replay.get::<_, i64>("fence_generation"), 2);
 
-        client
-            .batch_execute(&current_bundle)
-            .map_err(|error| format!("restore current policy fixture bundle after replay: {error}"))?;
+        client.batch_execute(&current_bundle).map_err(|error| {
+            format!("restore current policy fixture bundle after replay: {error}")
+        })?;
         assert_ok(&call(
             &mut client,
             "kernel_bind_actor_membership",

@@ -3792,7 +3792,9 @@ fn push_required_check(
         r#"do $kernel$
     declare failing_rows text;
     begin
-      {add};
+      if not exists (select 1 from pg_constraint where conrelid = to_regclass({table_literal}) and conname = {name_literal}) then
+    execute {statement_literal};
+  end if;
       begin
         alter table {quoted_table} validate constraint {quoted_name};
       exception when check_violation then
@@ -3802,7 +3804,8 @@ fn push_required_check(
       end;
     end $kernel$"#,
         name_literal = quote_literal(name),
-        add = format!("if not exists (select 1 from pg_constraint where conrelid = to_regclass({}) and conname = {}) then\n    execute {};\n  end if", quote_literal(table), quote_literal(name), quote_literal(&statement))
+        table_literal = quote_literal(table),
+        statement_literal = quote_literal(&statement),
     );
     push_artifact(
         artifacts,
