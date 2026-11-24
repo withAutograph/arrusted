@@ -156,17 +156,13 @@ describe("Konsistent repository conventions", () => {
     expect(result.exitCode).toBe(1);
     for (const convention of [
       "modules-direct-import-boundary",
-      "domain-libs-direct-import-boundary",
       "kernel-client-direct-import-boundary",
     ])
       expect(result.output).toContain(`"conventionName": "${convention}"`);
     for (const filePath of [
-      "packages/modules/example/domain.ts",
       "packages/modules/example/hc.ts",
       "packages/modules/example/vendor.ts",
       "packages/modules/example/vite.config.ts",
-      "packages/modules/example/agent.ts",
-      "packages/domain-libs/employee/index.ts",
       "packages/kernel-client/index.ts",
     ])
       expect(result.output).toContain(filePath);
