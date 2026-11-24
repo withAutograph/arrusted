@@ -171,6 +171,8 @@ export const checkWorkspaceImports = (context: BoundaryContext): void => {
   const publicCsvWorkspaceImports = new Set([
     "@autograph/csv-workspace",
     "@autograph/csv-workspace/server",
+    "@autograph/csv-workspace/mapping",
+    "@autograph/csv-workspace/draft",
   ]);
   const edges = new Map<string, Set<string>>();
   const scanned = [
