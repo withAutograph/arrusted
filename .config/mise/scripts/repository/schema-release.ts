@@ -636,13 +636,11 @@ export function transitionPredecessorArtifacts(
 ): string[] {
   // A caller may stage a byte copy of a checked release. Listing that release
   // again after a newer one would archive the newer fields and then refuse them.
-  const seen = new Set<string>();
-  return [...external, ...priorReleaseArtifacts(app, version, repositoryRoot)].filter((file) => {
-    const digest = sha256File(file);
-    if (seen.has(digest)) return false;
-    seen.add(digest);
-    return true;
-  });
+  const staged = new Set(external.map(sha256File));
+  const prior = priorReleaseArtifacts(app, version, repositoryRoot).filter(
+    (file) => !staged.has(sha256File(file)),
+  );
+  return [...new Set([...external, ...prior])];
 }
 
 /** A plan has one prior cut; the transition contract retains every historical shape. */
