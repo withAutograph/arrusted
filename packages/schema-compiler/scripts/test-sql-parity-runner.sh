@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+# CI sets these for the real run; each case below sets its own.
+unset SQL_PARITY_EXCLUDE_TARGETS SQL_PARITY_ONLY_TARGETS
+
 trap 'status=$?; printf "parity fixture command failed (%s): %s\n" "${status}" "${BASH_COMMAND}" >&2' ERR
 
 readonly repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"

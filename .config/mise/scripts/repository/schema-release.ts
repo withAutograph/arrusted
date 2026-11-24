@@ -634,7 +634,13 @@ export function transitionPredecessorArtifacts(
   repositoryRoot: string,
   external: readonly string[] = [],
 ): string[] {
-  return [...new Set([...external, ...priorReleaseArtifacts(app, version, repositoryRoot)])];
+  // A caller may stage a byte copy of a checked release. Listing that release
+  // again after a newer one would archive the newer fields and then refuse them.
+  const staged = new Set(external.map(sha256File));
+  const prior = priorReleaseArtifacts(app, version, repositoryRoot).filter(
+    (file) => !staged.has(sha256File(file)),
+  );
+  return [...new Set([...external, ...prior])];
 }
 
 /** A plan has one prior cut; the transition contract retains every historical shape. */
@@ -789,7 +795,7 @@ function priorReleaseArtifacts(app: App, version: string, repositoryRoot = root)
   return readdirSync(releases, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && entry.name !== version)
     .map((entry) => entry.name)
-    .sort()
+    .sort(compareReleaseCutOrder)
     .map((candidate) => path.join(releases, candidate, "app-artifact.json"))
     .filter(existsSync);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { mapImportCsv, readImportCsv } from "../../csv-workspace/mapping";
+import { mapImportCsv, readImportCsv } from "@autograph/csv-workspace/mapping";
 import { applyRecordImport, prepareRecordImport } from "../records";
 import { definition, fakeContext } from "./fixture";
 

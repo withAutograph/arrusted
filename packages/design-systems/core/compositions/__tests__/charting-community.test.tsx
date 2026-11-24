@@ -16,7 +16,7 @@ it("shows Enterprise-only charts as visible tables without a licence", () => {
       <HeatmapChart
         family="heatmap"
         title="Heat"
-        data={[{ id: "a", xLabel: "Mon", yLabel: "Bread", value: 4 }]}
+        data={[{ id: "a", xKey: "mon", xLabel: "Mon", yKey: "bread", yLabel: "Bread", value: 4 }]}
       />
       <WaterfallChart
         family="waterfall"
