@@ -88,6 +88,9 @@ export async function realm(
   await admin.end();
   const url = `postgresql://postgres:${password}@127.0.0.1:${port}/${name}`;
   const pool = new Pool({ connectionString: url, max: 6 });
+  // Stopping the cluster can end a connection that is still closing.
+  pool.on("error", () => {});
+  pool.on("connect", (client) => client.on("error", () => {}));
   pools.push(pool);
   await pool.query(await readFile(path.join(root, "schema.sql"), "utf8"));
   await pool.query(
