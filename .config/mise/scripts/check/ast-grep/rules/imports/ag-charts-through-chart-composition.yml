@@ -3,7 +3,7 @@ language: TypeScript
 severity: error
 message: import AG Charts only from the design-system chart composition
 note: Apps and other packages render charts through @autograph/compositions.
-files: [packages/domain-libs/**/*.ts, packages/**/*.ts]
+files: [packages/**/*.ts]
 ignores: [packages/design-systems/core/compositions/charting/**]
 rule:
   any:
@@ -24,7 +24,7 @@ language: Tsx
 severity: error
 message: import AG Charts only from the design-system chart composition
 note: Apps and other packages render charts through @autograph/compositions.
-files: [packages/domain-libs/**/*.tsx, packages/**/*.tsx]
+files: [packages/**/*.tsx]
 ignores: [packages/design-systems/core/compositions/charting/**]
 rule:
   any:
@@ -47,8 +47,6 @@ message: import AG Charts only from the design-system chart composition
 note: Apps and other packages render charts through @autograph/compositions.
 files:
   [
-    packages/domain-libs/**/*.js,
-    packages/domain-libs/**/*.jsx,
     packages/**/*.js,
     packages/**/*.jsx,
     packages/**/*.mjs,

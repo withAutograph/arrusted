@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-#MISE description="Prove currency rates and monthly fallback against isolated PostgreSQL"
-set -euo pipefail
-cd "$MISE_MONOREPO_ROOT"
-exec bun .config/mise/scripts/repository/test-generated-runtime.ts currency-rates

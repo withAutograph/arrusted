@@ -6,10 +6,18 @@ export function ChartSummary(props: {
   rows: Array<{ id: string; cells: string[]; segment?: ChartSegmentClick }>;
   onSegmentClick?: (segment: ChartSegmentClick) => void;
   actionLabel?: string;
+  /** Shown to everyone, for a chart that cannot be drawn; otherwise screen readers only. */
+  visible?: boolean;
 }) {
   return (
-    <div className="sr-only">
-      <table>
+    <div
+      className={
+        props.visible
+          ? "max-h-[360px] overflow-auto text-[length:var(--text-caption)] text-[var(--color-text-secondary)]"
+          : "sr-only"
+      }
+    >
+      <table className={props.visible ? "w-full text-left" : undefined}>
         <caption>{props.caption}</caption>
         <thead>
           <tr>

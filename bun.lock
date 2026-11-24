@@ -17,10 +17,8 @@
         "@tanstack/query-core": "5.102.8",
         "@tanstack/react-query": "catalog:",
         "ag-charts-community": "14.1.0",
-        "ag-charts-enterprise": "14.1.0",
         "ag-charts-react": "14.1.0",
         "ag-grid-community": "33.3.0",
-        "ag-grid-enterprise": "33.3.0",
         "ag-grid-react": "33.3.0",
         "ai": "catalog:",
         "better-auth": "catalog:",
@@ -97,19 +95,6 @@
         "react": "catalog:",
         "react-dom": "catalog:",
         "server-only": "0.0.1",
-      },
-    },
-    "packages/agents/reference-resolution": {
-      "name": "@autograph/agent-reference-resolution",
-      "devDependencies": {
-        "@autograph/typescript-config": "workspace:*",
-        "vitest": "catalog:",
-      },
-    },
-    "packages/app-runtime": {
-      "name": "@autograph/app-runtime",
-      "peerDependencies": {
-        "react": ">=19.0.0 <20.0.0",
       },
     },
     "packages/auth": {
@@ -216,118 +201,6 @@
         "react": ">=19.0.0 <20.0.0",
       },
     },
-    "packages/currency-rates": {
-      "name": "@autograph/currency-rates",
-      "devDependencies": {
-        "@autograph/typescript-config": "workspace:*",
-        "@autograph/vite-config": "workspace:*",
-        "pg": "catalog:",
-        "vite-plus": "catalog:",
-      },
-    },
-    "packages/dashboard-agent-evals": {
-      "name": "@autograph/dashboard-agent-evals",
-      "devDependencies": {
-        "@autograph/typescript-config": "workspace:*",
-        "vite-plus": "catalog:",
-      },
-    },
-    "packages/domain-libs/_shared": {
-      "name": "@domain-libs/_shared",
-      "devDependencies": {
-        "vite-plus": "catalog:",
-      },
-    },
-    "packages/domain-libs/accounting": {
-      "name": "@domain-libs/accounting",
-      "dependencies": {
-        "@domain-libs/_shared": "workspace:*",
-      },
-      "devDependencies": {
-        "vite-plus": "catalog:",
-      },
-    },
-    "packages/domain-libs/compensation": {
-      "name": "@domain-libs/compensation",
-      "dependencies": {
-        "@domain-libs/_shared": "workspace:*",
-      },
-      "devDependencies": {
-        "vite-plus": "catalog:",
-      },
-    },
-    "packages/domain-libs/contractor": {
-      "name": "@domain-libs/contractor",
-      "dependencies": {
-        "@domain-libs/_shared": "workspace:*",
-      },
-      "devDependencies": {
-        "vite-plus": "catalog:",
-      },
-    },
-    "packages/domain-libs/employee": {
-      "name": "@domain-libs/employee",
-      "dependencies": {
-        "@domain-libs/_shared": "workspace:*",
-      },
-      "devDependencies": {
-        "vite-plus": "catalog:",
-      },
-    },
-    "packages/domain-libs/org-assignment": {
-      "name": "@domain-libs/org-assignment",
-      "dependencies": {
-        "@domain-libs/_shared": "workspace:*",
-      },
-      "devDependencies": {
-        "vite-plus": "catalog:",
-      },
-    },
-    "packages/domain-libs/position": {
-      "name": "@domain-libs/position",
-      "dependencies": {
-        "@domain-libs/_shared": "workspace:*",
-      },
-      "devDependencies": {
-        "vite-plus": "catalog:",
-      },
-    },
-    "packages/domain-libs/recruiting": {
-      "name": "@domain-libs/recruiting",
-      "dependencies": {
-        "@domain-libs/_shared": "workspace:*",
-      },
-      "devDependencies": {
-        "vite-plus": "catalog:",
-      },
-    },
-    "packages/domain-libs/requisition": {
-      "name": "@domain-libs/requisition",
-      "dependencies": {
-        "@domain-libs/_shared": "workspace:*",
-      },
-      "devDependencies": {
-        "vite-plus": "catalog:",
-      },
-    },
-    "packages/domain-libs/revenue": {
-      "name": "@domain-libs/revenue",
-      "dependencies": {
-        "@domain-libs/_shared": "workspace:*",
-      },
-      "devDependencies": {
-        "vite-plus": "catalog:",
-      },
-    },
-    "packages/domain-libs/vendor": {
-      "name": "@domain-libs/vendor",
-      "dependencies": {
-        "@domain-libs/_shared": "workspace:*",
-      },
-      "devDependencies": {
-        "vite-plus": "catalog:",
-      },
-    },
     "packages/generated-app-runtime": {
       "name": "@autograph/generated-app-runtime",
       "dependencies": {
@@ -339,32 +212,6 @@
         "vite-plus": "catalog:",
         "vitest": "catalog:",
       },
-    },
-    "packages/integration-runtime": {
-      "name": "@autograph/integration-runtime",
-      "dependencies": {
-        "@autograph/generated-app-runtime": "workspace:*",
-        "zod": "catalog:",
-      },
-      "devDependencies": {
-        "@testing-library/react": "catalog:",
-        "@types/react": "catalog:",
-        "@types/react-dom": "catalog:",
-        "jsdom": "catalog:",
-        "next": "catalog:",
-        "pg": "catalog:",
-        "react": "catalog:",
-        "react-dom": "catalog:",
-        "vitest": "catalog:",
-      },
-      "peerDependencies": {
-        "next": ">=16.0.0",
-        "react": ">=19.0.0 <20.0.0",
-      },
-      "optionalPeers": [
-        "next",
-        "react",
-      ],
     },
     "packages/next-config": {
       "name": "@autograph/next-config",
@@ -399,20 +246,6 @@
         "@types/pg": "catalog:",
         "typescript": "catalog:",
         "vitest": "catalog:",
-      },
-    },
-    "packages/playwright-config": {
-      "name": "@autograph/playwright-config",
-      "version": "0.0.0",
-      "dependencies": {
-        "@autograph/generated-app-runtime": "workspace:*",
-        "pg": "catalog:",
-      },
-      "devDependencies": {
-        "vitest": "catalog:",
-      },
-      "peerDependencies": {
-        "playwright": ">=1.63.0 <2.0.0",
       },
     },
     "packages/typescript-config": {
@@ -563,10 +396,6 @@
 
     "@ast-grep/cli-win32-x64-msvc": ["@ast-grep/cli-win32-x64-msvc@0.45.3", "", { "os": "win32", "cpu": "x64" }, "sha512-UZrpVbjLQqQIRxWqeMcwyLSIhlDZyhYb8SinssM38Oo6mEB2jMfHCEoigay9UOZTfUR268n72BBV48nW2h+QwA=="],
 
-    "@autograph/agent-reference-resolution": ["@autograph/agent-reference-resolution@workspace:packages/agents/reference-resolution"],
-
-    "@autograph/app-runtime": ["@autograph/app-runtime@workspace:packages/app-runtime"],
-
     "@autograph/auth": ["@autograph/auth@workspace:packages/auth"],
 
     "@autograph/canvas": ["@autograph/canvas@workspace:packages/canvas"],
@@ -575,21 +404,13 @@
 
     "@autograph/csv-workspace": ["@autograph/csv-workspace@workspace:packages/csv-workspace"],
 
-    "@autograph/currency-rates": ["@autograph/currency-rates@workspace:packages/currency-rates"],
-
-    "@autograph/dashboard-agent-evals": ["@autograph/dashboard-agent-evals@workspace:packages/dashboard-agent-evals"],
-
     "@autograph/generated-app-runtime": ["@autograph/generated-app-runtime@workspace:packages/generated-app-runtime"],
-
-    "@autograph/integration-runtime": ["@autograph/integration-runtime@workspace:packages/integration-runtime"],
 
     "@autograph/next-config": ["@autograph/next-config@workspace:packages/next-config"],
 
     "@autograph/oxlint-config": ["@autograph/oxlint-config@workspace:packages/oxlint-config"],
 
     "@autograph/platform-microfrontends": ["@autograph/platform-microfrontends@workspace:packages/platform-microfrontends"],
-
-    "@autograph/playwright-config": ["@autograph/playwright-config@workspace:packages/playwright-config"],
 
     "@autograph/starter": ["@autograph/starter@workspace:app"],
 
@@ -742,28 +563,6 @@
     "@csstools/css-tokenizer": ["@csstools/css-tokenizer@4.0.0", "", {}, "sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA=="],
 
     "@date-fns/tz": ["@date-fns/tz@1.5.0", "", {}, "sha512-lwYN/vDPeNRULcepoE/LO2Pgx+7/RV+S9ARfbc9lr2DtGkOD7pAiruHvbR1RX3Qyf6ja47EWJDMsNK5vK08DJg=="],
-
-    "@domain-libs/_shared": ["@domain-libs/_shared@workspace:packages/domain-libs/_shared"],
-
-    "@domain-libs/accounting": ["@domain-libs/accounting@workspace:packages/domain-libs/accounting"],
-
-    "@domain-libs/compensation": ["@domain-libs/compensation@workspace:packages/domain-libs/compensation"],
-
-    "@domain-libs/contractor": ["@domain-libs/contractor@workspace:packages/domain-libs/contractor"],
-
-    "@domain-libs/employee": ["@domain-libs/employee@workspace:packages/domain-libs/employee"],
-
-    "@domain-libs/org-assignment": ["@domain-libs/org-assignment@workspace:packages/domain-libs/org-assignment"],
-
-    "@domain-libs/position": ["@domain-libs/position@workspace:packages/domain-libs/position"],
-
-    "@domain-libs/recruiting": ["@domain-libs/recruiting@workspace:packages/domain-libs/recruiting"],
-
-    "@domain-libs/requisition": ["@domain-libs/requisition@workspace:packages/domain-libs/requisition"],
-
-    "@domain-libs/revenue": ["@domain-libs/revenue@workspace:packages/domain-libs/revenue"],
-
-    "@domain-libs/vendor": ["@domain-libs/vendor@workspace:packages/domain-libs/vendor"],
 
     "@emnapi/runtime": ["@emnapi/runtime@1.11.3", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA=="],
 
@@ -1567,8 +1366,6 @@
 
     "ag-charts-core": ["ag-charts-core@14.1.0", "", { "dependencies": { "ag-charts-types": "14.1.0" } }, "sha512-lkjDoudYOiUncHQ0FaDv8CaQ+TsOK16vUZnkJNPIaC92opRP95pryDbWQ6VDWzCLCqsJbAGPx2xlsTor+WgA2A=="],
 
-    "ag-charts-enterprise": ["ag-charts-enterprise@14.1.0", "", { "dependencies": { "ag-charts-community": "14.1.0", "ag-charts-core": "14.1.0" } }, "sha512-1bLN22vv07tdJH/UrmSrIWSJu0fkpr//jfrcwaeAatXSwUspcjLzHmcQNNoeQ0TX6xTFaoZ558mJ96P3pmRhWw=="],
-
     "ag-charts-locale": ["ag-charts-locale@14.1.0", "", {}, "sha512-5UFnL7JoOj491LtqZmlCdbxDvXqE12qz664CZFBK4Tzlh8n48pN9yWfVqhlmkJWEC/wugG3Yf6/i3WGxL5qljw=="],
 
     "ag-charts-react": ["ag-charts-react@14.1.0", "", { "dependencies": { "ag-charts-community": "14.1.0" }, "peerDependencies": { "react": "^18.0.0 || ^19.0.0" } }, "sha512-gEyLSBsCzBNcJRJ2Ux9k6oVryOLUhJ16u0HH27K+9Y0Xtt2AypvZ3cQIKpJIywsffbrYZwcYAbEbIoKR2qWJow=="],
@@ -1576,8 +1373,6 @@
     "ag-charts-types": ["ag-charts-types@14.1.0", "", {}, "sha512-mmzkng88c0l+Z9PvCMowMilhVeNgDU/iMuMemcOQD4BG/qO4vbkxWvyQO0iqju8Dx7YOY81PNzC/RmElQNiVkA=="],
 
     "ag-grid-community": ["ag-grid-community@33.3.0", "", { "dependencies": { "ag-charts-types": "11.3.0" } }, "sha512-Nr7Wd3Qc0tbR+BWZ4y8LgEwLkHTvrtJ4f4k5eb4zuoNZFM52MyLfu+m4OAplIm9nOVBdp5tg/ALWvu13jak+Nw=="],
-
-    "ag-grid-enterprise": ["ag-grid-enterprise@33.3.0", "", { "dependencies": { "ag-grid-community": "33.3.0" }, "optionalDependencies": { "ag-charts-community": "11.3.0", "ag-charts-enterprise": "11.3.0" } }, "sha512-dzA3BpNDAsM7sRIoRTg4Q60imloaMsLlx7DY16w1/NbT07SLgdi6c/+YZDd9ZPtincO0Ubxu9UkQPRmMZksswg=="],
 
     "ag-grid-react": ["ag-grid-react@33.3.0", "", { "dependencies": { "ag-grid-community": "33.3.0", "prop-types": "^15.8.1" }, "peerDependencies": { "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-AApiiHDt0oyz2qAXjZh0JCRSH0H2eOdLusxxF8vaYWbz/WcFBZcfOWi62ScfUpOESjuEVvQJJ3eI8PFrudBhrw=="],
 
@@ -2381,10 +2176,6 @@
 
     "ag-grid-community/ag-charts-types": ["ag-charts-types@11.3.0", "", {}, "sha512-FXyk24PizYS4QoPTk7FVaFDgvmZYBQo6sgl5n3lkHugTNTZBtwBmN3i4JnBXgNjGDB6Q05MRkoBA2rvW8rPBag=="],
 
-    "ag-grid-enterprise/ag-charts-community": ["ag-charts-community@11.3.0", "", { "dependencies": { "ag-charts-core": "11.3.0", "ag-charts-locale": "11.3.0", "ag-charts-types": "11.3.0" } }, "sha512-hM5WaTZNNFR8V1Cru8mlL0VQVfVuA7pTe/YOIjeyHBfAx7W+bEpp/i0SxyYCZVhOUltXsRKrJOiUregXNRVzXQ=="],
-
-    "ag-grid-enterprise/ag-charts-enterprise": ["ag-charts-enterprise@11.3.0", "", { "dependencies": { "ag-charts-community": "11.3.0", "ag-charts-core": "11.3.0" } }, "sha512-EnZSJvmmizvw+xgawQ6xwogzLa7Ei+qNQ4DigvRaU0g9pgeS27fZj0df321dvc1zGP29wBAJ/eCFUi3xbGEhVg=="],
-
     "assistant-stream/nanoid": ["nanoid@6.0.1", "", { "bin": { "nanoid": "bin/nanoid.js" } }, "sha512-3wVS3i51pE2pi1k5FFL/95BGfVS0kSsvDVuGXHOtxox/TywUmtgq+3qiTOTbs9J7KfHaXPiN171k/A6dBnaXFw=="],
 
     "auth/zod": ["zod@4.6.2", "", {}, "sha512-lh5RCAGFa1Cm2hjtNwLQhSs/AsqdWnTQaBER9fEwN/88pSh7KOtJavtBx/0VlkN/uFd61SwYmljLMDAsHlvzBQ=="],
@@ -2491,14 +2282,6 @@
 
     "@vercel/functions/@vercel/oidc/jose": ["jose@5.10.0", "", {}, "sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg=="],
 
-    "ag-grid-enterprise/ag-charts-community/ag-charts-core": ["ag-charts-core@11.3.0", "", { "dependencies": { "ag-charts-types": "11.3.0" } }, "sha512-qfiVsKDS1VggDPODeoGu3i46TLvEP8xPaAOKOunC7wH07wi4CeA9TYv9tiBArU8VagUFi/ive74zN7yVYtRpSg=="],
-
-    "ag-grid-enterprise/ag-charts-community/ag-charts-locale": ["ag-charts-locale@11.3.0", "", {}, "sha512-2tmOiDV+2kVCuo3eBPwPDaga6WesEcmyjhbu+omcC4xTfY9vrdulUZxy56fk6jThayVHRsawEHH/ue5LvkqHyA=="],
-
-    "ag-grid-enterprise/ag-charts-community/ag-charts-types": ["ag-charts-types@11.3.0", "", {}, "sha512-FXyk24PizYS4QoPTk7FVaFDgvmZYBQo6sgl5n3lkHugTNTZBtwBmN3i4JnBXgNjGDB6Q05MRkoBA2rvW8rPBag=="],
-
-    "ag-grid-enterprise/ag-charts-enterprise/ag-charts-core": ["ag-charts-core@11.3.0", "", { "dependencies": { "ag-charts-types": "11.3.0" } }, "sha512-qfiVsKDS1VggDPODeoGu3i46TLvEP8xPaAOKOunC7wH07wi4CeA9TYv9tiBArU8VagUFi/ive74zN7yVYtRpSg=="],
-
     "eslint/ajv/json-schema-traverse": ["json-schema-traverse@0.4.1", "", {}, "sha512-xbbCH5dCYU5T8LcEhhuh7HJ88HXuW3qsI3Y0zOZFKfZEHcpWiHU/Jxzk629Brsab/mMiHQti9wMP+845RPe3Vg=="],
 
     "find-workspaces/pkg-types/confbox": ["confbox@0.1.8", "", {}, "sha512-RMtmw0iFkeR4YV+fUOSucriAQNb9g8zFR52MWCtl+cCZOFRNL6zeB395vPzFhEjjn4fMxXudmELnl/KF/WrK6w=="],
@@ -2548,7 +2331,5 @@
     "@inquirer/core/wrap-ansi/string-width/is-fullwidth-code-point": ["is-fullwidth-code-point@3.0.0", "", {}, "sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg=="],
 
     "@vercel/functions/@vercel/oidc/@vercel/cli-config/zod": ["zod@4.1.11", "", {}, "sha512-WPsqwxITS2tzx1bzhIKsEs19ABD5vmCVa4xBo2tq/SrV4RNZtfws1EnCWQXM6yh8bD08a1idvkB5MZSBiZsjwg=="],
-
-    "ag-grid-enterprise/ag-charts-enterprise/ag-charts-core/ag-charts-types": ["ag-charts-types@11.3.0", "", {}, "sha512-FXyk24PizYS4QoPTk7FVaFDgvmZYBQo6sgl5n3lkHugTNTZBtwBmN3i4JnBXgNjGDB6Q05MRkoBA2rvW8rPBag=="],
   }
 }

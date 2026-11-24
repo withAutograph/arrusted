@@ -5,13 +5,7 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-const suite = process.argv[2];
-if (suite !== undefined && suite !== "currency-rates")
-  throw new Error("Unknown runtime test suite");
-const testArguments =
-  suite === "currency-rates"
-    ? ["--config", "packages/currency-rates/vite.config.ts"]
-    : ["packages/generated-app-runtime/__tests__"];
+const testArguments = ["packages/generated-app-runtime/__tests__"];
 
 // This suite owns its cluster and never uses a configured application database.
 const scratch = await mkdtemp(path.join(tmpdir(), "generated-runtime-tests-"));

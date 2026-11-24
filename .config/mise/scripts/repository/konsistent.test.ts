@@ -97,27 +97,10 @@ describe("Konsistent repository conventions", () => {
         'import { createFetchKernelClient } from "@kernel-client";\nexport const leaked = createFetchKernelClient;\n',
     },
     {
-      convention: "app-runtime-direct-import-boundary",
-      path: "packages/app-runtime/index.tsx",
-      source: 'import { AppRuntime } from "@contracts";\nexport type Runtime = AppRuntime;\n',
-    },
-    {
-      convention: "app-runtime-direct-import-boundary",
-      path: "packages/app-runtime/index.tsx",
-      source:
-        'import { createFetchKernelClient } from "@kernel-client";\nexport const leaked = createFetchKernelClient;\n',
-    },
-    {
       convention: "agent-foundation-direct-import-boundary",
       path: "packages/agent-foundation/index.ts",
       source:
         'import { KernelClient } from "@contracts";\nexport const leaked = null as KernelClient | null;\n',
-    },
-    {
-      convention: "agent-foundation-direct-import-boundary",
-      path: "packages/agent-foundation/index.ts",
-      source:
-        'import type { Employee } from "@domain-libs/employee";\nexport type Leaked = Employee;\n',
     },
     {
       convention: "auth-direct-import-boundary",
@@ -131,12 +114,6 @@ describe("Konsistent repository conventions", () => {
       source:
         'import { createFetchKernelClient } from "@kernel-client";\nexport const leaked = createFetchKernelClient;\n',
     },
-    {
-      convention: "domain-libs-direct-import-boundary",
-      path: "packages/domain-libs/employee/index.ts",
-      source:
-        'import type { AgentIdentity } from "@agent-foundation";\nexport type Leaked = AgentIdentity;\n',
-    },
   ])("rejects syntax-local imports through $convention", ({ convention, path, source }) => {
     const root = fixture({ [path]: source });
 
@@ -147,8 +124,6 @@ describe("Konsistent repository conventions", () => {
 
   it("rejects the expanded direct package boundaries", () => {
     const root = fixture({
-      "packages/modules/example/domain.ts":
-        'import { employee } from "@domain-libs/employee";\nexport const leaked = employee;\n',
       "packages/modules/example/hc.ts":
         'import type { Client } from "@hc-client";\nexport type Leaked = Client;\n',
       "packages/modules/example/vendor.ts":
@@ -159,10 +134,6 @@ describe("Konsistent repository conventions", () => {
         'import type { Client } from "@autograph/vendor/generated-client";\nexport type Leaked = Client;\n',
       "packages/modules/example/vite.config.ts":
         'import { config } from "@autograph/vite-config/testing";\nexport const leaked = config;\n',
-      "packages/modules/example/agent.ts":
-        'import { runAgent } from "@autograph/agent-reference-resolution";\nexport const leaked = runAgent;\n',
-      "packages/domain-libs/employee/index.ts":
-        'import { Button } from "@autograph/components";\nexport const leaked = Button;\n',
       "packages/kernel-client/index.ts":
         'import type { Editor } from "@modules/editable-grid";\nexport type Leaked = Editor;\n',
       "apps/hc/frontend/src/App.tsx":

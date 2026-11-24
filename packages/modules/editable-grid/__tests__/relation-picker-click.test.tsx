@@ -14,7 +14,7 @@ import type { KernelClient, Schema, VisibleRecord } from "@contracts";
 
 import { bootstrapAgGrid, EditableRowVersionGrid, useEditableRowVersionGrid } from "../index";
 
-bootstrapAgGrid({ allowMissingLicense: true });
+bootstrapAgGrid();
 
 const SCHEMA: Schema = {
   app_id: "demo",

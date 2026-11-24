@@ -1,4 +1,0 @@
-{
-  "extends": "@autograph/typescript-config/base.json",
-  "include": ["./**/*.ts"]
-}

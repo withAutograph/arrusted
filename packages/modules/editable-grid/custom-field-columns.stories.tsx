@@ -19,7 +19,7 @@ import { EditableRowVersionGrid } from "./EditableRowVersionGrid";
 import type { RelationOptionsByModel } from "./schema-columns";
 import { useEditableRowVersionGridPreview } from "./useEditableRowVersionGrid";
 
-bootstrapAgGrid({ allowMissingLicense: true });
+bootstrapAgGrid();
 
 const SCHEMA: Schema = {
   app_id: "demo",

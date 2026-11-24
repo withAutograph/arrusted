@@ -5,7 +5,6 @@ import { mergeConfig } from "vite";
 const config: StorybookConfig = {
   stories: [
     "../packages/design-systems/core/stories/**/*.stories.@(ts|tsx)",
-    "../packages/dashboard-agent-evals/**/*.stories.@(ts|tsx)",
     "../packages/modules/**/*.stories.@(ts|tsx)",
     "../packages/canvas/**/*.stories.@(ts|tsx)",
   ],

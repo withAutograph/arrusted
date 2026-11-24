@@ -158,8 +158,8 @@ export const canvas = createCanvasHost({
           return null;
         }
       },
-      agGridLicenseKey: null,
-      agChartsLicenseKey: null,
+      agGridLicenseKey: process.env.NEXT_PUBLIC_AG_GRID_LICENSE_KEY?.trim() || null,
+      agChartsLicenseKey: process.env.NEXT_PUBLIC_AG_CHARTS_LICENSE_KEY?.trim() || null,
     }),
   },
 });

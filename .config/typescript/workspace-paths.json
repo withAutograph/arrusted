@@ -13,7 +13,6 @@
       "@autograph/components": ["../../packages/design-systems/core/components/index.ts"],
       "@autograph/compositions": ["../../packages/design-systems/core/compositions/index.ts"],
       "@autograph/icons": ["../../packages/design-systems/core/icons/index.ts"],
-      "@domain-libs/*": ["../../packages/domain-libs/*/index.ts"],
       "@engines/*": ["../../packages/engines/*"],
       "@modules/*": ["../../packages/modules/*"]
     }

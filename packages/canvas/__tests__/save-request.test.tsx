@@ -15,8 +15,8 @@ import { parseSaveRequest, parseThreads } from "../threads";
 import { canvasMemory, send, sessionId, turns, typicalLayout } from "../stories/fixtures/canvas";
 import { change, stageAs } from "../stories/fixtures/grid";
 
-bootstrapAgCharts({ allowMissingLicense: true });
-bootstrapAgGrid({ allowMissingLicense: true });
+bootstrapAgCharts();
+bootstrapAgGrid();
 
 function mount(memory: ReturnType<typeof canvasMemory>) {
   return render(

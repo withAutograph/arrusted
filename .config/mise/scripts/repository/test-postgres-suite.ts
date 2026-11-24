@@ -7,14 +7,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const suite = process.argv[2];
-if (
-  process.argv.length !== 3 ||
-  !["runtime", "source-identities"].includes(suite ?? "")
-)
-  throw new Error("usage: test-postgres-suite.ts <runtime|source-identities>");
 const root = fileURLToPath(new URL("../../../..", import.meta.url));
-const scratch = await mkdtemp(path.join(tmpdir(), `integration-${suite}-tests-`));
+const scratch = await mkdtemp(path.join(tmpdir(), "source-identities-tests-"));
 const data = path.join(scratch, "postgres");
 const postgresEnvironment = {
   NODE_ENV: "test",
@@ -86,32 +80,9 @@ try {
   }
   const fixtureUrl = new URL(`postgresql://postgres@127.0.0.1:${port}/postgres`);
   fixtureUrl.password = password;
-  environment[
-    suite === "source-identities"
-        ? "KERNEL_TEST_DATABASE_URL"
-        : "INTEGRATION_TEST_DATABASE_URL"
-  ] = fixtureUrl.toString();
-  if (suite === "source-identities")
-    environment.SQL_PARITY_ONLY_TARGETS = "sql_runtime_integrations";
-  const args =
-    suite === "source-identities"
-      ? ["run", "--no-deps", "schema:test-parity"]
-      : [
-            "--no-env-file",
-            "x",
-            "vitest",
-            "run",
-            "--config",
-            "packages/integration-runtime/vitest.config.ts",
-            "--maxWorkers",
-            "1",
-            "--no-file-parallelism",
-            "--testTimeout",
-            "120000",
-            "--hookTimeout",
-            "120000",
-          ];
-  const child = spawn(suite === "source-identities" ? "mise" : "bun", args, {
+  environment.KERNEL_TEST_DATABASE_URL = fixtureUrl.toString();
+  environment.SQL_PARITY_ONLY_TARGETS = "sql_runtime_integrations";
+  const child = spawn("mise", ["run", "--no-deps", "schema:test-parity"], {
     cwd: root,
     env: environment,
     stdio: "inherit",

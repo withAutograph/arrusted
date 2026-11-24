@@ -50,15 +50,11 @@ None of these steps may depend on a service we host.
   expose them for Codex and Cursor (AGENTS.md plus a shared skills directory).
 
 ### 2. Prune to the starter's dependency graph
-- These 17 workspace packages aren't reachable from `app/`, so remove them or
-  justify keeping them:
-  - `agents/reference-resolution`;
-  - `app-runtime`;
-  - `currency-rates`;
-  - `dashboard-agent-evals`;
-  - `domain-libs/*` (11 packages);
-  - `integration-runtime`;
-  - `playwright-config`.
+- Done: removed `agents/reference-resolution`, `app-runtime`, `currency-rates`,
+  `dashboard-agent-evals`, `integration-runtime` (with `modules/integrations`),
+  `playwright-config` and the TypeScript `domain-libs`. `domain-libs/catalog.json`
+  stays: the starter's compile step, the schema-compiler tests and the
+  `add-section` skill use it.
 - Also audit the non-package directories (`modules`, `design-systems`, `engines`,
   `platform-*`, `provisioning`, `protected-installer`, `rust-auth`,
   `work-session-tools`) against what the starter actually imports.
@@ -81,10 +77,10 @@ None of these steps may depend on a service we host.
   - add tests for policy roles, `relforcerowsecurity`, column ACLs and type owners.
 
 ### 4. Licensing and dependencies
-- The `editable-grid` module and the charting composition use **AG Grid and AG
-  Charts Enterprise**, which need a commercial key. For an MIT release, either
-  switch to the Community editions or another grid, or make Enterprise an optional
-  add-on.
+- Done: AG Grid and AG Charts **Community** are the default; Enterprise is an
+  optional, user-licensed add-on ([how](ag-enterprise.md)).
+- Fix the known vulnerable dependencies the security check reports, starting with
+  `better-auth` and `tinypool` (critical).
 - Run a third-party licence inventory (`bun.lock`, `Cargo.lock`) before announcing.
 
 ### 5. Release engineering

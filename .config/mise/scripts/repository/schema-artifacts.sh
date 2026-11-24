@@ -7,12 +7,10 @@ cd "${repo_root}"
 
 case "${1:-}" in
   compile)
-    bun .config/mise/scripts/repository/export-domain-catalog.ts
     bun .config/mise/scripts/repository/schema-release.ts compile
     bun .config/mise/scripts/repository/data-plane-fixture.ts compile
     ;;
   check)
-    bun .config/mise/scripts/repository/export-domain-catalog.ts --check
     bun .config/mise/scripts/repository/schema-release.ts check
     bun .config/mise/scripts/repository/data-plane-fixture.ts check
     ;;

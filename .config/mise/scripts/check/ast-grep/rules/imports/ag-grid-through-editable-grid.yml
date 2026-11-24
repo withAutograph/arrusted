@@ -5,11 +5,8 @@ message: import AG Grid only from the editable-grid module
 note: Apps and other packages mount AG Grid through @modules/editable-grid.
 files:
   [
-    packages/domain-libs/**/*.ts,
     packages/**/*.ts,
-    packages/domain-libs/**/*.mts,
     packages/**/*.mts,
-    packages/domain-libs/**/*.cts,
     packages/**/*.cts,
   ]
 ignores: [packages/modules/editable-grid/**]
@@ -33,7 +30,7 @@ language: Tsx
 severity: error
 message: import AG Grid only from the editable-grid module
 note: Apps and other packages mount AG Grid through @modules/editable-grid.
-files: [packages/domain-libs/**/*.tsx, packages/**/*.tsx]
+files: [packages/**/*.tsx]
 ignores: [packages/modules/editable-grid/**]
 rule:
   any:
@@ -57,10 +54,6 @@ message: import AG Grid only from the editable-grid module
 note: Apps and other packages mount AG Grid through @modules/editable-grid.
 files:
   [
-    packages/domain-libs/**/*.js,
-    packages/domain-libs/**/*.jsx,
-    packages/domain-libs/**/*.mjs,
-    packages/domain-libs/**/*.cjs,
     packages/**/*.js,
     packages/**/*.jsx,
     packages/**/*.mjs,

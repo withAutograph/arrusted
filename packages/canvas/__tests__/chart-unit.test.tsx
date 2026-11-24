@@ -24,7 +24,7 @@ import { bootstrapAgCharts } from "@autograph/compositions";
 
 // As the app's session view: charts render with AG Charts registered, so a
 // chart test can never pass on the "Call bootstrapAgCharts" error boundary.
-bootstrapAgCharts({ allowMissingLicense: true });
+bootstrapAgCharts();
 
 function mount(client: CanvasClient, config: unknown, unitId = "chart-1") {
   const store = createSelectionStore(client.definition);

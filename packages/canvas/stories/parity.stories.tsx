@@ -19,7 +19,7 @@ import {
   paritySession,
 } from "./fixtures/parity";
 
-bootstrapAgGrid({ allowMissingLicense: true });
+bootstrapAgGrid();
 
 /** The canvas; the sessions menu's Open switches it to that session. */
 function ParityStory({ memory }: { memory: MemoryCanvas }) {

@@ -58,5 +58,5 @@ Architecture and rules:
 
 ## License
 
-[MIT](LICENSE). Some UI packages currently depend on AG Grid and AG Charts
-Enterprise, which are commercially licensed; see the release plan.
+[MIT](LICENSE). Grids and charts use the MIT-licensed AG Grid and AG Charts
+Community editions; you can [add an Enterprise licence](docs/ag-enterprise.md).

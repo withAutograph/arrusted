@@ -16,6 +16,7 @@ import {
   maxListOffset,
   openColumnId,
   pickerPage,
+  focusedCell,
   rangeCells,
   useSessionRows,
 } from "../grid-unit";
@@ -38,7 +39,7 @@ import {
   withStagedValues,
 } from "../stories/fixtures/grid";
 
-bootstrapAgGrid({ allowMissingLicense: true });
+bootstrapAgGrid();
 
 type Memory = ReturnType<typeof gridMemory>;
 
@@ -683,6 +684,17 @@ describe("grid unit", () => {
     await waitFor(() => expect(opened).toHaveBeenCalled());
     await new Promise((resolve) => setTimeout(resolve, 100));
     expect(opened).toHaveBeenCalledTimes(1);
+  });
+
+  it("without Enterprise cell ranges, only a focused field cell is a selection", () => {
+    const at = (index: number) => (index === 0 ? { record_id: "r1" } : undefined);
+    const fields = new Set(["f_name"]);
+    const focus = (rowIndex: number | null, column: string) =>
+      focusedCell({ rowIndex, column: { getColId: () => column } }, fields, at);
+    expect(focus(0, "f_name")).toEqual({ record_id: "r1", field_id: "f_name" });
+    expect(focus(0, "ag-Grid-SelectionColumn")).toBeNull();
+    expect(focus(1, "f_name")).toBeNull();
+    expect(focus(null, "f_name")).toBeNull();
   });
 
   it("a cell range across the open control selects only fields", () => {

@@ -6,7 +6,7 @@ import { createChartValueFormatter } from "./format";
 import { emitSegment } from "./interaction";
 import type { AgScatterSeriesOptions } from "ag-charts-community";
 
-import { AgChartsHost, type AgCartesianChartOptions } from "./runtime";
+import { AgChartsHost, agChartsEnterpriseEnabled, type AgCartesianChartOptions } from "./runtime";
 import { chartAxis, chartColor, useResolvedChartTheme, type ChartCanvasTheme } from "./theme";
 import type { ChartRuntimeProps, RangeMarkerChartConfig, RangeMarkerPoint } from "./types";
 
@@ -78,6 +78,8 @@ const LEGEND_MAX_HEIGHT = 56;
 
 export function RangeMarkerChart(props: ChartRuntimeProps<RangeMarkerChartConfig>) {
   const theme = useResolvedChartTheme();
+  // This series type needs AG Charts Enterprise; Community shows the data table.
+  const enterprise = agChartsEnterpriseEnabled();
   const height = props.height ?? DEFAULT_HEIGHT;
   const formatValue = props.formatValue ?? createChartValueFormatter(props.valueFormat);
   const rowLabels = useMemo(
@@ -192,7 +194,7 @@ export function RangeMarkerChart(props: ChartRuntimeProps<RangeMarkerChartConfig
         <ChartEmptyState height={height}>
           {props.emptyState ?? props.emptyLabel ?? "No data available"}
         </ChartEmptyState>
-      ) : options ? (
+      ) : !enterprise ? null : options ? (
         <AgChartsHost
           options={options}
           label={props.title ?? "range marker chart"}
@@ -202,6 +204,7 @@ export function RangeMarkerChart(props: ChartRuntimeProps<RangeMarkerChartConfig
         <ChartEmptyState height={height}>Loading chart theme…</ChartEmptyState>
       )}
       <ChartSummary
+        visible={!enterprise && props.data.length > 0}
         caption={props.title ?? "Range marker chart data"}
         columns={[
           "Category",
@@ -228,6 +231,7 @@ export function RangeMarkerChart(props: ChartRuntimeProps<RangeMarkerChartConfig
       />
       {points.length > 0 ? (
         <ChartSummary
+          visible={!enterprise && props.data.length > 0}
           caption={`${props.title ?? "Range marker chart"} points`}
           columns={["Point", "Row", "Value", "Group", previousLabel]}
           rows={points.map((point) => ({

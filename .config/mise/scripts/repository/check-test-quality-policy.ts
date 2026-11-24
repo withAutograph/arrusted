@@ -5,7 +5,6 @@ import path from "node:path";
 export const POLICY_VALIDATOR_PATHS = new Set([
   ".config/mise/scripts/repository/check-git-hook-gates.test.ts",
   ".config/mise/scripts/repository/supply-chain-security.test.ts",
-  ".config/turbo/generators/__tests__/domain-lib-turbo.test.ts",
   ".config/mise/scripts/repository/__tests__/test-quality-policy.test.ts",
 ]);
 

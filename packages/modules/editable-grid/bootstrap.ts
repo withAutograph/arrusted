@@ -1,36 +1,42 @@
-// AG Grid bootstrap — license + Enterprise module registration.
+// AG Grid bootstrap: module registration and the optional Enterprise licence.
 //
-// Apps call this ONCE at React root mount time (before any
-// `<EditableRowVersionGrid>` renders). Encapsulating it here means apps
-// never directly import `ag-grid-*`, which keeps the scanner rule
-// (apps cannot import ag-grid-* directly) airtight: license / module
-// setup is library territory, not app territory.
+// Apps call this ONCE before any `<EditableRowVersionGrid>` renders. Keeping it
+// here means apps never import `ag-grid-*` directly (the scanner enforces it).
 
-import { LicenseManager } from "ag-grid-enterprise";
-import { ModuleRegistry } from "ag-grid-community";
-import { AllEnterpriseModule } from "ag-grid-enterprise";
+import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
+import { loadAgGridEnterprise } from "./enterprise";
 
-let bootstrapped = false;
+let communityRegistered = false;
+let enterprise: Promise<void> | undefined;
+let enterpriseEnabled = false;
 
-export function bootstrapAgGrid(options: {
-  licenseKey?: string;
-  allowMissingLicense?: boolean;
-}): void {
-  if (bootstrapped) return;
-  const licenseKey = options.licenseKey?.trim();
-  if (!licenseKey) {
-    if (!options.allowMissingLicense) {
-      throw new Error(
-        "AG Grid Enterprise license key is missing. Pass VITE_AG_GRID_LICENSE_KEY " +
-          "or explicitly allow missing licenses for a trial-mode environment.",
-      );
-    }
-    // eslint-disable-next-line no-console
-    console.warn(
-      "[editable-grid] AG Grid Enterprise license key is missing; continuing because allowMissingLicense was explicitly set.",
-    );
+/** Whether Enterprise features (grouping, side bar, cell ranges) are available. */
+export function agGridEnterpriseEnabled(): boolean {
+  return enterpriseEnabled;
+}
+
+/**
+ * Registers AG Grid Community synchronously. With a licence key and an installed
+ * Enterprise package (see `enterprise.ts`) it also loads Enterprise; await the
+ * result before rendering a grid in that case.
+ */
+export async function bootstrapAgGrid(options: { licenseKey?: string } = {}): Promise<void> {
+  if (!communityRegistered) {
+    ModuleRegistry.registerModules([AllCommunityModule]);
+    communityRegistered = true;
   }
-  LicenseManager.setLicenseKey(licenseKey ?? "");
-  ModuleRegistry.registerModules([AllEnterpriseModule]);
-  bootstrapped = true;
+  const licenseKey = options.licenseKey?.trim();
+  if (!licenseKey) return;
+  if (loadAgGridEnterprise === null) {
+    console.warn(
+      "[editable-grid] An AG Grid licence key is set but Enterprise is not enabled; see docs/ag-enterprise.md.",
+    );
+    return;
+  }
+  enterprise ??= loadAgGridEnterprise().then(({ AllEnterpriseModule, LicenseManager }) => {
+    LicenseManager.setLicenseKey(licenseKey);
+    ModuleRegistry.registerModules([AllEnterpriseModule]);
+    enterpriseEnabled = true;
+  });
+  return enterprise;
 }

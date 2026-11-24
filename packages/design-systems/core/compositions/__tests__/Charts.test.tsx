@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 const shown = vi.hoisted(() => ({ listeners: undefined as Record<string, Function> | undefined }));
 vi.mock("../charting/runtime", () => ({
+  agChartsEnterpriseEnabled: () => true,
   AgChartsHost: (props: {
     label: string;
     options: {

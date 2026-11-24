@@ -4,7 +4,7 @@ import { bootstrapAgCharts } from "../packages/design-systems/core/compositions/
 import "./preview.css";
 import "./storybook.css";
 
-bootstrapAgCharts({ allowMissingLicense: true });
+bootstrapAgCharts();
 
 const preview: Preview = {
   parameters: {

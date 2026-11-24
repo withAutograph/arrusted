@@ -37,9 +37,9 @@ import { bootstrapAgCharts } from "@autograph/compositions";
 
 // As the app's session view: charts render with AG Charts registered, so a
 // chart test can never pass on the "Call bootstrapAgCharts" error boundary.
-bootstrapAgCharts({ allowMissingLicense: true });
+bootstrapAgCharts();
 
-bootstrapAgGrid({ allowMissingLicense: true });
+bootstrapAgGrid();
 
 /** Counts the session operations the canvas sends, by operation. */
 function counting(client: CanvasClient, before?: (input: WorkSessionRequest) => Promise<void>) {

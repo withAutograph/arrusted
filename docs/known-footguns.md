@@ -607,14 +607,8 @@ spike pinned `33.3.0` because `33.3.2` released after the license cutoff
 banner. Future minor-version bumps need to verify the release date is
 still covered or the license needs renewal.
 
-`bootstrapAgGrid` throws when the license key is missing unless the caller
-explicitly opts into trial mode. Local dev may allow a missing key so
-contributors can inspect non-license behavior. Deploy/runtime surfaces should
-prefer `VITE_AG_GRID_LICENSE_KEY` (or `NEXT_PUBLIC_AG_GRID_LICENSE_KEY` in a
-Next.js consumer); if a non-production or proof deployment must run without
-the key, set `VITE_ALLOW_MISSING_AG_GRID_LICENSE=true` or the corresponding
-`NEXT_PUBLIC_ALLOW_MISSING_AG_GRID_LICENSE=true` deliberately
-so the trial watermark and console warning are visible rather than accidental.
+Community is the default and needs no key. See
+[AG Grid and AG Charts Enterprise](ag-enterprise.md) to turn Enterprise on.
 
 ### Watch: bootstrap encapsulation must stay airtight
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { AgGridReact } from "ag-grid-react";
+import { agGridEnterpriseEnabled } from "./bootstrap";
 import type {
   CellClickedEvent,
   ColDef,
@@ -7,6 +8,7 @@ import type {
   GridApi,
   GridReadyEvent,
   IRowNode,
+  SideBarDef,
 } from "ag-grid-community";
 
 import type { VisibleRecord } from "@contracts";
@@ -28,9 +30,36 @@ const DEFAULT_COL_DEF: ColDef<VisibleRecord> = {
   filter: true,
   sortable: true,
   resizable: true,
-  enableRowGroup: true,
   minWidth: 120,
 };
+
+// Pivot controls stay hidden until the page wires pivot data.
+const SIDE_BAR = {
+  toolPanels: [
+    {
+      id: "columns",
+      labelDefault: "Columns",
+      labelKey: "columns",
+      iconKey: "columns",
+      toolPanel: "agColumnsToolPanel",
+      toolPanelParams: {
+        suppressPivotMode: true,
+        suppressPivots: true,
+        suppressRowGroups: false,
+        suppressValues: false,
+      },
+    },
+    {
+      id: "filters",
+      labelDefault: "Filters",
+      labelKey: "filters",
+      iconKey: "filter",
+      toolPanel: "agFiltersToolPanel",
+    },
+  ],
+} satisfies SideBarDef;
+
+const ENTERPRISE_COL_DEF: ColDef<VisibleRecord> = { ...DEFAULT_COL_DEF, enableRowGroup: true };
 
 // Leave auto-group column undefined so AG Grid's default renderer preserves
 // source-column valueFormatters. Count styling lives in header-chrome.css.
@@ -76,42 +105,20 @@ export function EditableRowVersionGrid(props: EditableRowVersionGridSurfaceProps
     if (columns.length > 0) gridApiRef.current?.refreshCells({ force: true, columns });
   }, [props.columnDefs]);
 
+  const enterprise = agGridEnterpriseEnabled();
   return (
     <div data-grid="editable-row-version" data-grid-mode={props.mode} className="h-full w-full">
       <AgGridReact<VisibleRecord | MetaRowMarker>
         theme={isEditMode ? AgGridTheme : AgGridReadTheme}
         rowData={props.rows}
         columnDefs={props.columnDefs as ColDef<VisibleRecord | MetaRowMarker>[]}
-        defaultColDef={DEFAULT_COL_DEF}
+        defaultColDef={enterprise ? ENTERPRISE_COL_DEF : DEFAULT_COL_DEF}
         getRowId={(p: GetRowIdParams<VisibleRecord | MetaRowMarker>) => p.data.record_id}
         singleClickEdit={false}
         stopEditingWhenCellsLoseFocus
         animateRows={false}
-        // Pivot controls stay hidden until the page wires pivot data.
-        sideBar={{
-          toolPanels: [
-            {
-              id: "columns",
-              labelDefault: "Columns",
-              labelKey: "columns",
-              iconKey: "columns",
-              toolPanel: "agColumnsToolPanel",
-              toolPanelParams: {
-                suppressPivotMode: true,
-                suppressPivots: true,
-                suppressRowGroups: false,
-                suppressValues: false,
-              },
-            },
-            {
-              id: "filters",
-              labelDefault: "Filters",
-              labelKey: "filters",
-              iconKey: "filter",
-              toolPanel: "agFiltersToolPanel",
-            },
-          ],
-        }}
+        // Enterprise only; Community warns about each of these options.
+        {...(enterprise ? { sideBar: SIDE_BAR, cellSelection: isEditMode } : {})}
         onGridReady={onGridReady}
         isFullWidthRow={props.isFullWidthRow}
         fullWidthCellRenderer={RowMetaRowRenderer}
@@ -119,7 +126,6 @@ export function EditableRowVersionGrid(props: EditableRowVersionGridSurfaceProps
         getRowHeight={props.getRowHeight}
         isExternalFilterPresent={() => props.externalFilterPresent}
         doesExternalFilterPass={props.externalFilterPass}
-        cellSelection={isEditMode}
         rowSelection={withDefaultIsRowSelectable(props.rowSelection)}
         onSelectionChanged={props.onSelectionChanged}
         onCellClicked={

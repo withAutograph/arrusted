@@ -12,7 +12,7 @@ import { AgChartsHost, bootstrapAgCharts } from "../charting/runtime";
 // runtime registers them before the first chart renders.
 it("renders a real chart without AG Charts' missing-module error", async () => {
   vi.spyOn(console, "error").mockImplementation(() => {});
-  bootstrapAgCharts({ allowMissingLicense: true });
+  bootstrapAgCharts();
   render(
     <AgChartsHost
       label="spread"

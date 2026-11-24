@@ -1,50 +1,47 @@
 import { Component, lazy, Suspense, type ErrorInfo, type ReactNode } from "react";
 import type { AgChartOptions } from "ag-charts-community";
 import type { AgCharts as AgChartsComponent } from "ag-charts-react";
+import { loadAgChartsEnterprise } from "./enterprise";
 
-export type AgChartsBootstrapOptions = {
-  licenseKey?: string;
-  allowMissingLicense?: boolean;
-};
+export type AgChartsBootstrapOptions = { licenseKey?: string };
 
-let bootstrapOptions: AgChartsBootstrapOptions | undefined;
-let enterprisePromise: Promise<void> | undefined;
+let licenseKey: string | undefined;
+let modulesPromise: Promise<void> | undefined;
 
-export function bootstrapAgCharts(options: AgChartsBootstrapOptions) {
-  if (bootstrapOptions) {
-    const changed =
-      bootstrapOptions.licenseKey !== options.licenseKey ||
-      bootstrapOptions.allowMissingLicense !== options.allowMissingLicense;
-    if (changed) throw new Error("AG Charts has already been bootstrapped with different options");
-    return;
-  }
-  if (!options.licenseKey && !options.allowMissingLicense) {
-    throw new Error(
-      "AG Charts Enterprise license key is missing. Pass a license key or explicitly allow a missing key for non-production proof environments.",
+/**
+ * Sets the optional Enterprise licence key. Without one, charts use AG Charts
+ * Community. Call it before the first chart renders.
+ */
+export function bootstrapAgCharts(options: AgChartsBootstrapOptions = {}) {
+  const key = options.licenseKey?.trim() || undefined;
+  if (key !== licenseKey && modulesPromise !== undefined)
+    throw new Error("AG Charts has already been bootstrapped with different options");
+  licenseKey = key;
+  if (key !== undefined && loadAgChartsEnterprise === null)
+    console.warn(
+      "[charts] An AG Charts licence key is set but Enterprise is not enabled; see docs/ag-enterprise.md.",
     );
-  }
-  bootstrapOptions = { ...options };
 }
 
-async function ensureEnterprise() {
-  if (!bootstrapOptions) {
-    throw new Error("Call bootstrapAgCharts before rendering a chart");
+/** Whether heatmap, range-marker and waterfall charts can be drawn. */
+export function agChartsEnterpriseEnabled(): boolean {
+  return licenseKey !== undefined && loadAgChartsEnterprise !== null;
+}
+
+async function registerModules() {
+  const { AllCommunityModule, ModuleRegistry } = await import("ag-charts-community");
+  ModuleRegistry.registerModules([AllCommunityModule]);
+  if (licenseKey !== undefined && loadAgChartsEnterprise !== null) {
+    const enterprise = await loadAgChartsEnterprise();
+    enterprise.LicenseManager.setLicenseKey(licenseKey);
+    ModuleRegistry.registerModules([enterprise.AllEnterpriseModule]);
   }
-  enterprisePromise ??= import("ag-charts-enterprise").then((enterprise) => {
-    if (bootstrapOptions?.licenseKey) {
-      enterprise.LicenseManager.setLicenseKey(bootstrapOptions.licenseKey);
-    }
-    // AG Charts renders nothing until its series, axes and features are
-    // registered; the compositions use the whole enterprise set.
-    enterprise.ModuleRegistry.registerModules([enterprise.AllEnterpriseModule]);
-  });
-  return enterprisePromise;
 }
 
 type LazyAgChartsType = typeof AgChartsComponent;
 
 const LazyAgCharts = lazy(async () => {
-  await ensureEnterprise();
+  await (modulesPromise ??= registerModules());
   const charts = await import("ag-charts-react");
   return { default: charts.AgCharts as LazyAgChartsType };
 }) as unknown as LazyAgChartsType;

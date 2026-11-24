@@ -24,7 +24,7 @@ import {
   type HostStaging,
 } from "../index";
 
-bootstrapAgGrid({ allowMissingLicense: true });
+bootstrapAgGrid();
 
 const SCHEMA: Schema = {
   app_id: "demo",
@@ -424,22 +424,6 @@ describe("host-owned staging", () => {
     await waitFor(() => expect(screen.getByText("South")).toBeInTheDocument());
     await userEvent.setup().click(cell("w-2", "name"));
     expect(grid.onCellClicked).toHaveBeenCalledWith({ rowKey: "w-2", fieldId: "name" });
-  });
-
-  it("does not report a click on row grouping's own column as a field", async () => {
-    const grid = mount({ pending: [], sinks: { onStage: vi.fn(), onRevert: vi.fn() } });
-    await waitFor(() => expect(screen.getByText("South")).toBeInTheDocument());
-    act(() => {
-      grid.api().setRowGroupColumns(["name"]);
-      grid.api().expandAll();
-    });
-    const auto = await waitFor(() => {
-      const found = cell("w-2", "ag-Grid-AutoColumn");
-      expect(found).not.toBeNull();
-      return found;
-    });
-    await userEvent.setup().click(auto);
-    expect(grid.onCellClicked).not.toHaveBeenCalled();
   });
 });
 

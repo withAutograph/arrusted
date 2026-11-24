@@ -11,7 +11,7 @@ import { createSelectionStore, type CanvasSelection } from "../selection";
 import { useCanvasSession } from "../use-canvas-session";
 import { gridMemory, money, projectId, sessionId, withStagedValues } from "./fixtures/grid";
 
-bootstrapAgGrid({ allowMissingLicense: true });
+bootstrapAgGrid();
 
 type Memory = ReturnType<typeof gridMemory>;
 

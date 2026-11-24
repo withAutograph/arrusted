@@ -19,7 +19,7 @@ import {
 } from "./fixtures/canvas";
 import { money, projectId } from "./fixtures/grid";
 
-bootstrapAgGrid({ allowMissingLicense: true });
+bootstrapAgGrid();
 
 function CanvasStory({
   memory,

@@ -8,8 +8,6 @@
     ".config/turbo/generators"
   ],
   "scripts": {
-    "generate:domain-catalog": "bun .config/mise/scripts/repository/export-domain-catalog.ts",
-    "check:domain-catalog": "bun .config/mise/scripts/repository/export-domain-catalog.ts --check",
     "check:typescript-config": "bun run --cwd packages/typescript-config check"
   },
   "dependencies": {
@@ -25,10 +23,8 @@
     "@tanstack/query-core": "5.102.8",
     "@tanstack/react-query": "catalog:",
     "ag-charts-community": "14.1.0",
-    "ag-charts-enterprise": "14.1.0",
     "ag-charts-react": "14.1.0",
     "ag-grid-community": "33.3.0",
-    "ag-grid-enterprise": "33.3.0",
     "ag-grid-react": "33.3.0",
     "ai": "catalog:",
     "better-auth": "catalog:",

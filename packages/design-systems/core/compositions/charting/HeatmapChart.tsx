@@ -4,7 +4,7 @@ import { ChartEmptyState, ChartFrame } from "./ChartFrame";
 import { ChartSummary } from "./ChartSummary";
 import { createChartValueFormatter } from "./format";
 import { emitSegment } from "./interaction";
-import { AgChartsHost, type AgCartesianChartOptions } from "./runtime";
+import { AgChartsHost, agChartsEnterpriseEnabled, type AgCartesianChartOptions } from "./runtime";
 import { chartAxis, useResolvedChartTheme } from "./theme";
 import type { ChartRuntimeProps, HeatmapChartConfig } from "./types";
 
@@ -12,6 +12,8 @@ const DEFAULT_HEIGHT = 360;
 
 export function HeatmapChart(props: ChartRuntimeProps<HeatmapChartConfig>) {
   const theme = useResolvedChartTheme();
+  // This series type needs AG Charts Enterprise; Community shows the data table.
+  const enterprise = agChartsEnterpriseEnabled();
   const height = props.height ?? DEFAULT_HEIGHT;
   const formatValue = props.formatValue ?? createChartValueFormatter(props.valueFormat);
   const options = useMemo<AgCartesianChartOptions | null>(() => {
@@ -81,12 +83,13 @@ export function HeatmapChart(props: ChartRuntimeProps<HeatmapChartConfig>) {
         <ChartEmptyState height={height}>
           {props.emptyState ?? props.emptyLabel ?? "No data available"}
         </ChartEmptyState>
-      ) : options ? (
+      ) : !enterprise ? null : options ? (
         <AgChartsHost options={options} label={props.title ?? "heatmap chart"} height={height} />
       ) : (
         <ChartEmptyState height={height}>Loading chart theme…</ChartEmptyState>
       )}
       <ChartSummary
+        visible={!enterprise && props.data.length > 0}
         caption={props.title ?? "Heatmap chart data"}
         columns={[props.yLabel ?? "Row", props.xLabel ?? "Column", props.valueLabel ?? "Value"]}
         rows={props.data.map((datum) => ({

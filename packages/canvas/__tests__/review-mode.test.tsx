@@ -35,7 +35,7 @@ import {
 import { canvasMemory, send, sessionId, typicalLayout, unitIds } from "../stories/fixtures/canvas";
 import { change, personId, projectId, stageAs } from "../stories/fixtures/grid";
 
-bootstrapAgGrid({ allowMissingLicense: true });
+bootstrapAgGrid();
 
 function mount(memory: MemoryCanvas) {
   return render(

@@ -3,7 +3,7 @@ experimental = true
 quiet = true
 
 [monorepo]
-config_roots = ["app", ".storybook", "packages/domain-libs/*", "packages/kernel"]
+config_roots = ["app", ".storybook", "packages/kernel"]
 
 [tools]
 actionlint = "1.7.12"
@@ -199,10 +199,6 @@ else
 fi
 '''
 
-[tasks."generate:domain-lib-turbo"]
-description = "Regenerate domain-library Turbo configurations"
-run = "bun .config/turbo/generators/domain-lib-turbo.ts --write"
-
 [tasks."test:kernel"]
 description = "Run Rust workspace tests"
 run = "sh .config/mise/tasks/kernel/test"
@@ -210,10 +206,6 @@ run = "sh .config/mise/tasks/kernel/test"
 [tasks."test:kernel:workspace"]
 description = "Run Rust workspace tests"
 run = "sh .config/mise/tasks/kernel/test-workspace"
-
-[tasks."eval:dashboard-agent"]
-description = "Score an agent-generated dashboard submission against the repository corpus"
-run = "mise exec -- bun packages/dashboard-agent-evals/cli.ts"
 
 [tasks.build]
 description = "Build package and catalog outputs"

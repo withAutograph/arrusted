@@ -4,7 +4,7 @@ import { ChartEmptyState, ChartFrame } from "./ChartFrame";
 import { ChartSummary } from "./ChartSummary";
 import { createChartValueFormatter } from "./format";
 import { emitSegment } from "./interaction";
-import { AgChartsHost, type AgChartOptions } from "./runtime";
+import { AgChartsHost, agChartsEnterpriseEnabled, type AgChartOptions } from "./runtime";
 import { chartAxis, useResolvedChartTheme } from "./theme";
 import type { ChartRuntimeProps, WaterfallChartConfig } from "./types";
 
@@ -12,6 +12,8 @@ const DEFAULT_HEIGHT = 320;
 
 export function WaterfallChart(props: ChartRuntimeProps<WaterfallChartConfig>) {
   const theme = useResolvedChartTheme();
+  // This series type needs AG Charts Enterprise; Community shows the data table.
+  const enterprise = agChartsEnterpriseEnabled();
   const height = props.height ?? DEFAULT_HEIGHT;
   const formatValue = props.formatValue ?? createChartValueFormatter(props.valueFormat);
   const chartState = useMemo(() => {
@@ -119,12 +121,13 @@ export function WaterfallChart(props: ChartRuntimeProps<WaterfallChartConfig>) {
         <ChartEmptyState height={height}>
           {props.emptyState ?? props.emptyLabel ?? "No data available"}
         </ChartEmptyState>
-      ) : options ? (
+      ) : !enterprise ? null : options ? (
         <AgChartsHost options={options} label={props.title ?? "waterfall chart"} height={height} />
       ) : (
         <ChartEmptyState height={height}>Loading chart theme…</ChartEmptyState>
       )}
       <ChartSummary
+        visible={!enterprise && props.data.length > 0}
         caption={props.title ?? "Waterfall chart data"}
         columns={["Step", props.valueLabel ?? "Value"]}
         rows={props.data.map((datum) => ({

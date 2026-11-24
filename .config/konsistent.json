@@ -28,7 +28,6 @@
           "@autograph/auth/*",
           "@kernel-client",
           "@kernel-client/*",
-          "@domain-libs/*",
           "@hc-client",
           "@hc-client/*",
           "@autograph/hc/*",
@@ -36,9 +35,7 @@
           "@vendor-client/*",
           "@autograph/vendor/*",
           "@autograph/vite-config",
-          "@autograph/vite-config/*",
-          "@autograph/agent-reference-resolution",
-          "@autograph/agent-reference-resolution/*"
+          "@autograph/vite-config/*"
         ],
         "importTypesFrom": [
           "@autograph/integrations",
@@ -47,7 +44,6 @@
           "@autograph/auth/*",
           "@kernel-client",
           "@kernel-client/*",
-          "@domain-libs/*",
           "@hc-client",
           "@hc-client/*",
           "@autograph/hc/*",
@@ -55,9 +51,7 @@
           "@vendor-client/*",
           "@autograph/vendor/*",
           "@autograph/vite-config",
-          "@autograph/vite-config/*",
-          "@autograph/agent-reference-resolution",
-          "@autograph/agent-reference-resolution/*"
+          "@autograph/vite-config/*"
         ]
       }
     },
@@ -87,35 +81,10 @@
     {
       "name": "compositions-direct-import-boundary",
       "description": "Reusable compositions receive clients through props instead of importing the kernel client.",
-      "paths": [
-        "packages/design-systems/*/compositions/**/*.{ts,tsx,mts,cts}"
-      ],
+      "paths": ["packages/design-systems/*/compositions/**/*.{ts,tsx,mts,cts}"],
       "mustNot": {
-        "importValuesFrom": [
-          "@kernel-client",
-          "@kernel-client/*"
-        ],
-        "importTypesFrom": [
-          "@kernel-client",
-          "@kernel-client/*"
-        ]
-      }
-    },
-    {
-      "name": "app-runtime-direct-import-boundary",
-      "description": "The shared app runtime consumes contract declarations as types and cannot import the runtime kernel client.",
-      "paths": "packages/app-runtime/**/*.{ts,tsx,mts,cts}",
-      "mustNot": {
-        "importValuesFrom": [
-          "@contracts",
-          "@contracts/*",
-          "@kernel-client",
-          "@kernel-client/*"
-        ],
-        "importTypesFrom": [
-          "@kernel-client",
-          "@kernel-client/*"
-        ]
+        "importValuesFrom": ["@kernel-client", "@kernel-client/*"],
+        "importTypesFrom": ["@kernel-client", "@kernel-client/*"]
       }
     },
     {
@@ -123,14 +92,7 @@
       "description": "Agent foundation consumes shared contracts as types and cannot import domain libraries directly.",
       "paths": "packages/agent-foundation/**/*.{ts,tsx,mts,cts}",
       "mustNot": {
-        "importValuesFrom": [
-          "@contracts",
-          "@contracts/*",
-          "@domain-libs/*"
-        ],
-        "importTypesFrom": [
-          "@domain-libs/*"
-        ]
+        "importValuesFrom": ["@contracts", "@contracts/*"]
       }
     },
     {
@@ -159,7 +121,6 @@
           "@autograph/icons",
           "@autograph/icons/*",
           "@modules/*",
-          "@domain-libs/*",
           "@hc-client",
           "@hc-client/*",
           "@autograph/hc/*",
@@ -184,7 +145,6 @@
           "@autograph/icons",
           "@autograph/icons/*",
           "@modules/*",
-          "@domain-libs/*",
           "@hc-client",
           "@hc-client/*",
           "@autograph/hc/*",
@@ -202,55 +162,8 @@
       "description": "Authentication consumes shared contracts as types and cannot import the runtime kernel client.",
       "paths": "packages/auth/**/*.{ts,tsx,mts,cts}",
       "mustNot": {
-        "importValuesFrom": [
-          "@contracts",
-          "@contracts/*",
-          "@kernel-client",
-          "@kernel-client/*"
-        ],
-        "importTypesFrom": [
-          "@kernel-client",
-          "@kernel-client/*"
-        ]
-      }
-    },
-    {
-      "name": "domain-libs-direct-import-boundary",
-      "description": "Domain libraries cannot directly import agent-foundation orchestration.",
-      "paths": "packages/domain-libs/**/*.{ts,tsx,mts,cts}",
-      "mustNot": {
-        "importValuesFrom": [
-          "@agent-foundation",
-          "@agent-foundation/*",
-          "@autograph/components",
-          "@autograph/compositions",
-          "@autograph/icons",
-          "@autograph/auth",
-          "@autograph/auth/*",
-          "@autograph/integrations",
-          "@autograph/integrations/*",
-          "@kernel-client",
-          "@kernel-client/*",
-          "@modules/*",
-          "@source-import",
-          "@source-import/*"
-        ],
-        "importTypesFrom": [
-          "@agent-foundation",
-          "@agent-foundation/*",
-          "@autograph/components",
-          "@autograph/compositions",
-          "@autograph/icons",
-          "@autograph/auth",
-          "@autograph/auth/*",
-          "@autograph/integrations",
-          "@autograph/integrations/*",
-          "@kernel-client",
-          "@kernel-client/*",
-          "@modules/*",
-          "@source-import",
-          "@source-import/*"
-        ]
+        "importValuesFrom": ["@contracts", "@contracts/*", "@kernel-client", "@kernel-client/*"],
+        "importTypesFrom": ["@kernel-client", "@kernel-client/*"]
       }
     },
     {
@@ -268,7 +181,6 @@
           "@autograph/auth/*",
           "@autograph/integrations",
           "@autograph/integrations/*",
-          "@domain-libs/*",
           "@hc-client",
           "@hc-client/*",
           "@autograph/hc/*",
@@ -288,7 +200,6 @@
           "@autograph/auth/*",
           "@autograph/integrations",
           "@autograph/integrations/*",
-          "@domain-libs/*",
           "@hc-client",
           "@hc-client/*",
           "@autograph/hc/*",

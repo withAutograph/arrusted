@@ -16,7 +16,7 @@ import { bootstrapAgGrid } from "./bootstrap";
 import { EditableRowVersionGrid } from "./EditableRowVersionGrid";
 import { useEditableRowVersionGridPreview } from "./useEditableRowVersionGrid";
 
-bootstrapAgGrid({ allowMissingLicense: true });
+bootstrapAgGrid();
 
 const SCHEMA: Schema = {
   app_id: "demo",

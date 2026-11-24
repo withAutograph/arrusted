@@ -240,14 +240,8 @@ async function main() {
     return;
   }
   // The canvas's grids and charts need their modules once; the keys are public.
-  bootstrapAgGrid({
-    licenseKey: config.agGridLicenseKey ?? undefined,
-    allowMissingLicense: config.agGridLicenseKey === null,
-  });
-  bootstrapAgCharts({
-    licenseKey: config.agChartsLicenseKey ?? undefined,
-    allowMissingLicense: config.agChartsLicenseKey === null,
-  });
+  await bootstrapAgGrid({ licenseKey: config.agGridLicenseKey ?? undefined });
+  bootstrapAgCharts({ licenseKey: config.agChartsLicenseKey ?? undefined });
   // `autoResize` (the default, spelled out) sends `ui/notifications/size-changed`
   // whenever the document's content height changes.
   const app = new App(

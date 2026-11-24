@@ -4,8 +4,8 @@ default_branch = "origin/main"
 
 
 local generatedContractGlob = "packages/contracts/wire.generated.ts"
-local frontendFilesGlob = "{packages/domain-libs/**/*.{js,jsx,ts,tsx,json,css,html},packages/**/*.{js,jsx,ts,tsx,json,css,html},.storybook/**/*.{js,jsx,ts,tsx,json,css,html}}"
-local frontendSourceFilesGlob = "{packages/domain-libs/**/*.{js,jsx,ts,tsx},packages/**/*.{js,jsx,ts,tsx}}"
+local frontendFilesGlob = "{packages/**/*.{js,jsx,ts,tsx,json,css,html},.storybook/**/*.{js,jsx,ts,tsx,json,css,html}}"
+local frontendSourceFilesGlob = "packages/**/*.{js,jsx,ts,tsx}"
 local storybookSourceFilesGlob = "packages/**/*.stories.{js,jsx,ts,tsx}"
 local storybookFilesGlob = "{.storybook/**/*," + storybookSourceFilesGlob + "}"
 local rustFilesGlob = "packages/**/*.rs"
@@ -84,10 +84,6 @@ local fastCheck = new Mapping<String, Step> {
   ["check:storybook"] = new Step {
     glob = storybookFilesGlob
     check = "mise --cd .storybook build"
-  }
-  ["check:domain-lib-turbo-configs"] = new Step {
-    glob = "{packages/domain-libs/*/package.json,packages/domain-libs/*/turbo.json,.config/turbo/generators/**/*,.config/hk.pkl}"
-    check = "mise exec -- bun .config/turbo/generators/domain-lib-turbo.ts --check"
   }
   ["check:konsistent"] = new Step {
     glob = konsistentFilesGlob

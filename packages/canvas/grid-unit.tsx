@@ -9,6 +9,8 @@ import {
   EditableRowVersionGrid,
   useEditableRowVersionGridPreview,
   type CellNote,
+  agGridEnterpriseEnabled,
+  type CellFocusedEvent,
   type CellSelectionChangedEvent,
   type GridApi,
   type SelectionChangedEvent,
@@ -134,6 +136,23 @@ export function rangeCells(
     }
   }
   return cells;
+}
+
+/** The field cell a focus event names; checkbox, open and other grid-made columns are not fields. */
+export function focusedCell(
+  event: {
+    rowIndex: number | null;
+    rowPinned?: unknown;
+    column: { getColId(): string } | string | null;
+  },
+  fieldIds: ReadonlySet<string>,
+  rowAt: (index: number) => { record_id?: string } | undefined,
+): { record_id: string; field_id: string } | null {
+  if (event.rowIndex === null || event.rowPinned) return null;
+  const field_id = typeof event.column === "string" ? event.column : event.column?.getColId();
+  if (field_id === undefined || !fieldIds.has(field_id)) return null;
+  const record_id = rowAt(event.rowIndex)?.record_id;
+  return record_id === undefined ? null : { record_id, field_id };
 }
 
 /** A row's open control: a quiet icon button that shows on row hover or focus. */
@@ -1181,6 +1200,23 @@ export function GridUnit({
     if (cells.length === 0) releaseOwn("cells");
     else selectRef.current.select({ kind: "cells", unit_id: own, model_id: ownModel, cells });
   };
+  const fieldIdsRef = useRef<ReadonlySet<string>>(new Set());
+  fieldIdsRef.current = new Set(model?.fields.map((field) => String(field.id)));
+  const onCellFocused = (event: CellFocusedEvent) => {
+    const focused = focusedCell(
+      event,
+      fieldIdsRef.current,
+      (index) => event.api.getDisplayedRowAtIndex(index)?.data as VisibleRecord | undefined,
+    );
+    if (focused === null) return;
+    const { unitId: own, modelId: ownModel } = selectRef.current;
+    selectRef.current.select({
+      kind: "cells",
+      unit_id: own,
+      model_id: ownModel,
+      cells: [focused],
+    });
+  };
   const onSelectionChanged = (event: SelectionChangedEvent) => {
     if (event.source === "rowDataChanged" || event.source === "api") return;
     const recordIds = event.api
@@ -1224,7 +1260,10 @@ export function GridUnit({
       resizable: false,
       suppressHeaderMenuButton: true,
     });
-    event.api.addEventListener("cellSelectionChanged", onCellSelection);
+    if (agGridEnterpriseEnabled())
+      event.api.addEventListener("cellSelectionChanged", onCellSelection);
+    // Community has no cell ranges: the focused cell is the selection.
+    else event.api.addEventListener("cellFocused", onCellFocused);
     // Scrolling to the last rows reads the next page.
     event.api.addEventListener("bodyScrollEnd", () => {
       const last = event.api.getLastDisplayedRowIndex();

@@ -18,7 +18,7 @@ import {
 import { seedTypical, send, sessionId, unitIds } from "./fixtures/canvas";
 import { projectId } from "./fixtures/grid";
 
-bootstrapAgGrid({ allowMissingLicense: true });
+bootstrapAgGrid();
 
 function ApproveStory({ memory }: { memory: MemoryCanvas }) {
   return (

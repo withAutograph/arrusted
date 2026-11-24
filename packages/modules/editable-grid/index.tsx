@@ -22,7 +22,7 @@ export { useEditBuffer } from "./hooks/useEditBuffer";
 export { useRecordReads } from "./hooks/useRecordReads";
 export { useSelectedRowIds } from "./hooks/useSelectedRowIds";
 export type { UseSelectedRowIdsResult } from "./hooks/useSelectedRowIds";
-export { bootstrapAgGrid } from "./bootstrap";
+export { agGridEnterpriseEnabled, bootstrapAgGrid } from "./bootstrap";
 export { agGridLeafEditor } from "./cell-editors";
 export type { LeafEditorKind, LeafEditorBundle } from "./cell-editors";
 export type { BulkGroupLabelLookup, ChangeTypeLabelLookup, ChangeTypeOption } from "./row-meta-row";
@@ -91,4 +91,9 @@ export { CurrencyRateEditor } from "./CurrencyRateEditor";
 export type { CurrencyRateEditorProps, CurrencyRateSaveInput } from "./CurrencyRateEditor";
 
 // AG Grid types hosts need for the grid surface events they receive.
-export type { CellSelectionChangedEvent, GridApi, SelectionChangedEvent } from "ag-grid-community";
+export type {
+  CellFocusedEvent,
+  CellSelectionChangedEvent,
+  GridApi,
+  SelectionChangedEvent,
+} from "ag-grid-community";

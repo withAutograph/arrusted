@@ -7,7 +7,7 @@ import { bootstrapAgCharts } from "@autograph/compositions";
 
 // As the app's session view: charts render with AG Charts registered, so a
 // chart test can never pass on the "Call bootstrapAgCharts" error boundary.
-bootstrapAgCharts({ allowMissingLicense: true });
+bootstrapAgCharts();
 
 const segment = (field_id: string, value: unknown) =>
   ({ kind: "segment", unit_id: "chart", model_id: "m_person", field_id, value }) as const;
