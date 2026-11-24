@@ -28,6 +28,9 @@ export function loopback(url: string) {
       );
   }
   const host = parsed.hostname.toLowerCase();
+  // Postgres decodes "%00" and similar after this check, which could reach another host.
+  if (host.includes("%"))
+    throw new SafeError("Database URL host must not contain percent-encoded characters.");
   return (
     !host.includes(",") &&
     (host === "localhost" ||
@@ -88,7 +91,7 @@ function isIgnoredByVercelIgnore(content: string, relPath: string): boolean {
   for (let i = 1; i < segments.length; i++) parentDirs.push(segments.slice(0, i).join("/"));
   let ignored = false;
   for (const rawLine of content.split(/\r?\n/)) {
-    const line = rawLine.trim();
+    const line = rawLine.trimEnd();
     if (!line || line.startsWith("#")) continue;
     const negated = line.startsWith("!");
     const body = negated ? line.slice(1) : line;

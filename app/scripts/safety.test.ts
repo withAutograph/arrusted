@@ -318,6 +318,9 @@ test("hosted mutation gate confirms; loopback accepts legitimate Postgres params
     /hostaddr/i,
   );
   expect(() => loopback("postgresql://user@localhost/db?service=prod")).toThrow(/service/i);
+  expect(() => loopback("postgres://user:pw@prod.example.com%00.localhost/db")).toThrow(
+    /percent-encoded/i,
+  );
   expect(() => loopback("https://user@localhost/db")).toThrow(/postgres:\/\//i);
 });
 
