@@ -47,10 +47,16 @@ struct DisposablePostgres {
 
 impl DisposablePostgres {
     fn start() -> Self {
-        let unique = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("clock after epoch")
-            .as_nanos();
+        // Parallel tests can read the same clock value; the counter keeps names apart.
+        static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+        let unique = format!(
+            "{}-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock after epoch")
+                .as_nanos(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        );
         let root = std::env::temp_dir().join(format!(
             "protected-installer-pg-{}-{unique}",
             std::process::id()
