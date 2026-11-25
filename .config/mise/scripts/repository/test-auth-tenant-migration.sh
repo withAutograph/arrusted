@@ -44,7 +44,7 @@ PLATFORM_AUTH_DATABASE_URL="${fresh_database_url}" \
 BETTER_AUTH_APP_NAME=Autograph \
 BETTER_AUTH_URL="http://localhost:3000" \
 BETTER_AUTH_SECRET="01234567890123456789012345678901" \
-  mise exec -- bun x auth@1.7.3 generate \
+  mise exec -- bun x auth@1.7.28 generate \
     --config "${repo_root}/packages/auth/auth.ts" \
     --output "${generated_schema}" \
     --yes >/dev/null

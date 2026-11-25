@@ -3084,7 +3084,7 @@ The worker reads these private `startup/` files before it requests authority:
   frames.
 - `ready.json`: version 1, the exact `run_id`, and startup `frame_id: 0`.
 - `auth-schema-plan.json`: `{version: 1, resource, schemaPlan}`. The plan binds
-  the same resource, `toolchain: "better-auth@1.7.3"`, the
+  the same resource, `toolchain: "better-auth@1.7.28"`, the
   `_auth_schema_history` contract, sorted unique `catalogAppIds`, target and
   before-schema SHA-256 digests, the exact ordered SQL effects with owners and
   hashes, and `planDigest`.

@@ -52,7 +52,7 @@ it("runs the real standalone producer with only a private input file and no cred
     expect(result.status, result.stderr).toBe(0);
     const proposal = JSON.parse(result.stdout);
     expect(proposal).toEqual(await proposeEmptyAuthSchemaMigration(input));
-    expect(proposal.schemaPlan.toolchain).toBe("better-auth@1.7.3");
+    expect(proposal.schemaPlan.toolchain).toBe("better-auth@1.7.28");
     expect(proposal.schemaPlan.effects).toHaveLength(6);
     const stdin = spawnSync(executable, [], {
       cwd: directory,

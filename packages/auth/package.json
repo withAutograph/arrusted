@@ -33,7 +33,7 @@
     "@better-auth-ui/core": "catalog:",
     "@better-auth-ui/react": "catalog:",
     "@better-auth/cimd": "catalog:",
-    "@better-auth/infra": "0.4.7",
+    "@better-auth/infra": "0.4.31",
     "@better-auth/oauth-provider": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@vercel/functions": "3.10.4",
