@@ -17,8 +17,8 @@
     },
     "test": {
       "dependsOn": ["^test"],
+      "env": ["KERNEL_TEST_DATABASE_URL"],
       "passThroughEnv": [
-        "KERNEL_TEST_DATABASE_URL",
         "TMPDIR",
         "SCHEMA_COMPILER_DIAGNOSTICS",
         "CARGO_TARGET_DIR",
@@ -40,8 +40,8 @@
         "schema-compiler#test",
         "typegen#test"
       ],
+      "env": ["KERNEL_TEST_DATABASE_URL"],
       "passThroughEnv": [
-        "KERNEL_TEST_DATABASE_URL",
         "TMPDIR",
         "SCHEMA_COMPILER_DIAGNOSTICS",
         "CARGO_TARGET_DIR",

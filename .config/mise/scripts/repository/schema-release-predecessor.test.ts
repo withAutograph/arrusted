@@ -121,7 +121,8 @@ test("the first explicit external artifact wins regardless of its name or versio
   withReleases(["2026-10-31.release-v9"], (root, artifact) => {
     const canonical = path.join(root, "canonical.json");
     const secondary = path.join(root, "secondary.json");
-    for (const file of [canonical, secondary]) writeFileSync(file, "{}");
+    writeFileSync(canonical, JSON.stringify({ schema: { version: "external-canonical" } }));
+    writeFileSync(secondary, JSON.stringify({ schema: { version: "external-secondary" } }));
     const external = [canonical, secondary, canonical, artifact("2026-10-31.release-v9")];
     expect(
       transitionPlanPredecessorArtifact("fixture", "2026-10-31.release-v9", root, external),
@@ -129,6 +130,38 @@ test("the first explicit external artifact wins regardless of its name or versio
     expect(
       transitionPredecessorArtifacts("fixture", "2026-10-31.release-v10", root, external),
     ).toEqual([canonical, secondary, artifact("2026-10-31.release-v9")]);
+  });
+});
+
+test("a staged byte copy of a checked release keeps that release's cut-order position", () => {
+  const v1 = "2026-10-01.release-v1";
+  const v2 = "2026-10-02.release-v2";
+  const v3 = "2026-10-03.release-v3";
+  withReleases([v1, v2], (root, artifact) => {
+    const v1Copy = path.join(root, "staged-v1.json");
+    const v2Copy = path.join(root, "staged-v2.json");
+    writeFileSync(v1Copy, readFileSync(artifact(v1)));
+    writeFileSync(v2Copy, readFileSync(artifact(v2)));
+
+    expect(transitionPredecessorArtifacts("fixture", v3, root, [v2Copy])).toEqual([
+      artifact(v1),
+      v2Copy,
+    ]);
+    expect(transitionPlanPredecessorArtifact("fixture", v3, root, [v2Copy])).toBe(v2Copy);
+
+    expect(transitionPredecessorArtifacts("fixture", v3, root, [v1Copy])).toEqual([
+      v1Copy,
+      artifact(v2),
+    ]);
+    expect(transitionPlanPredecessorArtifact("fixture", v3, root, [v1Copy])).toBe(v1Copy);
+
+    expect(transitionPredecessorArtifacts("fixture", v3, root, [artifact(v2), v1Copy])).toEqual([
+      v1Copy,
+      artifact(v2),
+    ]);
+    expect(transitionPlanPredecessorArtifact("fixture", v3, root, [artifact(v2), v1Copy])).toBe(
+      artifact(v2),
+    );
   });
 });
 

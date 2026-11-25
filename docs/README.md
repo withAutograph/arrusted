@@ -12,22 +12,21 @@ These docs are the source of truth for Autograph.
 6. [Frontend Architecture](frontend-architecture.md): UI layering, module/composition contracts, and AG2 port-over decisions.
 7. [Component Port Tracker](component-port-tracker.md): reconciled component inventory, AG2 port status, acceptance gates, and AI-composition proof strategy.
 8. [Agent Foundation](agent-foundation.md): canonical agent architecture, current-main implementation status, and ownership boundaries.
-9. [Dashboard Agent Evaluations](dashboard-agent-evals.md): executable corpus, submission protocol, deterministic scoring, and browser-lane handoff for agent-generated dashboards.
-10. [AG2 Reference](ag2-reference.md): product lessons and explicit non-port list.
-11. [AG2 Baseline Vocabulary](ag2-baseline-vocabulary.md): headcount schema template, HC subset, and intentional departures.
-12. [Import Principles](import-principles.md): current agent-led CSV workspace contract, authority split, recovery semantics, and limits.
-13. [CSV Import Integration Postmortem](csv-import-integration-postmortem.md): why Vendor CSV reuse expanded into an app-integration program, why the first vertical slices became too broad, and what the evidence-first rebuild changed.
-14. [CSV Import App Integration Comparison](csv-import-app-integration-comparison.md): historical 2026-07-28 HC/Vendor side-by-side; not current architecture. Current contract is `import-principles.md`.
-15. [Route-Owned Microfrontends](route-owned-microfrontends.md): checked root Vercel Services topology, route ownership, preview resolution, provider-neutral Compose proof, and shared-origin security boundary.
-16. [Adopting a Route-Owned Application](guides/adopting-a-route-owned-app.md): canonical local source and route registration, optional hosted provisioning, validation, and framework-boundary guidance for route-owned Next.js and Vite apps.
-17. [Building an App with App Builder](guides/building-apps-with-app-builder.md): complete app-building sequence: source/setup, direct creation, native configuration and tasks, generated-data features, authentication, compiler repair, validation, publication, Production handoff, and recent history coverage.
-18. [Deployment Security](deployment-security.md): protected Vercel project graph, staged cutover, app/API authorization requirements, and browser hardening.
-19. [Maintaining the Vercel Production Proof](guides/maintaining-vercel-production-proof.md): exact execution order, QA prerequisites, failure triage, provider receipt semantics, and safe modification checklist.
-20. [Vercel Better Auth migration runner](guides/vercel-auth-migration-runner.md): native-Git Deployment Check migration boundary and provider setup.
-21. [Independent Vercel Deployments Operations](operations/vercel-independent-deployments.md): sanitized monitoring, alert ownership, runbooks, Preview QA lifecycle, and spend-warning contract.
-22. [Integrations](integrations/ampersand.md): hosted Ampersand integration boundary and V0 storage model. The [local connection-management app](integrations/connection-management-app.md) records the fixture UI and authorization boundary. The [Xero readiness gate](integrations/vendor-xero-readiness.md) records U8 evidence; the [Xero supplier/AP integration](integrations/vendor-xero.md) owns U11 runtime and rollout.
-23. [Known Footguns](known-footguns.md): bounded V0 risks with explicit hardening triggers — substrate / contract layer.
-24. [Interaction Footguns](interaction-footguns.md): UX / interaction questions with multiple defensible answers; current behavior + deferred-debate triggers.
+9. [AG2 Reference](ag2-reference.md): product lessons and explicit non-port list.
+10. [AG2 Baseline Vocabulary](ag2-baseline-vocabulary.md): headcount schema template, HC subset, and intentional departures.
+11. [Import Principles](import-principles.md): current agent-led CSV workspace contract, authority split, recovery semantics, and limits.
+12. [CSV Import Integration Postmortem](csv-import-integration-postmortem.md): why Vendor CSV reuse expanded into an app-integration program, why the first vertical slices became too broad, and what the evidence-first rebuild changed.
+13. [CSV Import App Integration Comparison](csv-import-app-integration-comparison.md): historical 2026-07-28 HC/Vendor side-by-side; not current architecture. Current contract is `import-principles.md`.
+14. [Route-Owned Microfrontends](route-owned-microfrontends.md): checked root Vercel Services topology, route ownership, preview resolution, provider-neutral Compose proof, and shared-origin security boundary.
+15. [Adopting a Route-Owned Application](guides/adopting-a-route-owned-app.md): canonical local source and route registration, optional hosted provisioning, validation, and framework-boundary guidance for route-owned Next.js and Vite apps.
+16. [Building an App with App Builder](guides/building-apps-with-app-builder.md): complete app-building sequence: source/setup, direct creation, native configuration and tasks, generated-data features, authentication, compiler repair, validation, publication, Production handoff, and recent history coverage.
+17. [Deployment Security](deployment-security.md): protected Vercel project graph, staged cutover, app/API authorization requirements, and browser hardening.
+18. [Maintaining the Vercel Production Proof](guides/maintaining-vercel-production-proof.md): exact execution order, QA prerequisites, failure triage, provider receipt semantics, and safe modification checklist.
+19. [Vercel Better Auth migration runner](guides/vercel-auth-migration-runner.md): native-Git Deployment Check migration boundary and provider setup.
+20. [Independent Vercel Deployments Operations](operations/vercel-independent-deployments.md): sanitized monitoring, alert ownership, runbooks, Preview QA lifecycle, and spend-warning contract.
+21. [Integrations](integrations/ampersand.md): hosted Ampersand integration boundary and V0 storage model. The [local connection-management app](integrations/connection-management-app.md) records the fixture UI and authorization boundary. The [Xero readiness gate](integrations/vendor-xero-readiness.md) records U8 evidence; the [Xero supplier/AP integration](integrations/vendor-xero.md) owns U11 runtime and rollout.
+22. [Known Footguns](known-footguns.md): bounded V0 risks with explicit hardening triggers — substrate / contract layer.
+23. [Interaction Footguns](interaction-footguns.md): UX / interaction questions with multiple defensible answers; current behavior + deferred-debate triggers.
 
 ## Operations and Tooling
 
@@ -67,7 +66,7 @@ These docs are the source of truth for Autograph.
   verification, and rollout sequencing.
 - `frontend-architecture.md` is the lasting reference doc for UI layering and the design-system port.
 - `ag2-reference.md` is the only place for AG2-specific rejected terms.
-- `ag2-baseline-vocabulary.md` records AG2 baseline vocabulary, the `packages/domain-libs/` headcount domain libraries, and the explicit Autograph departures.
+- `ag2-baseline-vocabulary.md` records AG2 baseline vocabulary, the `packages/domain-libs/catalog.json` headcount starter models, and the explicit Autograph departures.
 - `import-principles.md` is the current contract for the agent-led CSV
   workspace: one transient human-editable draft, agent preparation, exact
   pending-Save recovery, one canonical atomic Save, and the public

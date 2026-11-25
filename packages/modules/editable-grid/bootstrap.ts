@@ -33,10 +33,15 @@ export async function bootstrapAgGrid(options: { licenseKey?: string } = {}): Pr
     );
     return;
   }
-  enterprise ??= loadAgGridEnterprise().then(({ AllEnterpriseModule, LicenseManager }) => {
-    LicenseManager.setLicenseKey(licenseKey);
-    ModuleRegistry.registerModules([AllEnterpriseModule]);
-    enterpriseEnabled = true;
-  });
+  enterprise ??= Promise.resolve()
+    .then(loadAgGridEnterprise)
+    .then(({ AllEnterpriseModule, LicenseManager }) => {
+      LicenseManager.setLicenseKey(licenseKey);
+      ModuleRegistry.registerModules([AllEnterpriseModule]);
+      enterpriseEnabled = true;
+    })
+    .catch((error: unknown) => {
+      console.error("[editable-grid] Enterprise failed to load; using Community.", error);
+    });
   return enterprise;
 }

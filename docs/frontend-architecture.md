@@ -60,8 +60,8 @@ entrypoint exports. Its existing executable server-auth import restriction is
 retained; a directory named `frontend` does not itself prove browser execution,
 and erased authentication type imports are allowed. Actual browser/server
 credential, tenant-isolation, and approval boundaries remain required.
-`mise run check:workspace-imports` owns resolved internal imports and
-domain-library cycles. Deployment validators retain their credential and
+`mise run check:workspace-imports` owns resolved internal imports.
+Deployment validators retain their credential and
 provider contracts while preserving direct official Next and Vite configuration
 imports.
 
@@ -186,7 +186,7 @@ that feed workflow modules and apps.
 4. **Compositions** — reusable UI assemblies built from components. Nav, sidebar, filter builder, table (presentational or interactive), breadcrumbs, empty/error/loading states, charts, KPI strip, detail card, timeline, drilldown, prose/callout. Props-first for app/runtime use; spec-driven when a composition is saved, shared, generated, or rendered by a non-app caller (see Composition Spec Contract). Stories document compositions; stories are not runtime dependencies.
 5. **Engines** — pure non-UI logic. CSV parsing, field validation, value adaptation, import classification, formatting, stable hashing, UUID helpers, and column compilation. Often more reusable than UI; can be consumed by modules and apps directly. Engines never import UI, stories, modules, kernel-client, or apps.
 6. **Modules** — reusable workflow surfaces. Own substrate plumbing (preview/commit/idempotency, draft/apply/discard, error envelopes, tenant wiring). See Layer Discriminators.
-7. **Domain libs** — optional app-domain declarative schema, seed vocabulary, structural reconciliation shape, and ordered entity-identity policy under `packages/domain-libs/<domain>/`. They are borrowable app accelerants, not generic substrate or app workflow policy.
+7. **Domain catalog** — plain hand-edited starter model definitions, fields, relations, enum options, and seed rows in `packages/domain-libs/catalog.json`, consumed by app-owned CUE schemas. There are no TypeScript domain-lib packages or catalog generator.
 8. **App sections/pages** — app-owned route/nav organization. Sections are top-level product areas (e.g., `comp`, `people-analytics`); pages are routes inside sections.
 9. **Apps** — own auth, tenant context, domain schema, global shell, route trees. Compose modules into pages; configure modules with app-specific schema/renderers/policies.
 
@@ -199,16 +199,10 @@ contracts from `contracts/`, but never from `kernel-client/`. Engines also never
 components, compositions, or stories. `stories/` is terminal example code and
 must not be imported by runtime layers. CI-enforced.
 
-Domain libs are a separate borrowable-app track. A folder like
-`packages/domain-libs/employee/` may contain app-domain vocabulary because
-its job is to seed or accelerate a concrete app schema shape. Other shared packages
+The domain catalog (`packages/domain-libs/catalog.json`) is plain hand-edited
+starter schema data for app-owned CUE files. Shared packages
 (`design-systems/`, `engines/`, `modules/`, `contracts/`, `kernel-client/`)
-must not import domain libs or branch on those domain nouns. Domain libs
-preserve domain models, fields, lookup values, and declarative business metadata;
-they must not preserve source-app runtime metadata such as page tabs, sidebars,
-route behavior, rendering state, duplicate audit/change-type authority, or raw
-source-app field types. They are not runtime aliases; apps intentionally import,
-copy, or fork them when adopting a domain library.
+must not branch on domain nouns from the catalog.
 
 ## Layer Discriminators
 
@@ -258,8 +252,8 @@ same request is resolved. Saved import history is a view over ordinary
 change-set diffs, not a new store.
 
 Hosts supply authentication/origin enforcement, active schema, the frozen
-tenant/app/actor/date context, domain instructions, ordered identity policies
-from `packages/domain-libs/`, model selection, canonical dry-run validation, and canonical
+tenant/app/actor/date context, domain instructions, app-owned ordered identity policies,
+model selection, canonical dry-run validation, and canonical
 kernel transport. Models without identity policy remain searchable reference
 context rather than writable targets. HC and Vendor provide concrete adapters;
 their kernel authorization and app write guards remain authoritative.
@@ -271,18 +265,6 @@ deleted `packages/agents/csv`, `packages/csv-import-host`, and
 matching is `resolveImportIdentity`; there is no upstream identity-graph
 classifier. See `import-principles.md` for the detailed contract and
 current resource limits.
-
-Optional app integration presentation lives in `packages/modules/integrations`.
-`IntegrationsSurface` receives safe authorized summaries and explicit action
-references; it never receives tenant credentials or chooses authority. An
-app-bound Server Component reads through the app DAL and renders this same
-surface both embedded and on the optional standard page. Text, provider subset
-and order, section visibility, and placement are the supported customization
-surface. Filters only narrow presentation. Use existing semantic tokens and
-desktop-window resizing, with small client islands and lazy external setup UI.
-Shared server mechanics live in `packages/integration-runtime` and central
-authority in `packages/integration-control-plane`; app-owned recipe instances
-continue to own provider semantics and target bindings.
 
 `packages/integrations` is the reusable wrapper boundary for external
 integration libraries. It owns Ampersand React/prebuilt UI adapters,
@@ -372,23 +354,10 @@ generated SQL only after parity and caller cutover. When an advisory concern
 also exists in TypeScript, generate both surfaces from the manifest and add
 parity tests around the overlapping contract.
 
-**Domain libs** are app-domain accelerants. They package a coherent declarative
-shape: models, fields, seed vocabulary, and reusable structural metadata so a
-new app can start from a known schema. Ordered import identity and
-reconciliation policy are app-owned because matching authority depends on the
-app's selected fields, provider contracts, and ambiguity handling. An app may
-author that policy beside its CUE schema and generate a validated artifact; a
-domain library must not create a second policy authority.
-They may contain domain nouns (`position`, `employee`, `requisition`) but may
-not contain imperative matching mechanics, relation policy, runtime workflow state,
-fetching, rendering, page-shell metadata, kernel invariants, app-specific
-authorization, or app-specific normalization thresholds. Apps import, copy, or
-fork domain libs; the app remains the schema and workflow-policy owner after
-adoption. Within
-`packages/domain-libs/`, entity domains may import `_shared` only. App-owned schema
-catalogs may assemble domain-lib blocks in deterministic order; that fan-in
-composition must live in `apps/`, not in a domain-lib package. Shared packages
-never import `packages/domain-libs/`.
+**Domain catalog** (`packages/domain-libs/catalog.json`) holds plain hand-edited
+starter models, fields, relations, enum options, and seed rows so a new app can
+start from known definitions in CUE. Ordered import identity, reconciliation
+policy, workflow state, authorization, and product rules remain app-owned.
 
 **App-owned shell** owns error state and orchestration, not the error wire
 contract. It may render global banners, route-level errors, and logging sinks.
@@ -567,7 +536,7 @@ execution API.
 Positive ownership proof: a conformant caller can pass any neutral record
 shape, render the composition directly or inside `Sheet`, and receive typed
 field/action callbacks. Negative proof: design-system boundary checks forbid
-app, module, kernel-client, and domain-lib imports; validation tests reject
+app, module, and kernel-client imports; validation tests reject
 unknown blocks and non-serializable field values. Storybook uses neutral fixture
 vocabulary, while employee, position, vendor, and other domain examples remain
 in app-local stories.
@@ -647,7 +616,7 @@ The library owns:
 
 The reviewed mutation lifecycle's local call boundary is enforced by the
 `apply-through-editable-grid-*` ast-grep rules. TypeScript and JavaScript under
-`apps`, `packages/domain-libs`, and `packages` may call other API routes; direct `fetch`,
+`apps` and `packages` may call other API routes; direct `fetch`,
 `postJson`, or client `postJson` calls to `/api/apply` are forbidden outside
 `packages/modules/editable-grid`. Positive and negative fixtures run through
 `mise run test:ast-grep`, and the repository scan runs through
@@ -995,9 +964,8 @@ apps/
 
 Multiple design systems are supported by adding sibling folders under `design-systems/` (e.g., `design-systems/v2/`). Apps choose which design system to import.
 
-Package tests are co-located under each owner (`packages/**/__tests__` and
-`packages/domain-libs/*/__tests__`) so test imports obey the same layer direction as the
-runtime code they protect. Runtime code must not import test files; the boundary
+Package tests are co-located under each owner (`packages/**/__tests__`) so test
+imports obey the same layer direction as the runtime code they protect. Runtime code must not import test files; the boundary
 scanner enforces both relative test-file imports and workspace package subpaths.
 Direct import-source rules represented in `.config/konsistent.json` are not
 duplicated in the scanner; dynamic and resolved-relative forms remain scanner
@@ -1011,7 +979,7 @@ the same PR.
 These are the operational rules. Most are CI-enforceable; treat them as constraints, not aspirations.
 
 1. **Domain agnosticism** — `design-systems/`, `engines/`, and `modules/` never reference specific app IDs, model names, or domain concepts. CI grep enforces. Modeled on AG2's `pnpm check:runtime-scanners`.
-2. **One-way dependency** — UI flows `tokens -> components -> compositions -> stories`; pure logic lives in `engines`; shared wire/client types live in `contracts`; optional fetch transport lives in `kernel-client`; domain libraries sit above reusable generic packages and below apps. Modules and apps may consume the lower tracks according to their responsibility. Skip-down allowed; skip-up banned. Tests are co-located with the owner they protect and must import only the owner layer plus lower layers; runtime code must not import test files. Engines never import UI, modules, kernel-client, or apps. Modules may import type-only client/error contracts from `contracts`; all `kernel-client` imports remain banned. Stories are examples only, not reusable runtime helpers. CI enforces.
+2. **One-way dependency** — UI flows `tokens -> components -> compositions -> stories`; pure logic lives in `engines`; shared wire/client types live in `contracts`; optional fetch transport lives in `kernel-client`. Modules and apps may consume the lower tracks according to their responsibility. Skip-down allowed; skip-up banned. Tests are co-located with the owner they protect and must import only the owner layer plus lower layers; runtime code must not import test files. Engines never import UI, modules, kernel-client, or apps. Modules may import type-only client/error contracts from `contracts`; all `kernel-client` imports remain banned. Stories are examples only, not reusable runtime helpers. CI enforces.
 3. **Modules own workflow state** — substrate plumbing lives in modules, never in apps or compositions.
 4. **Style visual identity via tokens** — no raw colors, shadows, radii, spacing, typography, sizing, or z-index values in design-system runtime code. Reference semantic tokens; semantic tokens reference value tokens; themes can map differently. The CI scanner blocks raw Tailwind visual utilities in components and compositions so each design system can be remapped without rewriting component code.
 5. **Slots over flags** — extensibility via slots and render props, not boolean behavior flags. Variants (`primary/secondary`) and sizes (`xs/sm/md/lg`) are configuration, not behavior branching, and are fine.
