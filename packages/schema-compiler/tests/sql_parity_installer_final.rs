@@ -771,6 +771,10 @@ fn materialize_schema_rolls_back_partial_model_tables_on_failure_via_generated_i
     );
 }
 
+// Parallel tests share one database; its grants cannot be changed concurrently.
+// Each batch is one implicit transaction, so the lock lasts until it ends.
+const DATABASE_ACL_LOCK: i64 = 7_340_121;
+
 struct Harness {
     database_url: String,
     client: Client,
@@ -863,7 +867,7 @@ impl Harness {
                 .get(0);
             self.client
                 .batch_execute(&format!(
-                    "reset role; grant connect on database \"{database_name}\" to \"{}\", \"{}\"; set role \"{role_name}\"",
+                    "reset role; select pg_advisory_xact_lock({DATABASE_ACL_LOCK}); grant connect on database \"{database_name}\" to \"{}\", \"{}\"; set role \"{role_name}\"",
                     self.capability_roles[1], self.capability_roles[2]
                 ))
                 .expect("grant owned fixture capability roles database connect");
@@ -924,7 +928,7 @@ impl Drop for Harness {
                 .map(|row| row.get(0))
                 .unwrap_or_default();
             let _ = self.client.batch_execute(&format!(
-                "revoke connect on database \"{database_name}\" from \"{capability_role}\""
+                "select pg_advisory_xact_lock({DATABASE_ACL_LOCK}); revoke connect on database \"{database_name}\" from \"{capability_role}\""
             ));
             let _ = self
                 .client
