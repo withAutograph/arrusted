@@ -22,7 +22,8 @@ optional, commercially licensed by AG Grid Ltd, and never bundled by default.
 
 With a key but no installed package, the app logs a warning and stays on
 Community. If an Enterprise package fails to load at runtime, the app logs the
-error and falls back to Community.
+error and falls back to Community; a heatmap, range-marker or waterfall chart
+already on screen shows an error until the page reloads.
 
 The Enterprise path is not covered by this repository's tests: the test suite
 runs against the Community editions only.

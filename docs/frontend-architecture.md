@@ -912,7 +912,6 @@ consumer needs them.
 
 ```
 packages/
-  app-runtime/                ← generic client-side tenant/runtime context provider
   contracts/                  ← shared TS data/client contracts; no runtime state
   design-systems/
     core/

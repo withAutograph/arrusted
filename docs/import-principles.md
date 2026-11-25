@@ -62,7 +62,7 @@ kernel already owns.
 
 ## Identity and reference context
 
-Ordered identity policy is domain authority and is exported by `packages/domain-libs/`.
+Ordered identity policy is domain authority and is owned by the app.
 Apps pass those policies unchanged to the reusable workspace. Exact matching
 and UUID allocation happen through the workspace identity tool; proposal rows
 must preserve its target grants. The complete amended draft, captured grid
