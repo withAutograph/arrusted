@@ -7,7 +7,7 @@
   },
   "scripts": {
     "check": "tsc -p tsconfig.json --noEmit",
-    "test": "vp test --config ../vite.config.ts --run _shared/__tests__"
+    "test": "vp test --run _shared/__tests__"
   },
   "devDependencies": {
     "vite-plus": "catalog:"

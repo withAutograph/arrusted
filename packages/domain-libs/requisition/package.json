@@ -7,7 +7,7 @@
   },
   "scripts": {
     "check": "tsc -p tsconfig.json --noEmit",
-    "test": "vp test --config ../vite.config.ts --run requisition/__tests__"
+    "test": "vp test --run requisition/__tests__"
   },
   "dependencies": {
     "@domain-libs/_shared": "workspace:*"
