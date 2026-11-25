@@ -385,6 +385,11 @@ values. Deployed auth still validates the complete tuple
 at its existing runtime boundary; the deployment rollout installs it in all
 Vercel targets.
 
+Better Auth 1.7.28 derives its encryption keys differently from 1.7.3, so every
+environment sharing the OAuth proxy (`OAUTH_PROXY_SECRET`) must upgrade
+together; sign-ins in flight during the deploy must be retried, and no stored
+accounts are affected.
+
 For local development, `mise run auth:oauth:doctor` reports the current local
 return origin, the stable production callback, and credential/secret presence
 without printing credential or secret values. It exits unsuccessfully with the

@@ -7,4 +7,4 @@ PLATFORM_AUTH_DATABASE_URL="${PLATFORM_AUTH_DATABASE_URL:-postgres://postgres@12
 BETTER_AUTH_APP_NAME=Autograph \
 BETTER_AUTH_URL="${BETTER_AUTH_URL:-http://localhost:3000}" \
 BETTER_AUTH_SECRET="${BETTER_AUTH_SECRET:-local-apps-auth-placeholder-secret-00000000}" \
-mise exec -- bun x auth@1.7.3 generate --config packages/auth/auth.ts --output packages/auth/schema.sql --yes
+mise exec -- bun x auth@1.7.28 generate --config packages/auth/auth.ts --output packages/auth/schema.sql --yes

@@ -294,7 +294,7 @@ describe("Auth approval wire and prestart failure", () => {
       schemaPlan: {
         version: 1,
         resource,
-        toolchain: "better-auth@1.7.3",
+        toolchain: "better-auth@1.7.28",
         history: { version: 1, schema: "_auth_schema_history", tables: ["plan", "attempt"] },
         catalogAppIds: ["digest-probe"],
         targetDigest: "f".repeat(64),

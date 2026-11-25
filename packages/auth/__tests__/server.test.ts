@@ -1,3 +1,4 @@
+import { hkdfSync } from "node:crypto";
 import { runInNewContext } from "node:vm";
 import { memoryAdapter } from "@better-auth/memory-adapter";
 import { betterAuth } from "better-auth";
@@ -147,6 +148,19 @@ const AUTH_PRODUCTION_DATABASE_IDENTITY = "ep-production.us-east-2.aws.neon.tech
 const AUTH_SECRET = "01234567890123456789012345678901";
 const INFRASTRUCTURE_API_KEY = "better-auth-infrastructure-api-key";
 const OAUTH_PROXY_SECRET = "proxy-secret-012345678901234567890";
+
+// Better Auth encrypts each OAuth proxy value under its own key (HKDF-SHA256).
+function oauthProxyKey(purpose: "oauth-proxy-package" | "oauth-proxy-state") {
+  return Buffer.from(
+    hkdfSync(
+      "sha256",
+      OAUTH_PROXY_SECRET,
+      "better-auth:oauth-encryption:v1",
+      `better-auth:${purpose}:v1`,
+      32,
+    ),
+  ).toString("hex");
+}
 
 function createAuth(
   options: Omit<Parameters<typeof createSharedAuth>[0], "appName"> & {
@@ -1605,15 +1619,17 @@ describe("shared auth package", () => {
       );
       const state = authorizationUrl.searchParams.get("state") ?? "";
       if (_label === "production") {
-        await expect(symmetricDecrypt({ key: OAUTH_PROXY_SECRET, data: state })).rejects.toThrow();
+        await expect(
+          symmetricDecrypt({ key: oauthProxyKey("oauth-proxy-package"), data: state }),
+        ).rejects.toThrow();
       } else {
         const proxyState = JSON.parse(
-          await symmetricDecrypt({ key: OAUTH_PROXY_SECRET, data: state }),
+          await symmetricDecrypt({ key: oauthProxyKey("oauth-proxy-package"), data: state }),
         ) as { isOAuthProxy?: boolean; stateCookie?: string };
         expect(proxyState.isOAuthProxy).toBe(true);
         const stateData = JSON.parse(
           await symmetricDecrypt({
-            key: OAUTH_PROXY_SECRET,
+            key: oauthProxyKey("oauth-proxy-state"),
             data: proxyState.stateCookie ?? "",
           }),
         ) as { callbackURL?: string };
@@ -1670,11 +1686,11 @@ describe("shared auth package", () => {
     const payload = (await response.json()) as { url?: string };
     const state = new URL(payload.url ?? "invalid:").searchParams.get("state") ?? "";
     const proxyState = JSON.parse(
-      await symmetricDecrypt({ key: OAUTH_PROXY_SECRET, data: state }),
+      await symmetricDecrypt({ key: oauthProxyKey("oauth-proxy-package"), data: state }),
     ) as { stateCookie?: string };
     const stateData = JSON.parse(
       await symmetricDecrypt({
-        key: OAUTH_PROXY_SECRET,
+        key: oauthProxyKey("oauth-proxy-state"),
         data: proxyState.stateCookie ?? "",
       }),
     ) as { callbackURL?: string };
