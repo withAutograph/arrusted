@@ -171,7 +171,7 @@ The declarative matrix is:
 | Scope                                                                                                               | Allowed                                                                                                    | Forbidden                                                                                                | Rule                                     |
 | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
 | `packages/integrations/**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs}`                                                        | External-library and package-local imports                                                                 | Root or subpath imports from `@contracts`, `@kernel-client`, app-generated clients, or `apps/*` | `integrations-no-app-kernel-imports-*`   |
-| TypeScript/JavaScript under `apps`, `packages/domain-libs`, and `packages`, excluding `packages/integrations`                | `@autograph/integrations` wrapper imports                                                                   | Root or subpath imports from `@amp-labs/react`                                                           | `provider-ui-through-integrations-*`     |
+| TypeScript/JavaScript under `apps` and `packages`, excluding `packages/integrations` | `@autograph/integrations` wrapper imports | Root or subpath imports from `@amp-labs/react` | `provider-ui-through-integrations-*` |
 | Provider adapters plus provider config and nested ingress/notification/payload/transport/webhook/sync/health owners | Opaque transient payload return, ordinary data properties such as `response.error`, and normalized metrics | Known logging/diagnostic receivers, aliases/destructuring, computed calls, or stdout/stderr writes       | `integration-transport-no-diagnostics-*` |
 
 Run `mise run test:ast-grep` for allowed/forbidden fixtures and
@@ -784,14 +784,11 @@ not the shared TypeScript wrapper package and not core kernel apply.
 
 ### Optional generated app capability
 
-New integrations-enabled apps compose `packages/integration-control-plane`,
-`packages/integration-runtime`, and `packages/modules/integrations`. The first
-owns minimal tenant connection authority, the second shares server mechanics and
-typed recipe factories, and the third owns safe presentation. This explicitly
-permits sharing mechanics formerly described as app-local below. App-owned
-recipe instances still own provider-to-domain meaning. `packages/integrations`
-continues to wrap the external SDK only. The older Vendor Rust bridge described
-below remains a migration source, not a requirement for generated apps.
+New integrations-enabled apps compose `packages/integration-control-plane` for
+minimal tenant connection authority; app-owned recipes and handlers own
+provider-to-domain meaning and presentation. `packages/integrations` continues
+to wrap the external SDK only. The older Vendor Rust bridge described below
+remains a migration source, not a requirement for generated apps.
 
 Shared setup uses the protected server OAuth flow and central connection
 verification, separately from app installation. The SDK account-management UI has

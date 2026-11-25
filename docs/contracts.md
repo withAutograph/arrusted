@@ -234,8 +234,7 @@ package exports. HC and Vendor use the shared alias map for legacy shared source
 imports, including generated data runtime code. The shared map contains no
 app-owned client aliases. The Next preset owns the standard app file patterns
 using `${configDir}`; projects with different file sets own their selections
-and deliberate overrides. `.config/typescript/domain-lib.json` owns the shared
-file patterns for domain libraries while inheriting the package test preset.
+and deliberate overrides.
 TypeScript replaces a `paths` map rather than merging its entries, so the
 shared map repeats `@/*` alongside its source aliases. A project that defines
 `paths` must also restate any shared aliases it still uses.
@@ -970,7 +969,7 @@ against, that complete artifact.
 Lifecycle:
 
 1. An app authors a base schema in app-owned CUE, optionally selecting
-   declarative schema blocks exported from `packages/domain-libs/`.
+   declarative starter model definitions from `packages/domain-libs/catalog.json`.
 2. Customer extensions are expressed as overlays that may add optional fields, labels, import mappings, and app-owned configuration.
 3. The app submits an effective schema revision for one `(app_id, customer_id)` pair.
 4. The kernel validates the full logical schema.
@@ -2309,7 +2308,7 @@ current validation state has since changed.
 
 HC and Vendor install the shared agent-led workspace through the public browser
 and server exports of `@autograph/csv-workspace`. The host supplies authenticated
-app/customer scope and actor, an active schema, domain-owned ordered identity
+app/customer scope and actor, an active schema, app-owned ordered identity
 policies, a run date chosen before upload, a configured model and a canonical
 kernel transport. The package owns parsing, agent tools, preparation, transient
 draft/conversation state, editable review and one human Save. Apps do not supply
@@ -2411,8 +2410,8 @@ App {
 
 The kernel reads app id, customer id, and schema revision. Connectors, agents,
 workflows, prompts, and surfaces are app-owned unless a kernel contract
-explicitly names them. An entity's ordered import identity is owned by its
-domain library; app workflow policy remains app-owned.
+explicitly names them. Ordered import identity and app workflow policy remain
+app-owned.
 
 When review comments talk about app model or field IDs "drifting," name the
 actual authority. The kernel schema is generic and has no awareness of a
@@ -2439,23 +2438,11 @@ cross-app runtime API.
 
 Libraries must not own app-specific matching policy, derived domain values, product workflow rules, or kernel invariants.
 
-Domain libraries (`packages/domain-libs/`) are an app-agnostic, domain-specific layer
-between Libraries and Apps. They own schema definitions, seed vocabulary,
-structural reconciliation shape, and explicit ordered entity identity policies.
-Reusable catalog traversal, validation, relation-graph checks, and canonical
-serialization are owned by `packages/engines/schema-catalog`. Domain libraries
-may import its declarative AST as types only; a boundary check rejects runtime
-imports so reusable vocabulary cannot acquire compiler behavior or policy.
-The neutral `ImportIdentityPolicy` type has one owner in the reusable import
-classification engine. Domain libraries author values against that type; an
-app consuming those values must deterministically validate every imported
-policy against its active schema before compiling rows, including model,
-field, and composite relation-endpoint existence. Missing or malformed policy
-data blocks compilation.
-Generic engines execute those policies; apps import them unchanged and own
-workflow decisions such as lookup creation and fuzzy-match confirmation.
-Domain libraries must not own I/O, derived app values, product workflow rules,
-or kernel invariants.
+The domain catalog (`packages/domain-libs/catalog.json`) is plain hand-edited
+data supplying reusable starter model definitions, fields, relations, enum
+options, and seed rows for app-owned CUE schemas. It has no TypeScript packages
+or generator; apps select from it in CUE and own their workflow decisions,
+import identity policies, derived values, and product rules.
 
 ## Local Next microfrontend executable resolution
 
@@ -3747,15 +3734,6 @@ router and Auth client and keeps its wording in props.
   `{ id, name }` organizations when a person has several that open the app
   and none is active. `choose(organizationId)` makes one active and resolves
   whether it did; false or a rejection shows that it could not be opened.
-
-## Currency rates
-
-The reusable [currency-rate contract](currency-rates.md) supplies opt-in exchange-rate
-schema vocabulary, a tenant-bound adapter over ordinary kernel operations, a pure
-conversion function, and a package editor. Kernel versions remain the sole effective
-history authority. Custom rates override automatic rates over their inclusive effective
-periods; the latest monthly automatic version has no end until a successor is applied.
-Provider fetching is explicit preparation outside reads and calculations.
 
 ### Managed Production app signup
 

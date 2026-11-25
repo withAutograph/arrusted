@@ -4,7 +4,7 @@ Status: proposed. Engineering milestones build one complete capability; none is 
 
 ## Baseline
 
-Extend existing integration-control-plane, integration-runtime, optional installer and reusable integrations UI. Verify the selected source and current hosted configuration before implementation. The earlier Merge assessment used an older checkout; its missing-control-plane observation is not this roadmap's baseline.
+Extend existing integration-control-plane and optional installer. Verify the selected source and current hosted configuration before implementation. The earlier Merge assessment used an older checkout; its missing-control-plane observation is not this roadmap's baseline.
 
 ## Delivery sequence
 

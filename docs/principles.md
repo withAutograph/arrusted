@@ -24,8 +24,8 @@ named implementation and evidence exist.
    installation, generated artifacts, migrations, and parity tests; it is not
    the target request-time authority.
 2. **Libraries** are reusable accelerants. They may provide Rust helpers, TypeScript components, import scaffolds, review surfaces, generated-client helpers, and reference implementations. They may know kernel contracts. They must not know app-specific product semantics.
-3. **Domain libraries** (`packages/domain-libs/`) own domain knowledge that is app-agnostic but not generic: schema definitions, seed vocabulary, structural reconciliation shape, canonical ordered field-group partitions, and the explicit ordered identity policy for each domain entity. Employee identity and field organization remain Employee concerns whether HC or Compensation consumes them. Borrowable by >=2 apps; no I/O and no app workflow. They may know kernel/library contracts; they must not know app workflows.
-4. **Apps** own domain _workflow_. They compose schema and import the relevant domain identity policies unchanged, then own relation/lookup-create actions, product-specific confirmation thresholds, connectors, auth/routes, persistence, prompt guidance and overrides, integration glue, and UI composition. Reusable engines execute supplied policies without embedding domain orderings; reusable agent packages may own agent-type mechanics, tool contracts, and domain-neutral prompt scaffolding.
+3. **Domain catalog** (`packages/domain-libs/catalog.json`) holds plain hand-edited, app-agnostic starter schema definitions, enum options, relations, and seed vocabulary that apps can select from in CUE. No TypeScript packages, generator, I/O, or app workflow live here.
+4. **Apps** own domain _workflow_. They compose schema and own their identity policies, relation/lookup-create actions, product-specific confirmation thresholds, connectors, auth/routes, persistence, prompt guidance and overrides, integration glue, and UI composition. Reusable engines execute supplied policies without embedding domain orderings; reusable agent packages may own agent-type mechanics, tool contracts, and domain-neutral prompt scaffolding.
 
 Treat these as if they were separate repos where each layer imports only the layers below it.
 
@@ -37,7 +37,8 @@ Treat these as if they were separate repos where each layer imports only the lay
 - `packages/kernel/` contains the distinct Rust/Postgres compiler, installer,
   verifier, migration, and parity support; it is a Cargo crate,
   but is not a peer utility package.
-- `packages/domain-libs/` holds app-agnostic domain knowledge under the rules above.
+- `packages/domain-libs/` holds the plain hand-edited starter domain catalog
+  (`catalog.json`) under the rules above.
 - `packages/` holds every reusable unit, including Cargo-only Rust packages,
   cross-language contracts, and private platform infrastructure. A Rust package
   under `packages/` does not need a `package.json`; Cargo workspace membership
@@ -59,14 +60,10 @@ compiler, and PostgreSQL is the compiled execution target.
 
 - CUE is the first external authoring frontend. Equivalent Rust fixtures remain
   available for compiler and parity tests; neither is a request-time dependency.
-- Reusable TypeScript `packages/domain-libs` vocabulary enters CUE only through the
-  deterministic checked `packages/domain-libs/catalog.json`; an app selects and overlays
-  that vocabulary in its own CUE package. TypeScript recipes are not parallel
-  persisted-schema authority.
-- `packages/engines/schema-catalog` owns the generic TypeScript catalog AST,
-  traversal, validation, and serialization. `packages/domain-libs` may import its types
-  and expose declarative construction helpers, but must not export catalog
-  compiler behavior.
+- Reusable starter domain vocabulary enters CUE through the plain hand-edited
+  `packages/domain-libs/catalog.json`; an app selects and overlays that
+  vocabulary in its own CUE package. There is no TypeScript domain-lib layer or
+  catalog generator.
 - The compiler emits canonical `schema.json`, generated wire/client artifacts,
   deterministic SQL, install metadata, checksums, and drift assertions.
 - Raw app-authored SQL, ORM metadata, GraphQL schemas, frontend types, and YAML

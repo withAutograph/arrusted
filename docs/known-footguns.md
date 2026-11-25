@@ -356,7 +356,7 @@ transport behind an earned bounded interface.
 
 ### Watch: workspace matching and writes have separate authorities
 
-Ordered identity policy comes from `packages/domain-libs/`. Exact identity resolution
+Ordered identity policy is app-owned. Exact identity resolution
 and allocation happen in workspace tools, while models without a policy remain
 searchable reference context only. Aliases are ordinary policy-declared fields;
 there is no confirmation protocol or hidden alias store. The kernel and app
@@ -700,10 +700,9 @@ do not add repository-wide word scans.
 
 Workspace package imports need to classify both the root package name and any
 subpath under it. Matching only exact package names lets imports such as
-`@domain-libs/employee/__tests__/index.test` or `@autograph/hc/src/schema`
-resolve to no scanner layer, which can bypass target-side bans and upward
-import checks even when `@domain-libs/employee` or `@autograph/hc`
-would be caught.
+`@autograph/hc/src/schema` resolve to no scanner layer, which can bypass
+target-side bans and upward import checks even when `@autograph/hc` would be
+caught.
 
 `mise run check:workspace-imports` maps `package-name/...` back to the owning
 workspace package. Future package-name rules belong in that focused validator
@@ -963,7 +962,7 @@ system, agent and import actors appear.
 
 ### Guard: app-selected schema parity can hide uncompiled domain vocabulary
 
-HC and Vendor currently select only a fraction of `domain-libs`. A compiler can
+HC and Vendor currently select only a fraction of `packages/domain-libs/catalog.json`. A compiler can
 therefore reproduce both checked-in app schemas while silently dropping
 properties or entire models that no current app selects. The known high-risk
 examples are inverse collections, field notes, validation rules, prose-derived

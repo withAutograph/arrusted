@@ -394,7 +394,7 @@ describe("grid unit", () => {
     expect(document.querySelector(".ag-diff-was")).toBeNull();
   });
 
-  it("leads with the records' name and starts key columns hidden", async () => {
+  it("leads with the records' name and keeps key columns visible without Enterprise", async () => {
     const [project, ...others] = gridDefinition.models;
     const definition = {
       ...gridDefinition,
@@ -438,9 +438,9 @@ describe("grid unit", () => {
       .map((header) => header.getAttribute("col-id"))
       .filter((id) => id?.startsWith("f_"));
     expect(headers[0]).toBe("f_name");
-    // The key column is not shown, but stays a column the Columns panel offers.
-    expect(headers).not.toContain("f_ref");
-    expect(cell(1, "f_ref")).toBeNull();
+    // Community has no Columns panel, so key columns stay visible rather than unreachable.
+    expect(headers).toContain("f_ref");
+    expect(cell(1, "f_ref")).toHaveTextContent("PRJ-1");
   });
 
   it("shows money as people read it, and a staged cell's value it replaced", async () => {

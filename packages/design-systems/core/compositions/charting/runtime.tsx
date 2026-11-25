@@ -7,6 +7,7 @@ export type AgChartsBootstrapOptions = { licenseKey?: string };
 
 let licenseKey: string | undefined;
 let modulesPromise: Promise<void> | undefined;
+let enterpriseFailed = false;
 
 /**
  * Sets the optional Enterprise licence key. Without one, charts use AG Charts
@@ -25,16 +26,21 @@ export function bootstrapAgCharts(options: AgChartsBootstrapOptions = {}) {
 
 /** Whether heatmap, range-marker and waterfall charts can be drawn. */
 export function agChartsEnterpriseEnabled(): boolean {
-  return licenseKey !== undefined && loadAgChartsEnterprise !== null;
+  return !enterpriseFailed && licenseKey !== undefined && loadAgChartsEnterprise !== null;
 }
 
 async function registerModules() {
   const { AllCommunityModule, ModuleRegistry } = await import("ag-charts-community");
   ModuleRegistry.registerModules([AllCommunityModule]);
   if (licenseKey !== undefined && loadAgChartsEnterprise !== null) {
-    const enterprise = await loadAgChartsEnterprise();
-    enterprise.LicenseManager.setLicenseKey(licenseKey);
-    ModuleRegistry.registerModules([enterprise.AllEnterpriseModule]);
+    try {
+      const enterprise = await loadAgChartsEnterprise();
+      enterprise.LicenseManager.setLicenseKey(licenseKey);
+      ModuleRegistry.registerModules([enterprise.AllEnterpriseModule]);
+    } catch (error: unknown) {
+      enterpriseFailed = true;
+      console.error("[charts] Enterprise failed to load; using Community.", error);
+    }
   }
 }
 

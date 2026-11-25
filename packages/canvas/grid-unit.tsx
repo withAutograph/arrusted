@@ -1086,17 +1086,19 @@ export function GridUnit({
       },
     };
   }, [canOpen, model]);
+  const enterprise = agGridEnterpriseEnabled();
   // `initialHide`: hidden when the column is made, so a column shown from the panel stays shown.
+  // Community has no Columns panel, so key columns stay visible there.
   const columnDefs = useMemo(
     () => [
       ...(openColumn === null ? [] : [openColumn as (typeof surfaceProps.columnDefs)[number]]),
       ...surfaceProps.columnDefs.map((column) =>
-        column.colId !== undefined && keyColumns.has(column.colId)
+        enterprise && column.colId !== undefined && keyColumns.has(column.colId)
           ? { ...column, initialHide: true }
           : column,
       ),
     ],
-    [surfaceProps.columnDefs, keyColumns, openColumn],
+    [surfaceProps.columnDefs, keyColumns, openColumn, enterprise],
   );
   const getRowHeight: EditableRowVersionGridSurfaceProps["getRowHeight"] = (params) =>
     surfaceProps.getRowHeight(params) ??
@@ -1208,7 +1210,10 @@ export function GridUnit({
       fieldIdsRef.current,
       (index) => event.api.getDisplayedRowAtIndex(index)?.data as VisibleRecord | undefined,
     );
-    if (focused === null) return;
+    if (focused === null) {
+      releaseOwn("cells");
+      return;
+    }
     const { unitId: own, modelId: ownModel } = selectRef.current;
     selectRef.current.select({
       kind: "cells",
@@ -1263,7 +1268,10 @@ export function GridUnit({
     if (agGridEnterpriseEnabled())
       event.api.addEventListener("cellSelectionChanged", onCellSelection);
     // Community has no cell ranges: the focused cell is the selection.
-    else event.api.addEventListener("cellFocused", onCellFocused);
+    else {
+      event.api.addEventListener("cellFocused", onCellFocused);
+      event.api.addEventListener("headerFocused", () => releaseOwn("cells"));
+    }
     // Scrolling to the last rows reads the next page.
     event.api.addEventListener("bodyScrollEnd", () => {
       const last = event.api.getLastDisplayedRowIndex();

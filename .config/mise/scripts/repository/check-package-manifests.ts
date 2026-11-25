@@ -111,15 +111,6 @@ function packageScriptErrors(
   if (typeof scripts.test === "string" && !testRunsOnce(scripts.test)) {
     errors.push(`${relative} test script must run once with --run`);
   }
-  const domainLibrary = /^packages\/domain-libs\/([^/]+)\/package\.json$/u.exec(relative);
-  if (
-    domainLibrary &&
-    typeof scripts.test === "string" &&
-    scripts.test.includes("--config ../vite.config.ts") &&
-    !scripts.test.includes(`${domainLibrary[1]}/__tests__`)
-  ) {
-    errors.push(`${relative} shared test config must select only its own __tests__ directory`);
-  }
   if (typeof scripts.build === "string") {
     if (
       /\s--noEmit(?:\s|$)/u.test(scripts.build) ||

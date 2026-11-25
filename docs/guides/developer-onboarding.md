@@ -518,14 +518,6 @@ The repo-wide generators live in `.config/turbo/generators/`. Add generators und
 `apps/<id>/turbo/generators/` or `packages/<path>/turbo/generators/` only when
 they are specific to an existing workspace.
 
-Domain-lib `turbo.json` files are generated from the repo-wide generator source.
-The canonical check rejects missing or stale generated configs.
-After changing their shared task inputs, regenerate them with:
-
-```sh
-mise run generate:domain-lib-turbo
-```
-
 Update the generators when the default workspace shape changes. Update root
 `turbo.json` only when the repo needs a new shared cacheable test/build task or
 output pattern, not for app-specific task names. Update `.config/mise/config.toml`
@@ -537,8 +529,7 @@ for `//path:task` addressing. Keep tool, environment, and task config under
 
 Root mise task names use an action-first shape: `<action>` for repo-wide
 commands such as `check`, `build`, `setup`, `start`, and `stop`, and
-`<action>:<scope>` for narrower repo-level commands such as `check:app`,
-`build:catalog` and `setup:db`. Keep app-owned lifecycle
+`<action>:<scope>` for narrower repo-level commands such as `check:app` and `setup:db`. Keep app-owned lifecycle
 tasks under the app namespace, for example `//apps/hc:dev`, instead of adding
 root aliases for existing app tasks.
 

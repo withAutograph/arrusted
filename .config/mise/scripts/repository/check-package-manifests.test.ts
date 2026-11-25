@@ -421,15 +421,3 @@ test("requires one-shot package tests and avoids duplicate pack builds", () => {
     ]),
   );
 });
-
-test("requires a shared domain library test config to select its owning package", () => {
-  const root = fixture();
-  writeManifest(root, "packages/domain-libs/accounting/package.json", {
-    name: "@domain-libs/accounting",
-    private: true,
-    scripts: { test: "vp test --config ../vite.config.ts --run __tests__" },
-  });
-  expect(checkPackageManifests(root)).toContain(
-    "packages/domain-libs/accounting/package.json shared test config must select only its own __tests__ directory",
-  );
-});

@@ -24,10 +24,7 @@ export function CanvasWorkspace({
   const [ready, setReady] = useState(false);
   useEffect(() => {
     let mounted = true;
-    void gridReady
-      // A failed Enterprise load leaves the Community grid working.
-      .catch((error: unknown) => console.error("[editable-grid] Enterprise failed to load", error))
-      .then(() => mounted && setReady(true));
+    void gridReady.then(() => mounted && setReady(true));
     return () => {
       mounted = false;
     };
