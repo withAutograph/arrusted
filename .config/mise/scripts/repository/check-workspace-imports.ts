@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { basename, dirname, join, relative } from "node:path";
+import { basename, dirname, join } from "node:path";
 import {
   type BoundaryContext,
   importReferences,
@@ -24,7 +24,7 @@ const workspace = (context: BoundaryContext): Workspace => {
     exports = new Map<string, string>(),
     generatedExports = new Map<string, string>(),
     withExports = new Set<string>();
-  for (const root of [join(context.root, "apps"), context.domainLibs, context.packages]) {
+  for (const root of [join(context.root, "apps"), context.packages]) {
     if (!existsSync(root)) continue;
     const manifests = filesUnder(root).filter((path) => basename(path) === "package.json");
     for (const manifest of manifests) {
@@ -108,12 +108,10 @@ const isInternal = (
   const aliases = exactAliases(context);
   return (
     specifier.startsWith(".") ||
-    specifier === "@domain-libs" ||
     specifier in aliases ||
     Object.keys(aliases).some((alias) => specifier.startsWith(`${alias}/`)) ||
     specifier.startsWith("@engines/") ||
     specifier.startsWith("@modules/") ||
-    specifier.startsWith("@domain-libs/") ||
     packageMatch(workspaces, specifier) !== undefined
   );
 };
@@ -128,7 +126,6 @@ const resolveImport = (
   if (local) return local;
   if (specifier.startsWith("."))
     return workspaces.generatedExports.get(join(dirname(source), specifier));
-  if (specifier === "@domain-libs") return undefined;
   const aliases = exactAliases(context);
   if (specifier in aliases) return resolveSourcePath(aliases[specifier]!);
   for (const [alias, target] of Object.entries(aliases))
@@ -137,7 +134,6 @@ const resolveImport = (
   for (const [prefix, root] of [
     ["@engines/", join(context.packages, "engines")],
     ["@modules/", join(context.packages, "modules")],
-    ["@domain-libs/", context.domainLibs],
   ] as const)
     if (specifier.startsWith(prefix))
       return resolveSourcePath(join(root, specifier.slice(prefix.length)));
@@ -150,21 +146,6 @@ const resolveImport = (
   return resolveSourcePath(join(directory, subpath));
 };
 
-const domainName = (context: BoundaryContext, path: string | undefined): string | undefined =>
-  path && isUnder(path, context.domainLibs)
-    ? relative(context.domainLibs, path).split(/[\\/]/)[0]
-    : undefined;
-const importedDomain = (
-  context: BoundaryContext,
-  specifier: string,
-  resolved: string | undefined,
-): string | undefined =>
-  domainName(context, resolved) ??
-  (specifier === "@domain-libs"
-    ? "__root__"
-    : specifier.startsWith("@domain-libs/")
-      ? specifier.slice("@domain-libs/".length).split("/")[0]
-      : undefined);
 export const checkWorkspaceImports = (context: BoundaryContext): void => {
   const workspaces = workspace(context);
   const csvWorkspaceRoot = join(context.packages, "csv-workspace");
@@ -174,12 +155,10 @@ export const checkWorkspaceImports = (context: BoundaryContext): void => {
     "@autograph/csv-workspace/mapping",
     "@autograph/csv-workspace/draft",
   ]);
-  const edges = new Map<string, Set<string>>();
   const scanned = [
     ...sourceFiles(context.packages).filter(
       (path) => !path.startsWith(join(context.packages, "rust-auth")) || !path.endsWith(".rs"),
     ),
-    ...sourceFiles(context.domainLibs),
     ...sourceFiles(join(context.root, "apps")),
   ];
   for (const path of scanned) {
@@ -217,31 +196,8 @@ export const checkWorkspaceImports = (context: BoundaryContext): void => {
           `${relativePath}: the CSV workspace receives domain and app context from its consumer, not \`${entry.specifier}\``,
         );
       }
-      const sourceDomain = domainName(context, path);
-      const targetDomain = importedDomain(context, entry.specifier, resolved);
-      if (sourceDomain && targetDomain && sourceDomain !== targetDomain) {
-        (edges.get(sourceDomain) ?? edges.set(sourceDomain, new Set()).get(sourceDomain)!).add(
-          targetDomain,
-        );
-      }
     }
   }
-  const visiting = new Set<string>();
-  const visited = new Set<string>();
-  const visit = (node: string, stack: string[]): void => {
-    if (visiting.has(node)) {
-      context.violations.push(
-        `packages/domain-libs: cycle detected in domain-lib imports: ${stack.slice(stack.indexOf(node)).join(" -> ")}`,
-      );
-      return;
-    }
-    if (visited.has(node)) return;
-    visiting.add(node);
-    for (const target of [...(edges.get(node) ?? [])].sort()) visit(target, [...stack, target]);
-    visiting.delete(node);
-    visited.add(node);
-  };
-  for (const node of [...edges.keys()].sort()) visit(node, [node]);
 };
 
 if (import.meta.main) {

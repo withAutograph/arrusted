@@ -6,7 +6,7 @@ Builder must compose complete integrations across hosted platforms and extend su
 
 Support organization-shared connections and both Autograph-managed and customer-owned platform accounts. Builder chooses providers using organization policy, actual capabilities, and authorized existing connections. Apps own schema, field authority, conflicts, and approval policy.
 
-The existing connection control plane, integration runtime, reusable UI, and optional Builder installer are the starting point. Source implementation is separate from configured hosted readiness. The earlier Merge assessment is retained as a historical smaller proposal.
+The existing connection control plane and optional Builder installer are the starting point. Source implementation is separate from configured hosted readiness. The earlier Merge assessment is retained as a historical smaller proposal.
 
 The original open questions are resolved as follows:
 

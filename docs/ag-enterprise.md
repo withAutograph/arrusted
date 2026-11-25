@@ -21,4 +21,8 @@ optional, commercially licensed by AG Grid Ltd, and never bundled by default.
    (both are visible in the browser, as AG Grid intends), then rebuild.
 
 With a key but no installed package, the app logs a warning and stays on
-Community.
+Community. If an Enterprise package fails to load at runtime, the app logs the
+error and falls back to Community.
+
+The Enterprise path is not covered by this repository's tests: the test suite
+runs against the Community editions only.

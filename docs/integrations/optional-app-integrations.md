@@ -14,9 +14,7 @@ canonical persistence and authorization.
 | Layer                                | Responsibility                                                                                                                                            |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/integration-control-plane` | Minimal connection/binding/grant authority, tenant RLS, lifecycle transitions and canonical-write leases. Installed only in the central service database. |
-| `packages/integration-runtime`       | Typed schema projections, shared normalization sequencing, source matching, replay validation and atomic canonical apply; app host composition.           |
-| App integration definition           | Tested recipe selection, typed target bindings, provider semantics and bounded configuration. CUE remains authoritative for schema and policy.            |
-| `packages/modules/integrations`      | Server-rendered catalog, accounts, health and activity; interactive action/review islands. No tenant or provider authority.                               |
+| App integration definition           | Tested recipe selection, typed target bindings, provider semantics, normalization, presentation, and bounded configuration. CUE remains authoritative for schema and policy. |
 | `packages/integrations`              | Retained legacy external SDK wrappers; new shared setup uses protected server OAuth.                                                                      |
 | Repository installer                 | Optional routes, app-bound `Integrations` component, and optional page/navigation. Same operation for fresh and existing apps.                            |
 

@@ -165,8 +165,7 @@ test("reproduces online plan and runtime bytes from the checked predecessor dige
     expect(runtimeMembers.map((name) => readFileSync(path.join(current.directory, name)))).toEqual(
       runtime,
     );
-    // Oldest first: the reverse would archive `note` and refuse to add it again.
-    build([staged, path.join(checkedIntervening, "app-artifact.json")]);
+    build([path.join(checkedIntervening, "app-artifact.json"), staged]);
     expect(readFileSync(plan)).toEqual(bytes);
     expect(runtimeMembers.map((name) => readFileSync(path.join(current.directory, name)))).toEqual(
       runtime,

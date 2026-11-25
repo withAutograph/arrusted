@@ -255,14 +255,9 @@ installation and customer scope, normalize through the app-owned recipe, compile
 `ApplyChangeSet`, and then persist through kernel apply. A reusable
 `packages/integration-compiler` crate may compile already-verified recipe input
 into generic kernel write contracts, but it must stay outside kernel and outside
-app/provider semantics. `packages/integration-runtime` also provides shared
-TypeScript mechanics and tested recipe factories. The app instantiates its
-recipe with typed bindings to normalized CUE-generated models and fields;
-provider selection, source identity, date/sign rules, clearing and accepted
-canonical effects remain explicit app-owned policy. Shared mechanics may verify
-bytes, sequence authority checks, compile typed operations, match source
-provenance and invoke compiler-owned atomic apply. They may not invent provider
-policy, mutate internal tables from app code, or bypass compiled authorization.
+app/provider semantics. App-owned recipes bind provider data to normalized
+CUE-generated models and fields; provider selection, source identity, date/sign
+rules, clearing and accepted canonical effects remain explicit app-owned policy.
 Rust app code may provide route glue, schema
 materialization, app policy, and the kernel apply bridge; it must not own
 provider ingress. The per-app data contract stays in the app schema; the kernel

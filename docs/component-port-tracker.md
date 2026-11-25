@@ -169,9 +169,7 @@ the host into the existing draft/apply lifecycle.
    kernel/client fixture, read them through the generated client, adapt them,
    render the panel, propose an edit, and assert the host produces the expected
    `ApplyChangeSet` or draft input. The panel itself never calls the kernel.
-6. **Agent evaluation corpus:** use the executable corpus and scoring contract
-   in [`dashboard-agent-evals.md`](dashboard-agent-evals.md), giving an agent
-   several schemas and user requests
+6. **Agent evaluation corpus:** give an agent several schemas and user requests
    (“show compensation without editable sensitive fields”, “put manager and
    department first”, “include recent related rows”). Score valid-spec rate,
    unknown-field rate, policy violations, deterministic render success, and
