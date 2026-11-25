@@ -23,8 +23,10 @@ disconnected (`app/vercel.json` sets `git.deploymentEnabled: false`).
      public `https://` origin. `AUTH_DATABASE_URL` may be omitted.
    Never put `MIGRATION_DATABASE_URL` or `NEON_*` in `.env.local`,
    `.env.production.secrets`, or Vercel's runtime environment.
-3. Configure the Vercel build for the repository's pinned Bun, Rust and CUE
-   toolchain.
+3. `bun run release` builds locally (`vercel pull --yes --environment production`
+   then `vercel build --prod`) using the local Bun, Rust and CUE toolchain and
+   deploys prebuilt output (`vercel deploy --prebuilt --prod`), so Vercel does
+   not need Rust or CUE remotely.
 
 ## Adding people
 

@@ -24,11 +24,14 @@ browser.
 
 Never put migration credentials (`MIGRATION_DATABASE_URL`) or Neon API keys in
 `.env.local`, `.env.production.secrets`, or Vercel's runtime environment. Use a
-separate restricted login for `APP_DATABASE_URL`. Package scripts wrap explicit
-`--env-file` loading so bare `bun run migrate`, `bun run migrate:undo`,
-`bun run records:import`, `bun run start` use local files while
-`bun run release` (and `--production` on `migrate`, `migrate:undo`,
-`records:import`, `people`) uses production files.
+separate restricted login for `APP_DATABASE_URL`. Scripts read their own env
+files (and still work when local files are absent): bare `bun run migrate`,
+`bun run migrate:undo`, `bun run records:import`, `bun run people`, and
+`bun run start` read `.env.local`/`.env.migrate` as local defaults, while
+`--production` is accepted by `setup:env`, `migrate`, `migrate:undo`,
+`records:import`, and `people` (`secrets:push` and `release` always use the
+production files). `--production` refuses loopback `MIGRATION_DATABASE_URL`
+targets.
 
 For a disposable local PostgreSQL server, create the database as its owner:
 
@@ -67,20 +70,26 @@ automatically. Leave Vercel Git auto-deploy disabled (`app/vercel.json` sets
 Run from the clean default branch after the PR has merged and the local checkout
 is updated.
 
-Run `bun run release --check` (no TTY required; connects read-only to read the
-applied schema and compute the plan, makes no changes, and never migrates or
-deploys) to run preflight and print the schema plan.
+The builder runs `bun run release --check` in their own terminal (requires a
+real TTY; connects read-only with the production owner login to read the applied
+schema and compute the plan, runs the local prebuilt Vercel build and
+`.vercel/output` private-path check, makes no database changes, and never
+migrates or deploys).
 
 `bun run release` fetches the remote and requires HEAD to equal its default
-branch, verifies the app- or repo-level Vercel project link and `.vercelignore`
-coverage (refusing if any `.env*` file or `.local/` secret/restore-point path
-would be uploaded), compiles and checks, verifies source commit provenance,
-shows the changes against the previous applied schema, and asks the human to
-type the app's configured name (read from `app/schema/app.cue`).
-It prints progress at each step, creates a restore point, migrates, verifies the
-applied release, deploys to production, and prints the deployment URL.
-Migration failure prevents deployment. Deployment failure leaves the database
-migrated: retry `bun run release` from the same source, or run
+branch, verifies the app- or repo-level Vercel project link, compiles and
+checks, verifies source commit provenance, shows the changes against the
+previous applied schema, then runs the local Vercel build before confirmation
+(`vercel pull --yes --environment production`, `vercel build --prod`, deletes
+pulled `.vercel/.env*` files, and checks `.vercel/output` and every
+`.vc-config.json` `filePathMap` for any `.env`, `.env.*` except `.env.example` /
+`.env.*.example`, or `.local` path segment). A failed build stops the release
+with nothing changed. After the build succeeds, it asks the human to type the
+app's configured name (read from `app/schema/app.cue`), prints progress at each
+step, creates a restore point, migrates, verifies the applied release, deploys
+the prebuilt output (`vercel deploy --prebuilt --prod`), and prints the
+deployment URL. Migration failure prevents deployment. Deployment failure leaves
+the database migrated: retry `bun run release` from the same source, or run
 `bun run migrate:undo --production`, restore the reported source commit and
 release it. Undo loses app record edits since the restore point; current Auth
 records survive.

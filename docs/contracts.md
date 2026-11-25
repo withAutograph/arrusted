@@ -21,18 +21,24 @@ private `0600` ignored files (`.env.local`/`.env.migrate` for local dev,
 browser forms, never chat or command output. Errors are redacted rather than
 suppressed so actionable refusals and PostgreSQL codes remain visible without
 leaking credentials. Production delivery uses `bun run release` (with
-`release --check` for non-TTY preflight, `runtimeRoles` and non-loopback
-validation, and read-only applied-schema plan, making no database changes and
-never migrating or deploying): clean default-branch source equal to fetched
-remote default, app- or repo-level Vercel project link, `.vercelignore` covering
-every secret, local tooling state, build cache, and restore-point path at the
-deploy working directory, compile/check, source provenance, `app/vercel.json`
-disabling Git auto-deploy, schema/data plan, human TTY confirmation using the
+`release --check` run by the builder in a real TTY for preflight, `runtimeRoles`
+and non-loopback validation, read-only applied-schema plan, and local prebuilt
+Vercel build + `.vercel/output` inspection, making no database changes and never
+migrating or deploying): clean default-branch source equal to fetched remote
+default, app- or repo-level Vercel project link, compile/check, source
+provenance, `app/vercel.json` disabling Git auto-deploy, schema/data plan, local
+prebuilt build (`vercel pull --yes --environment production`, `vercel build --prod`,
+deleting pulled `.vercel/.env*` files, and walking `.vercel/output` and every
+`.vc-config.json` `filePathMap` to refuse any `.env`, `.env.*` except
+`.env.example`/`.env.*.example`, or `.local` path segment) before confirmation
+so a failed build stops with nothing changed, human TTY confirmation using the
 configured app name, restore point (with `NEON_*` read exclusively from
 `.env.production.migrate` in production mode), migration, applied-release
-verification, then deployment with progress and URL output. Direct hosted
-mutation commands use the same gate (loopback detection does not protect SSH
-tunnels or local proxies to production). Server startup never applies pending
+verification, then `vercel deploy --prebuilt --prod` with progress and URL
+output. Direct hosted mutation commands (`--production` on `migrate`,
+`migrate:undo`, `records:import`, `people`, each rejecting loopback
+`MIGRATION_DATABASE_URL`) use the same gate (loopback detection does not protect
+SSH tunnels or local proxies to production). Server startup never applies pending
 hosted migrations and checks the active release via
 `kernel_read_runtime_release_observability` without granting the runtime login
 direct access to `autograph_applied_schema`. These are accident guards;

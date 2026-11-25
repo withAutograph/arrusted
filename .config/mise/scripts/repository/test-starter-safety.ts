@@ -83,12 +83,14 @@ try {
     NODE_ENV: "test",
     SINGLE_ORG_TEST_DATABASE_URL: dbUrl,
     SAFETY_TEST_DATABASE_URL: dbUrl,
+    KERNEL_TEST_DATABASE_URL: dbUrl,
   };
   for (const name of Object.keys(environment)) {
     if (
       name.endsWith("DATABASE_URL") &&
       name !== "SINGLE_ORG_TEST_DATABASE_URL" &&
-      name !== "SAFETY_TEST_DATABASE_URL"
+      name !== "SAFETY_TEST_DATABASE_URL" &&
+      name !== "KERNEL_TEST_DATABASE_URL"
     )
       delete environment[name];
   }
@@ -108,6 +110,10 @@ try {
       ],
     ],
     ["bun", ["test", "app/scripts/safety.test.ts"]],
+    [
+      "bun",
+      ["x", "vp", "test", "--config", "app/vite.config.ts", "--run", "app/scripts/migrate.test.ts"],
+    ],
     ["bun", ["x", "vp", "test", "--config", "app/vite.ui.config.ts", "--run"]],
   ];
 

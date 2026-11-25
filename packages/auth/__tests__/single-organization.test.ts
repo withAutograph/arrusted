@@ -50,6 +50,8 @@ describe.skipIf(!testUrl)("single-organization sign-in and OAuth", () => {
       const added = await addPerson({
         pool,
         auth: identity.auth,
+        organizationId: "team",
+        name: "Test team",
         origin: "http://127.0.0.1:4555",
         email,
       });

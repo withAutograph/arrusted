@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { betterAuth } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
@@ -8,6 +7,7 @@ import { createAgentGrantPlugins, requireGrantContext } from "./agent-grant";
 import { agentGrantIssuer } from "./agent-grant-policy";
 import { canvasFrameOrigins, readCanvasFrameOrigins } from "./canvas-frame";
 import { emptySetAdapter } from "./empty-set-adapter";
+import { ensureMembership } from "./people";
 import { errorMessage, redact } from "./redact";
 
 const RESET_PASSWORD_TOKEN_SECONDS = 7 * 24 * 60 * 60;
@@ -64,15 +64,12 @@ export function createSingleOrganizationAuth(input: {
       user: {
         create: {
           after: async (user) => {
-            await input.database.query(
-              `with deployment as (
-                insert into organization (id,name,slug,"createdAt") values ($1,$2,$1,now())
-                on conflict (id) do update set id=excluded.id returning id
-              )
-              insert into member (id,"organizationId","userId",role,"createdAt")
-              select $3,id,$4,'member',now() from deployment`,
-              [input.organizationId, input.name, randomBytes(24).toString("hex"), user.id],
-            );
+            await ensureMembership({
+              pool: input.database,
+              organizationId: input.organizationId,
+              name: input.name,
+              userId: user.id,
+            });
           },
         },
       },

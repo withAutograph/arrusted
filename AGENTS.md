@@ -23,12 +23,19 @@ Git, databases or deployment. Protect them from mistakes they can't see.
   draft PR: follow the [`ship-change`](.claude/skills/ship-change/SKILL.md) skill.
 - **Building is not approval to publish.** Merging, migrating live data, deploying,
   creating paid resources and opening up access each need their own clear yes.
-- **Production goes through `bun run release` only.** You may run
-  `bun run release --check` (no TTY; connects read-only to read the applied
-  schema and compute the plan without modifying the database or deploying) to
-  verify preflight and show the plan. Never run `vercel deploy`, `vercel --prod`,
-  live migrations or SQL against production directly. A person types the
-  confirmation themselves. Never type, pipe or script it for them.
+- **Production goes through `bun run release` only.** The builder runs both
+  `bun run release --check` (requires a real TTY; connects read-only with the
+  production owner login to read the applied schema, compute the plan, and run
+  the local prebuilt Vercel build and `.vercel/output` secret check without
+  modifying the database or deploying) and `bun run release` themselves in their
+  own terminal, not the agent. Commands that accept `--production` are
+  `setup:env` (prepares `app/.env.production.secrets` and
+  `app/.env.production.migrate` with names-only output) and the builder-run
+  production commands `migrate`, `migrate:undo`, `records:import`, and
+  `people` (`secrets:push` and `release` always target production). Never run
+  `vercel deploy`, `vercel --prod`, live migrations or SQL against production
+  directly. A person types the confirmation themselves. Never type, pipe or
+  script it for them.
 - **If a safety check refuses, stop and explain.** Don't bypass, weaken or work
   around it.
 - **Never use** `git push --force`, `git reset --hard`, `git clean`, history

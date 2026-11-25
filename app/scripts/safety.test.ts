@@ -1,7 +1,9 @@
 import { test, expect } from "bun:test";
 import { execFileSync, spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import {
   copyFileSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -13,16 +15,18 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { Pool } from "pg";
 import {
-  checkVercelIgnore,
+  checkBuildOutput,
   confirm,
   createGateIO,
   loopback,
   preflight,
   productionGate,
+  requireNonLoopback,
   type GateIO,
 } from "./production-gate";
 import {
   appliedRelease,
+  buildPrebuilt,
   release,
   resolveProductionEnv,
   schemaForPlan,
@@ -39,8 +43,9 @@ import {
   putEnv,
   readEnv,
   setupEnv,
+  validatedOrigin,
 } from "./local-secrets";
-import { writePersonLink } from "./people";
+import { safeEmailFileName, writePersonLink } from "./people";
 import { SafeError, redact, reportError } from "./safe-output";
 
 const pgTestUrl =
@@ -51,27 +56,6 @@ const pgTestUrl =
 if (!pgTestUrl && process.env.CI)
   throw new Error("SAFETY_TEST_DATABASE_URL (or SINGLE_ORG_TEST_DATABASE_URL) is required in CI.");
 const pgTest = pgTestUrl ? test : test.skip;
-
-const ROOT_VERCELIGNORE = [
-  ".env",
-  ".env.*",
-  "app/.env",
-  "app/.env.*",
-  ".local/",
-  "app/.local/",
-  ".config/fnox/",
-  "fnox.local.toml",
-  ".config/pitchfork.local.toml",
-  ".claude/",
-  ".codex/",
-  ".devin/",
-  "log/",
-  "debug-*.log",
-  ".scratch/",
-  "target/",
-  ".cargo-target/",
-  ".turbo/",
-].join("\n") + "\n";
 
 function fake(overrides: Partial<GateIO> = {}): GateIO {
   return {
@@ -198,8 +182,6 @@ test("real gateIO against real temp git repos with bare remote: ok, repo-level l
       'package schema\nmanifest: { app_id: "acme", customer_id: "acme", label: "Acme App" }\n',
     );
     writeFileSync(path.join(repo, ".gitignore"), "app/.generated/\n.vercel/\napp/.vercel/\n");
-    writeFileSync(path.join(appDir, ".vercelignore"), ".env\n.env.*\n.local/\n");
-    writeFileSync(path.join(repo, ".vercelignore"), ROOT_VERCELIGNORE);
     writeFileSync(path.join(repo, "tracked.txt"), "v1\n");
     git(repo, "add", ".");
     git(repo, "commit", "-m", "initial");
@@ -215,62 +197,48 @@ test("real gateIO against real temp git repos with bare remote: ok, repo-level l
       JSON.stringify({ projectId: "prj_1", orgId: "team_1" }),
     );
 
-    const io = createGateIO({ appDir, repoRoot: repo, check: () => {}, log: () => {} });
+    const io = createGateIO({
+      appDir,
+      repoRoot: repo,
+      check: () => {},
+      tty: () => true,
+      log: () => {},
+    });
     expect(io.appName?.()).toBe("Acme App");
 
-    // 1. ok (with app-level Vercel link and app/.vercelignore)
-    await preflight(false, io, { requireTty: false });
+    // 1. ok (with app-level Vercel link)
+    await preflight(false, io);
 
-    // 1b. missing or incomplete app/.vercelignore refuses both preflight and release --check
-    rmSync(path.join(appDir, ".vercelignore"));
-    expect(() => checkVercelIgnore(appDir, repo)).toThrow(/\.vercelignore/);
-    writeFileSync(path.join(appDir, ".vercelignore"), ".env\n.env.*\n");
-    expect(() => checkVercelIgnore(appDir, repo)).toThrow(/\.local\/people\/member\.txt/);
-    writeFileSync(
-      path.join(appDir, ".vercelignore"),
-      ".env\n.env.*\n!.env.production.secrets\n.local/\n",
-    );
-    expect(() => checkVercelIgnore(appDir, repo)).toThrow(/\.env\.production\.secrets/);
-    writeFileSync(path.join(appDir, ".vercelignore"), ".env\n.env.*\n.local/\n");
-
-    // 2. ok (with repo-level Vercel link and root .vercelignore); missing or incomplete root .vercelignore refuses
+    // 2. ok (with repo-level Vercel link)
     rmSync(path.join(appDir, ".vercel"), { recursive: true, force: true });
-    await expect(preflight(false, io, { requireTty: false })).rejects.toThrow("Vercel");
+    await expect(preflight(false, io)).rejects.toThrow("Vercel");
     mkdirSync(path.join(repo, ".vercel"), { recursive: true });
     writeFileSync(
       path.join(repo, ".vercel/project.json"),
       JSON.stringify({ projectId: "prj_1", orgId: "team_1" }),
     );
-    rmSync(path.join(repo, ".vercelignore"));
-    expect(() => checkVercelIgnore(appDir, repo)).toThrow(/\.vercelignore/);
-    writeFileSync(
-      path.join(repo, ".vercelignore"),
-      ".env\n.env.*\napp/.env\napp/.env.*\n.local/\napp/.local/\n",
-    );
-    expect(() => checkVercelIgnore(appDir, repo)).toThrow(/\.config\/fnox\/local\.toml/);
-    writeFileSync(path.join(repo, ".vercelignore"), ROOT_VERCELIGNORE);
-    await preflight(false, io, { requireTty: false });
+    await preflight(false, io);
 
     // 3. dirty tracked file
     writeFileSync(path.join(repo, "tracked.txt"), "dirty\n");
-    await expect(preflight(false, io, { requireTty: false })).rejects.toThrow("clean");
+    await expect(preflight(false, io)).rejects.toThrow("clean");
     writeFileSync(path.join(repo, "tracked.txt"), "v1\n");
 
     // 4. untracked file
     writeFileSync(path.join(repo, "untracked.txt"), "hi\n");
-    await expect(preflight(false, io, { requireTty: false })).rejects.toThrow("clean");
+    await expect(preflight(false, io)).rejects.toThrow("clean");
     rmSync(path.join(repo, "untracked.txt"));
 
     // 5. feature branch
     git(repo, "checkout", "-b", "feat/other");
-    await expect(preflight(false, io, { requireTty: false })).rejects.toThrow("default branch");
+    await expect(preflight(false, io)).rejects.toThrow("default branch");
     git(repo, "checkout", "main");
 
     // 6. unpushed commit
     writeFileSync(path.join(repo, "tracked.txt"), "v2\n");
     git(repo, "add", "tracked.txt");
     git(repo, "commit", "-m", "unpushed");
-    await expect(preflight(false, io, { requireTty: false })).rejects.toThrow("HEAD");
+    await expect(preflight(false, io)).rejects.toThrow("HEAD");
     git(repo, "reset", "--hard", "origin/main");
 
     // 7. behind remote
@@ -279,36 +247,58 @@ test("real gateIO against real temp git repos with bare remote: ok, repo-level l
     git(other, "add", "tracked.txt");
     git(other, "commit", "-m", "remote ahead");
     git(other, "push", "origin", "main");
-    await expect(preflight(false, io, { requireTty: false })).rejects.toThrow("HEAD");
+    await expect(preflight(false, io)).rejects.toThrow("HEAD");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });
 
-test("repository app/.vercelignore and root .vercelignore cover every secret, tooling, and restore-point path", () => {
-  const realApp = path.resolve(import.meta.dirname, "..");
-  const realRoot = path.resolve(realApp, "..");
-  const tmp = mkdtempSync(path.join(tmpdir(), "vercelignore-repo-check-"));
+test("checkBuildOutput accepts clean output (including .env.example) and refuses .env* or .local in files or .vc-config.json filePathMap", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "build-output-check-"));
   try {
-    const tmpApp = path.join(tmp, "app");
-    mkdirSync(path.join(tmpApp, ".vercel"), { recursive: true });
+    expect(() => checkBuildOutput(dir)).toThrow(/\.vercel\/output/);
+    const funcDir = path.join(dir, ".vercel/output/functions/index.func");
+    mkdirSync(funcDir, { recursive: true });
+    writeFileSync(path.join(funcDir, ".env.example"), "APP_DATABASE_URL=\n");
+    writeFileSync(path.join(funcDir, ".env.migrate.example"), "MIGRATION_DATABASE_URL=\n");
     writeFileSync(
-      path.join(tmpApp, ".vercel/project.json"),
-      JSON.stringify({ projectId: "p", orgId: "o" }),
+      path.join(funcDir, ".vc-config.json"),
+      JSON.stringify({
+        filePathMap: {
+          "app/.env.example": "app/.env.example",
+          "app/index.js": "app/index.js",
+        },
+      }),
     );
-    copyFileSync(path.join(realApp, ".vercelignore"), path.join(tmpApp, ".vercelignore"));
-    copyFileSync(path.join(realRoot, ".vercelignore"), path.join(tmp, ".vercelignore"));
-    checkVercelIgnore(tmpApp, tmp);
+    checkBuildOutput(dir);
 
-    rmSync(path.join(tmpApp, ".vercel"), { recursive: true, force: true });
-    mkdirSync(path.join(tmp, ".vercel"), { recursive: true });
+    // File path containing .env.* (non-example) is refused.
+    const leakedEnv = path.join(funcDir, ".env.production.secrets");
+    writeFileSync(leakedEnv, "SECRET=1\n");
+    expect(() => checkBuildOutput(dir)).toThrow(/\.env\.production\.secrets/);
+    rmSync(leakedEnv);
+
+    // File path containing .local segment is refused.
+    mkdirSync(path.join(funcDir, ".local/people"), { recursive: true });
+    writeFileSync(path.join(funcDir, ".local/people/alice.txt"), "link\n");
+    expect(() => checkBuildOutput(dir)).toThrow(/\.local/);
+    rmSync(path.join(funcDir, ".local"), { recursive: true, force: true });
+
+    // filePathMap value containing .env is refused.
     writeFileSync(
-      path.join(tmp, ".vercel/project.json"),
-      JSON.stringify({ projectId: "p", orgId: "o" }),
+      path.join(funcDir, ".vc-config.json"),
+      JSON.stringify({ filePathMap: { "safe.txt": "app/.env" } }),
     );
-    checkVercelIgnore(tmpApp, tmp);
+    expect(() => checkBuildOutput(dir)).toThrow(/app\/\.env/);
+
+    // filePathMap key containing .local is refused.
+    writeFileSync(
+      path.join(funcDir, ".vc-config.json"),
+      JSON.stringify({ filePathMap: { ".local/restore-points/a.dump": "safe.txt" } }),
+    );
+    expect(() => checkBuildOutput(dir)).toThrow(/\.local\/restore-points\/a\.dump/);
   } finally {
-    rmSync(tmp, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true });
   }
 });
 
@@ -346,7 +336,7 @@ test("hosted mutation gate confirms; loopback accepts legitimate Postgres params
   expect(() => loopback("https://user@localhost/db")).toThrow(/postgres:\/\//i);
 });
 
-test("release order, progress logs, deployment URL, release --check (no TTY/no side effects), and failure safety", async () => {
+test("release order, local build before confirm/migrate, release --check (requires TTY/runs build/no side effects), and failure safety", async () => {
   const calls: string[] = [];
   const logs: string[] = [];
   const io = {
@@ -366,6 +356,9 @@ test("release order, progress logs, deployment URL, release --check (no TTY/no s
       calls.push("plan");
       return "Add field Note.summary (optional; existing records remain empty).";
     },
+    build: () => {
+      calls.push("build");
+    },
     migrate: async () => {
       calls.push("migrate");
     },
@@ -379,37 +372,36 @@ test("release order, progress logs, deployment URL, release --check (no TTY/no s
     },
   };
 
-  // --check mode: works without TTY, runs preflight + plan, never confirms/migrates/deploys.
-  await release({ ...io, gate: { ...io.gate, tty: () => false } }, false, { checkOnly: true });
-  expect(calls).toEqual(["check", "plan"]);
+  // --check mode requires a real TTY just like release.
+  await expect(
+    release({ ...io, gate: { ...io.gate, tty: () => false } }, false, { checkOnly: true }),
+  ).rejects.toThrow("terminal");
+  expect(calls).toEqual([]);
+
+  // --check mode with TTY runs preflight + plan + local build, never confirms/migrates/deploys.
+  await release(io, false, { checkOnly: true });
+  expect(calls).toEqual(["check", "plan", "build"]);
   expect(logs.join("\n")).toContain("Add field Note.summary");
   expect(logs.join("\n")).toContain("No database migration or deployment was run");
 
-  // --check refuses when .vercelignore check fails, before planning or deploying.
+  // Failed build stops release before confirmation or migration.
   calls.length = 0;
   await expect(
-    release(
-      {
-        ...io,
-        gate: {
-          ...io.gate,
-          tty: () => false,
-          checkVercelIgnore: () => {
-            throw new SafeError("Missing .vercelignore.");
-          },
-        },
+    release({
+      ...io,
+      build: () => {
+        calls.push("build");
+        throw new SafeError("Build output contains private path: .env");
       },
-      false,
-      { checkOnly: true },
-    ),
-  ).rejects.toThrow(/\.vercelignore/);
-  expect(calls).toEqual([]);
+    }),
+  ).rejects.toThrow("private path");
+  expect(calls).toEqual(["check", "plan", "build"]);
 
-  // Full release: confirms, migrates, verifies, deploys, prints progress + deployment URL.
+  // Full release: builds locally before confirmation, then migrates, verifies, deploys.
   calls.length = 0;
   logs.length = 0;
   await release(io);
-  expect(calls).toEqual(["check", "plan", "confirm", "migrate", "verify", "deploy"]);
+  expect(calls).toEqual(["check", "plan", "build", "confirm", "migrate", "verify", "deploy"]);
   expect(logs.join("\n")).toContain("https://starter-prod.vercel.app");
   expect(logs.join("\n")).toContain("Creating restore point and applying database migration");
 
@@ -429,10 +421,78 @@ test("release order, progress logs, deployment URL, release --check (no TTY/no s
     release({
       ...io,
       deploy: () => {
-        throw Error("vercel build failed");
+        throw Error("vercel deploy failed");
       },
     }),
   ).rejects.toThrow("Database migration succeeded");
+});
+
+test("buildPrebuilt runs vercel pull then build, deletes pulled .vercel/.env* files, validates output, and redacts failures", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "prebuilt-vercel-"));
+  const previous = {
+    PATH: process.env.PATH,
+    CAPTURE_ARGS: process.env.CAPTURE_ARGS,
+    FAKE_MODE: process.env.FAKE_MODE,
+  };
+  try {
+    const argsFile = path.join(dir, "args");
+    mkdirSync(path.join(dir, ".vercel"), { recursive: true });
+    writeFileSync(
+      path.join(dir, "vercel"),
+      [
+        "#!/bin/sh",
+        'printf "%s\\n" "$*" >> "$CAPTURE_ARGS"',
+        'if [ "$1" = "pull" ]; then',
+        '  printf "SECRET=top-secret-value-123456\\n" > .vercel/.env.production.local',
+        "  exit 0",
+        "fi",
+        'if [ "$FAKE_MODE" = "fail-build" ]; then',
+        '  echo "build failed with postgresql://owner:super-secret-pw@db.example/app" >&2',
+        "  exit 1",
+        "fi",
+        "mkdir -p .vercel/output/functions/index.func",
+        'printf \'{"filePathMap":{"app/page.js":"app/page.js"}}\' > .vercel/output/functions/index.func/.vc-config.json',
+        'if [ "$FAKE_MODE" = "leak-output" ]; then',
+        '  printf "SECRET=1\\n" > .vercel/output/functions/index.func/.env.local',
+        "fi",
+      ].join("\n") + "\n",
+      { mode: 0o700 },
+    );
+    process.env.PATH = `${dir}:${previous.PATH ?? ""}`;
+    process.env.CAPTURE_ARGS = argsFile;
+
+    // 1. Clean build succeeds and removes pulled .vercel/.env.production.local.
+    process.env.FAKE_MODE = "ok";
+    buildPrebuilt(dir);
+    expect(readFileSync(argsFile, "utf8").trim().split("\n")).toEqual([
+      "pull --yes --environment production",
+      "build --prod",
+    ]);
+    expect(existsSync(path.join(dir, ".vercel/.env.production.local"))).toBe(false);
+
+    // 2. Failed build still removes pulled .vercel/.env.production.local and redacts stderr.
+    process.env.FAKE_MODE = "fail-build";
+    let caught: unknown;
+    try {
+      buildPrebuilt(dir);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(Error);
+    expect((caught as Error).message).not.toContain("super-secret-pw");
+    expect((caught as Error).message).toContain("[REDACTED]");
+    expect(existsSync(path.join(dir, ".vercel/.env.production.local"))).toBe(false);
+
+    // 3. Build output containing .env.local is refused by checkBuildOutput.
+    process.env.FAKE_MODE = "leak-output";
+    expect(() => buildPrebuilt(dir)).toThrow(/\.env\.local/);
+    expect(existsSync(path.join(dir, ".vercel/.env.production.local"))).toBe(false);
+  } finally {
+    for (const [key, value] of Object.entries(previous))
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("release validates production DB URLs (refuses loopback, same role, mismatched target, pooler) and appliedRelease uses connectionTarget", async () => {
@@ -460,7 +520,8 @@ test("release validates production DB URLs (refuses loopback, same role, mismatc
   expect(() =>
     validateProductionDatabaseUrls({
       migrationDatabaseUrl: mig,
-      appDatabaseUrl: "postgresql://owner:runtime-secret-pw@ep-prod.neon.tech/app?sslmode=verify-full",
+      appDatabaseUrl:
+        "postgresql://owner:runtime-secret-pw@ep-prod.neon.tech/app?sslmode=verify-full",
     }),
   ).toThrow(/separate unprivileged/);
 
@@ -484,6 +545,21 @@ test("release validates production DB URLs (refuses loopback, same role, mismatc
   await expect(
     appliedRelease("postgresql://owner:pw@ep-prod-pooler.neon.tech/app?sslmode=verify-full"),
   ).rejects.toThrow(/protected_installer_identity_mismatch/);
+
+  // Shared production validators used across release, migrate, records-import, people, and secrets:push.
+  expect(() =>
+    requireNonLoopback("MIGRATION_DATABASE_URL", "postgresql://owner:pw@localhost:5432/app"),
+  ).toThrow(/loopback/i);
+  requireNonLoopback("MIGRATION_DATABASE_URL", mig);
+  expect(() => validatedOrigin("http://app.example.com", ENV_PROD_SECRETS, true)).toThrow(
+    "https://",
+  );
+  expect(() => validatedOrigin("https://localhost:3000", ENV_PROD_SECRETS, true)).toThrow(
+    "loopback",
+  );
+  expect(validatedOrigin("https://app.example.com", ENV_PROD_SECRETS, true).origin).toBe(
+    "https://app.example.com",
+  );
 });
 
 test("production mode reads NEON_* exclusively from .env.production.migrate and deletes inherited values when absent", () => {
@@ -499,10 +575,7 @@ test("production mode reads NEON_* exclusively from .env.production.migrate and 
   expect(target.NEON_BRANCH_ID).toBeUndefined();
   expect(target.UNRELATED).toBe("keep");
 
-  applyProductionNeonEnv(
-    { NEON_API_KEY: "prod-key", NEON_PROJECT_ID: "prod-proj" },
-    target,
-  );
+  applyProductionNeonEnv({ NEON_API_KEY: "prod-key", NEON_PROJECT_ID: "prod-proj" }, target);
   expect(target.NEON_API_KEY).toBe("prod-key");
   expect(target.NEON_PROJECT_ID).toBe("prod-proj");
   expect(target.NEON_BRANCH_ID).toBeUndefined();
@@ -572,7 +645,11 @@ test("schema plan describes additions, renames, archives, required fields and no
 test("writePersonLink writes mode 0600 file inside mode 0700 .local/people directory", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "people-link-test-"));
   try {
-    const file = writePersonLink(dir, "alice@example.test", "http://localhost:3000/auth/set-password#token=abc");
+    const file = writePersonLink(
+      dir,
+      "alice@example.test",
+      "http://localhost:3000/auth/set-password#token=abc",
+    );
     expect(file).toBe(path.join(dir, ".local/people/alice_example.test.txt"));
     expect(statSync(path.join(dir, ".local/people")).mode & 0o777).toBe(0o700);
     expect(statSync(file).mode & 0o777).toBe(0o600);
@@ -802,6 +879,69 @@ pgTest(
       expect(combined).toContain(expectedCode);
       expect(combined).not.toContain(secretPw);
       expect(combined).not.toContain(url);
+    }
+  },
+);
+
+pgTest(
+  "people CLI adds then removes a user against isolated PostgreSQL without printing the link",
+  async () => {
+    if (!pgTestUrl) throw new Error("Database URL required.");
+    expect(loopback(pgTestUrl)).toBe(true);
+    const dbName = `people_cli_${randomUUID().replaceAll("-", "").slice(0, 16)}`;
+    const email = `cli-${randomUUID().slice(0, 8)}@example.test`;
+    const appDir = path.resolve(import.meta.dirname, "..");
+    const linkFile = path.join(appDir, ".local/people", `${safeEmailFileName(email)}.txt`);
+    const admin = new Pool({ connectionString: pgTestUrl });
+    const target = new URL(pgTestUrl);
+    target.pathname = `/${dbName}`;
+    const targetUrl = target.toString();
+    let pool: Pool | undefined;
+    let created = false;
+    try {
+      await admin.query(`create database "${dbName}"`);
+      created = true;
+      pool = new Pool({ connectionString: targetUrl });
+      await pool.query(readFileSync(path.resolve(appDir, "../packages/auth/schema.sql"), "utf8"));
+      const cliEnv = {
+        ...process.env,
+        MIGRATION_DATABASE_URL: targetUrl,
+        BETTER_AUTH_URL: "http://127.0.0.1:3000",
+        BETTER_AUTH_SECRET: "people-cli-test-secret-at-least-32-chars",
+      };
+
+      const add = spawnSync(
+        process.execPath,
+        [path.join(import.meta.dirname, "people.ts"), "add", email],
+        { env: cliEnv, encoding: "utf8" },
+      );
+      expect(add.status, add.stderr).toBe(0);
+      expect(add.stdout).toContain(linkFile);
+      expect(add.stdout + add.stderr).not.toContain("#token=");
+      expect(readFileSync(linkFile, "utf8")).toMatch(
+        /^http:\/\/127\.0\.0\.1:3000\/auth\/set-password#token=.+\n$/,
+      );
+      expect(
+        (
+          await pool.query('select count(*)::int as n from "member" where "organizationId" = $1', [
+            "starter",
+          ])
+        ).rows[0].n,
+      ).toBe(1);
+
+      const remove = spawnSync(
+        process.execPath,
+        [path.join(import.meta.dirname, "people.ts"), "remove", email],
+        { env: cliEnv, encoding: "utf8" },
+      );
+      expect(remove.status, remove.stderr).toBe(0);
+      expect(existsSync(linkFile)).toBe(false);
+      expect((await pool.query('select count(*)::int as n from "user"')).rows[0].n).toBe(0);
+    } finally {
+      rmSync(linkFile, { force: true });
+      await pool?.end();
+      if (created) await admin.query(`drop database if exists "${dbName}" with (force)`);
+      await admin.end();
     }
   },
 );

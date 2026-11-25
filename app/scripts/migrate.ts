@@ -1,12 +1,21 @@
-import { productionGate } from "./production-gate";
+import { productionGate, requireNonLoopback } from "./production-gate";
 import { reportError, SafeError } from "./safe-output";
 import { createHash, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Pool, type PoolClient } from "pg";
+import {
+  applyProductionNeonEnv,
+  ENV_LOCAL,
+  ENV_MIGRATE,
+  ENV_PROD_MIGRATE,
+  ENV_PROD_SECRETS,
+  NEON_ENV_KEYS,
+  readEnv,
+} from "./local-secrets";
 import {
   installGeneratedAppRuntime,
   createGeneratedAppRuntime,
@@ -544,14 +553,11 @@ if (import.meta.main) {
     if (flags.some((flag) => !allowedFlags.has(flag)) || new Set(flags).size !== flags.length)
       throw new SafeError("Only --local-only-repo and --production are supported.");
     const production = flags.includes("--production");
+    const appDir = path.join(root, "app");
     let databaseUrl = process.env.MIGRATION_DATABASE_URL;
     let appUrl = process.env.APP_DATABASE_URL;
     let authUrl = process.env.AUTH_DATABASE_URL;
     if (production) {
-      const { existsSync } = await import("node:fs");
-      const { applyProductionNeonEnv, ENV_PROD_MIGRATE, ENV_PROD_SECRETS, readEnv } =
-        await import("./local-secrets");
-      const appDir = path.join(root, "app");
       const prodSecretsPath = path.join(appDir, ENV_PROD_SECRETS);
       const prodMigratePath = path.join(appDir, ENV_PROD_MIGRATE);
       if (!existsSync(prodMigratePath))
@@ -565,11 +571,26 @@ if (import.meta.main) {
       databaseUrl = prodMigrate.MIGRATION_DATABASE_URL || undefined;
       appUrl = prodRuntime.APP_DATABASE_URL || undefined;
       authUrl = prodRuntime.AUTH_DATABASE_URL || undefined;
+    } else if (command !== "rehearse") {
+      const localRuntime = readEnv(path.join(appDir, ENV_LOCAL));
+      const localMigrate = readEnv(path.join(appDir, ENV_MIGRATE));
+      redactEnv = { ...localRuntime, ...localMigrate, ...process.env };
+      for (const key of NEON_ENV_KEYS)
+        if (process.env[key] === undefined && localMigrate[key])
+          process.env[key] = localMigrate[key];
+      databaseUrl = process.env.MIGRATION_DATABASE_URL ?? localMigrate.MIGRATION_DATABASE_URL;
+      appUrl = process.env.APP_DATABASE_URL ?? localRuntime.APP_DATABASE_URL;
+      authUrl = process.env.AUTH_DATABASE_URL ?? localRuntime.AUTH_DATABASE_URL;
     }
     if (!databaseUrl) throw new SafeError("MIGRATION_DATABASE_URL is required.");
     if (["apply", "rehearse"].includes(command) && !appUrl?.trim())
       throw new SafeError("APP_DATABASE_URL is required (separate restricted runtime login).");
-    const roles = runtimeRoles(databaseUrl, appUrl, authUrl);
+    if (production) {
+      requireNonLoopback("MIGRATION_DATABASE_URL", databaseUrl);
+      if (command !== "undo" && appUrl) requireNonLoopback("APP_DATABASE_URL", appUrl);
+      if (command !== "undo" && authUrl) requireNonLoopback("AUTH_DATABASE_URL", authUrl);
+    }
+    const roles = command === "undo" ? {} : runtimeRoles(databaseUrl, appUrl, authUrl);
     const input: MigrationInput = { databaseUrl, ...roles };
     if (["apply", "undo"].includes(command)) {
       const { schemaPlan, appliedRelease, compiled } = await import("./release");

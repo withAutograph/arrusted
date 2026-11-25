@@ -5,17 +5,17 @@
   "scripts": {
     "dev": "bun scripts/compile.ts && bun run --cwd ../packages/canvas-host build && next dev",
     "build": "bun scripts/compile.ts && bun run --cwd ../packages/canvas-host build && next build",
-    "start": "bun --env-file=.env.local --env-file=.env.migrate scripts/serve.ts",
+    "start": "bun scripts/serve.ts",
     "check": "tsc -p tsconfig.json --noEmit",
-    "migrate": "bun --env-file=.env.local --env-file=.env.migrate scripts/migrate.ts apply",
-    "migrate:undo": "bun --env-file=.env.local --env-file=.env.migrate scripts/migrate.ts undo",
+    "migrate": "bun scripts/migrate.ts apply",
+    "migrate:undo": "bun scripts/migrate.ts undo",
     "migrate:rehearse": "bun scripts/migrate.ts rehearse",
     "compile": "bun scripts/compile.ts",
-    "records:import": "bun --env-file=.env.local --env-file=.env.migrate scripts/records-import.ts",
+    "records:import": "bun scripts/records-import.ts",
     "setup:env": "bun scripts/local-secrets.ts setup",
     "secrets:push": "bun scripts/local-secrets.ts push",
     "people": "bun scripts/people.ts",
-    "release": "bun --env-file=.env.production.secrets --env-file=.env.production.migrate scripts/release.ts"
+    "release": "bun scripts/release.ts"
   },
   "dependencies": {
     "@autograph/auth": "workspace:*",

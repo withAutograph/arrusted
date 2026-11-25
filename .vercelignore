@@ -1,19 +1,6 @@
-# Exclude local/production env files, private sign-in links, restore points, local tooling state, logs, and build caches from Vercel uploads.
 .env
 .env.*
-app/.env
-app/.env.*
 .local/
-app/.local/
-.config/fnox/
-fnox.local.toml
-.config/pitchfork.local.toml
-.claude/
-.codex/
-.devin/
-log/
-debug-*.log
-.scratch/
 target/
 .cargo-target/
 .turbo/

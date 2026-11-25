@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { Pool } from "pg";
 import {
@@ -11,10 +11,11 @@ import {
 } from "./local-secrets";
 import { connectionTarget, migrate, runtimeRoles } from "./migrate";
 import {
+  checkBuildOutput,
   confirm,
   gateIO,
-  loopback,
   preflight,
+  requireNonLoopback,
   resolveAppName,
   resolveDeployCwd,
   type GateIO,
@@ -151,6 +152,7 @@ export function compiled() {
 export interface ReleaseIO {
   gate: GateIO;
   plan(): Promise<string>;
+  build(): void;
   migrate(): Promise<void>;
   matches(): Promise<boolean>;
   deploy(): string | void;
@@ -160,9 +162,11 @@ export async function release(
   localOnly = false,
   options: { checkOnly?: boolean } = {},
 ) {
-  await preflight(localOnly, io.gate, { requireTty: !options.checkOnly });
+  await preflight(localOnly, io.gate);
   io.gate.log("Computing schema plan…");
   io.gate.log(await io.plan());
+  io.gate.log("Building production output locally…");
+  io.build();
   if (options.checkOnly) {
     io.gate.log("Check passed. No database migration or deployment was run.");
     return;
@@ -246,15 +250,46 @@ export function validateProductionDatabaseUrls(input: {
     throw new SafeError(
       `Configure MIGRATION_DATABASE_URL in ${ENV_PROD_MIGRATE} and APP_DATABASE_URL in ${ENV_PROD_SECRETS} in a local editor first.`,
     );
-  for (const [name, value] of [
-    ["MIGRATION_DATABASE_URL", migrationDatabaseUrl],
-    ["APP_DATABASE_URL", appDatabaseUrl],
-    ...(authDatabaseUrl ? ([["AUTH_DATABASE_URL", authDatabaseUrl]] as const) : []),
-  ] as const) {
-    if (loopback(value))
-      throw new SafeError(`${name} must not target a loopback host for production.`);
-  }
+  requireNonLoopback("MIGRATION_DATABASE_URL", migrationDatabaseUrl);
+  requireNonLoopback("APP_DATABASE_URL", appDatabaseUrl);
+  if (authDatabaseUrl) requireNonLoopback("AUTH_DATABASE_URL", authDatabaseUrl);
   return runtimeRoles(migrationDatabaseUrl, appDatabaseUrl, authDatabaseUrl);
+}
+
+function runVercel(args: string[], cwd: string, env: Record<string, string | undefined>): string {
+  try {
+    return execFileSync("vercel", args, {
+      cwd,
+      env: process.env,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch (error) {
+    const err = error as { stderr?: Buffer | string; stdout?: Buffer | string };
+    const output = [err.stderr, err.stdout]
+      .map((p) => (Buffer.isBuffer(p) ? p.toString("utf8") : typeof p === "string" ? p : ""))
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .join("\n");
+    throw new Error(redact(output || `vercel ${args[0] ?? "command"} failed`, env));
+  }
+}
+
+export function buildPrebuilt(
+  deployCwd: string,
+  env: Record<string, string | undefined> = process.env,
+) {
+  try {
+    runVercel(["pull", "--yes", "--environment", "production"], deployCwd, env);
+    runVercel(["build", "--prod"], deployCwd, env);
+  } finally {
+    const vercelDir = path.join(deployCwd, ".vercel");
+    if (existsSync(vercelDir))
+      for (const name of readdirSync(vercelDir))
+        if (name === ".env" || name.startsWith(".env."))
+          rmSync(path.join(vercelDir, name), { force: true });
+  }
+  checkBuildOutput(deployCwd);
 }
 
 if (import.meta.main) {
@@ -276,6 +311,7 @@ if (import.meta.main) {
         gate: gateIO,
         plan: async () =>
           schemaPlan((await appliedRelease(databaseUrl))?.schema, compiled().schema),
+        build: () => buildPrebuilt(deployCwd, redactEnv),
         migrate: async () => {
           await migrate({
             databaseUrl,
@@ -284,25 +320,9 @@ if (import.meta.main) {
         },
         matches: async () => (await appliedRelease(databaseUrl))?.release_hash === compiled().hash,
         deploy: () => {
-          try {
-            const stdout = execFileSync("vercel", ["deploy", "--prod"], {
-              cwd: deployCwd,
-              encoding: "utf8",
-              stdio: ["ignore", "pipe", "pipe"],
-            });
-            const urls = stdout.match(/https:\/\/[^\s]+/g);
-            return urls?.at(-1);
-          } catch (error) {
-            const err = error as { stderr?: Buffer | string; stdout?: Buffer | string };
-            const output = [err.stderr, err.stdout]
-              .map((p) =>
-                Buffer.isBuffer(p) ? p.toString("utf8") : typeof p === "string" ? p : "",
-              )
-              .map((p) => p.trim())
-              .filter(Boolean)
-              .join("\n");
-            throw new Error(redact(output || "vercel deploy failed", redactEnv));
-          }
+          const stdout = runVercel(["deploy", "--prebuilt", "--prod"], deployCwd, redactEnv);
+          const urls = stdout.match(/https:\/\/[^\s]+/g);
+          return urls?.at(-1);
         },
       },
       localOnly,

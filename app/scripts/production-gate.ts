@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { readAppConfig } from "./app-config";
@@ -41,6 +41,10 @@ export function loopback(url: string) {
   );
 }
 
+export function requireNonLoopback(name: string, url: string): void {
+  if (loopback(url)) throw new SafeError(`${name} must not target a loopback host for production.`);
+}
+
 function isValidVercelProject(filePath: string): boolean {
   try {
     const parsed = JSON.parse(readFileSync(filePath, "utf8")) as {
@@ -66,98 +70,37 @@ export function hasVercelLink(appDir = defaultApp, repoRoot = defaultRoot): bool
   );
 }
 
-function globToRegExp(pattern: string): RegExp {
-  let out = "^";
-  for (let i = 0; i < pattern.length; i++) {
-    const ch = pattern[i]!;
-    if (ch === "*" && pattern[i + 1] === "*") {
-      out += ".*";
-      i++;
-    } else if (ch === "*") {
-      out += "[^/]*";
-    } else if (ch === "?") {
-      out += "[^/]";
-    } else {
-      out += ch.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+export function checkBuildOutput(deployCwd: string): void {
+  const outputDir = path.join(deployCwd, ".vercel/output");
+  if (!existsSync(outputDir))
+    throw new SafeError(`Missing ${outputDir}. Run vercel build --prod first.`);
+  const check = (candidate: string) => {
+    if (
+      candidate.split(/[/\\]+/).some((seg) => {
+        const s = seg.toLowerCase();
+        return s === ".local" || s === ".env" || (s.startsWith(".env.") && !s.endsWith(".example"));
+      })
+    )
+      throw new SafeError(`Build output contains private path: ${candidate}`);
+  };
+  const walk = (dir: string, rel = "") => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const nextRel = rel ? `${rel}/${entry.name}` : entry.name;
+      const full = path.join(dir, entry.name);
+      check(nextRel);
+      if (entry.isDirectory()) walk(full, nextRel);
+      else if (entry.name === ".vc-config.json") {
+        const config = JSON.parse(readFileSync(full, "utf8")) as {
+          filePathMap?: Record<string, unknown>;
+        };
+        for (const [k, v] of Object.entries(config.filePathMap ?? {})) {
+          check(k);
+          if (typeof v === "string") check(v);
+        }
+      }
     }
-  }
-  return new RegExp(`${out}$`);
-}
-
-function isIgnoredByVercelIgnore(content: string, relPath: string): boolean {
-  const normalized = relPath.replaceAll("\\", "/").replace(/^\/+/, "");
-  const segments = normalized.split("/");
-  const parentDirs: string[] = [];
-  for (let i = 1; i < segments.length; i++) parentDirs.push(segments.slice(0, i).join("/"));
-  let ignored = false;
-  for (const rawLine of content.split(/\r?\n/)) {
-    const line = rawLine.trimEnd();
-    if (!line || line.startsWith("#")) continue;
-    const negated = line.startsWith("!");
-    const body = negated ? line.slice(1) : line;
-    if (!body) continue;
-    const dirOnly = body.endsWith("/");
-    const withoutTrailing = dirOnly ? body.slice(0, -1) : body;
-    const rooted = body.startsWith("/") || withoutTrailing.includes("/");
-    const pattern = withoutTrailing.replace(/^\/+/, "");
-    if (!pattern) continue;
-    const regex = globToRegExp(pattern);
-    const candidates = dirOnly ? parentDirs : [...parentDirs, normalized];
-    const matched = candidates.some((candidate) =>
-      rooted ? regex.test(candidate) : regex.test(candidate.split("/").at(-1)!),
-    );
-    if (matched) ignored = !negated;
-  }
-  return ignored;
-}
-
-const REQUIRED_IGNORED_APP_PATHS = [
-  ".env",
-  ".env.local",
-  ".env.migrate",
-  ".env.production.secrets",
-  ".env.production.migrate",
-  ".local/people/member.txt",
-  ".local/restore-points/backup.sql",
-];
-
-const REQUIRED_IGNORED_ROOT_PATHS = [
-  ".env",
-  ".env.local",
-  ".config/fnox/local.toml",
-  "fnox.local.toml",
-  ".config/pitchfork.local.toml",
-  ".claude/settings.json",
-  ".codex/config.toml",
-  ".devin/state.json",
-  "log/dev.log",
-  "debug-1.log",
-  ".scratch/tmp.txt",
-  "target/debug/schema-compiler",
-  ".cargo-target/debug/schema-compiler",
-  ".turbo/cache.json",
-];
-
-/** Refuse deployment unless the .vercelignore at deployCwd excludes every secret/private file. */
-export function checkVercelIgnore(appDir = defaultApp, repoRoot = defaultRoot): void {
-  const deployCwd = resolveDeployCwd(appDir, repoRoot);
-  const ignorePath = path.join(deployCwd, ".vercelignore");
-  if (!existsSync(ignorePath))
-    throw new SafeError(
-      `Missing ${ignorePath}. Add .vercelignore covering .env, .env.*, and .local/ before deploying so secret files and restore points are never uploaded to Vercel.`,
-    );
-  const content = readFileSync(ignorePath, "utf8");
-  const relApp = path.relative(deployCwd, appDir).replaceAll("\\", "/");
-  const prefix = relApp && relApp !== "." ? `${relApp}/` : "";
-  const required = [
-    ...REQUIRED_IGNORED_APP_PATHS.map((file) => `${prefix}${file}`),
-    ...(path.resolve(deployCwd) === path.resolve(repoRoot) ? REQUIRED_IGNORED_ROOT_PATHS : []),
-  ];
-  const uncovered = [...new Set(required)].filter((file) => !isIgnoredByVercelIgnore(content, file));
-  if (uncovered.length > 0)
-    throw new SafeError(
-      `${ignorePath} does not ignore ${uncovered.join(", ")}. Update .vercelignore before deploying so secret files, local state, and restore points are never uploaded to Vercel.`,
-    );
+  };
+  walk(outputDir);
 }
 
 function commandOutput(error: unknown): string {
@@ -176,7 +119,6 @@ export interface GateIO {
   git(args: string[]): string;
   check(): void;
   linked(): boolean;
-  checkVercelIgnore?(): void;
   sourceCommit(): string;
   appName?(): string;
   tty(): boolean;
@@ -230,7 +172,6 @@ export function createGateIO(
         }
       }),
     linked: () => hasVercelLink(appDir, repoRoot),
-    checkVercelIgnore: () => checkVercelIgnore(appDir, repoRoot),
     sourceCommit: () =>
       JSON.parse(readFileSync(path.join(appDir, ".generated/build.json"), "utf8")).sourceCommit,
     appName: () => readAppConfig(appDir).name,
@@ -265,12 +206,8 @@ export async function confirm(io: GateIO = gateIO) {
     throw new SafeError("Confirmation did not match; nothing was changed.");
 }
 
-export async function preflight(
-  localOnly = false,
-  io: GateIO = gateIO,
-  options: { requireTty?: boolean } = {},
-) {
-  if (options.requireTty !== false && !io.tty())
+export async function preflight(localOnly = false, io: GateIO = gateIO) {
+  if (!io.tty())
     throw new SafeError(
       "A real terminal on stdin and stdout is required. Ask the human to run this command.",
     );
@@ -312,8 +249,6 @@ export async function preflight(
   }
   io.log("Checking Vercel project link…");
   if (!io.linked()) throw new SafeError("Link this app to its Vercel project before continuing.");
-  io.log("Checking .vercelignore coverage…");
-  io.checkVercelIgnore?.();
   io.log("Compiling schema and running type checks…");
   io.check();
   if (io.sourceCommit() !== io.git(["rev-parse", "HEAD"]))

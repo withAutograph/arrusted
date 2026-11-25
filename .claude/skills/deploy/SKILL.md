@@ -14,18 +14,23 @@ Never print or read secret values.
 2. For a schema change, rehearse on a disposable copy: `bun run migrate:rehearse`
    with `MIGRATION_DATABASE_URL` and `APP_DATABASE_URL` for that copy, plus
    `PRODUCTION_APP_DATABASE_URL` so it can refuse the production target.
-3. Run `bun run release --check` to verify preflight (clean `main` equal to the
-   remote default branch, Vercel project link, `.vercelignore` secret coverage,
-   compile/check, source commit) and print the schema plan. It connects
-   read-only to read the applied schema so it can compute the plan, without
-   modifying the database or deploying.
+3. Ask the builder to run `bun run release --check` in their own terminal
+   (requires a real TTY; connects read-only with the production owner login to
+   read the applied schema and compute the plan, runs the local prebuilt Vercel
+   build — `vercel pull --yes --environment production` and `vercel build --prod`
+   — deletes pulled `.vercel/.env*` files, and verifies `.vercel/output` and
+   every `.vc-config.json` `filePathMap` contain no `.env*` or `.local` paths,
+   without modifying the database or deploying).
 4. Say in plain words what will change for people, what happens to existing data,
    and how to undo it. Ask whether to go live now.
 5. On a yes, ask the builder to run `bun run release` in their own terminal. It
    loads `app/.env.production.secrets` and `app/.env.production.migrate`, checks
-   the source, shows the plan, and asks **them** to type the app's name; then it
-   takes a restore point, migrates, verifies the applied release, deploys, and
-   prints the deployment URL. Don't type it for them.
+   the source, shows the plan, runs the local prebuilt Vercel build and
+   `.vercel/output` check before confirmation (a failed build stops with nothing
+   changed), and asks **them** to type the app's name; then it takes a restore
+   point, migrates, verifies the applied release, deploys the prebuilt output
+   (`vercel deploy --prebuilt --prod`), and prints the deployment URL. Don't
+   type it for them.
 6. Open the app, sign in, and check the changed table and an existing one.
 
 `release` refuses a dirty tree, a branch other than `main`, or commits that aren't on
@@ -45,11 +50,13 @@ behavior is unproved until exercised. Check current provider documentation when
 executing provider steps.
 
 Local commands (`bun run migrate`, `bun run migrate:undo`, `bun run records:import`,
-`bun run people`, `bun run start`) use `app/.env.local` and `app/.env.migrate`.
-Production commands (`bun run release`, or `--production` on `migrate`,
-`migrate:undo`, `records:import`, `people`) read `app/.env.production.secrets`
-and `app/.env.production.migrate`. Never put `MIGRATION_DATABASE_URL` or `NEON_*`
-in `.env.local`, `.env.production.secrets`, or Vercel's runtime environment.
+`bun run people`, `bun run start`) read `app/.env.local` and `app/.env.migrate`
+as local defaults. Commands accepting `--production` are `setup:env`, `migrate`,
+`migrate:undo`, `records:import`, and `people` (`secrets:push` and `release`
+always read `app/.env.production.secrets` and `app/.env.production.migrate`).
+`--production` refuses loopback `MIGRATION_DATABASE_URL` targets. Never put
+`MIGRATION_DATABASE_URL` or `NEON_*` in `.env.local`, `.env.production.secrets`,
+or Vercel's runtime environment.
 
 **Tunnel limitation:** local commands skip the production gate when the database
 hostname is loopback (`localhost`, `127.0.0.1`, `[::1]`). An SSH tunnel or local

@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { Pool } from "pg";
+import { ENV_LOCAL, ENV_MIGRATE, readEnv } from "./local-secrets";
 import { loopback } from "./production-gate";
 import { SafeError, reportError } from "./safe-output";
 
@@ -89,19 +90,22 @@ export async function prepareStartup(input: {
 }
 
 if (import.meta.main) {
+  const localRuntime = readEnv(path.join(appRoot, ENV_LOCAL));
+  const localMigrate = readEnv(path.join(appRoot, ENV_MIGRATE));
+  const env: NodeJS.ProcessEnv = { ...localRuntime, ...localMigrate, ...process.env };
   try {
-    const target = process.env.MIGRATION_DATABASE_URL ?? process.env.APP_DATABASE_URL;
+    const target = env.MIGRATION_DATABASE_URL ?? env.APP_DATABASE_URL;
     if (!target) throw new SafeError("Configure APP_DATABASE_URL before starting.");
     await prepareStartup({
       databaseUrl: target,
-      matches: () => activeReleaseMatches(process.env.APP_DATABASE_URL ?? target),
+      matches: () => activeReleaseMatches(env.APP_DATABASE_URL ?? target),
       migrate: async () => {
-        if ((await run(process.execPath, ["scripts/migrate.ts", "apply"], process.env)) !== 0)
+        if ((await run(process.execPath, ["scripts/migrate.ts", "apply"], env)) !== 0)
           throw new SafeError("Local migration failed; server was not started.");
       },
     });
     const runtimeEnvironment = Object.fromEntries(
-      Object.entries(process.env).filter(
+      Object.entries(env).filter(
         ([key]) => key !== "MIGRATION_DATABASE_URL" && !key.startsWith("NEON_"),
       ),
     );
@@ -111,7 +115,7 @@ if (import.meta.main) {
       runtimeEnvironment,
     );
   } catch (error) {
-    reportError(error, "Startup migration check");
+    reportError(error, "Startup migration check", env);
     process.exitCode = 1;
   }
 }

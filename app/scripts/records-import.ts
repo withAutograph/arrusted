@@ -1,9 +1,10 @@
-import { productionGate } from "./production-gate";
+import { productionGate, requireNonLoopback } from "./production-gate";
 import { reportError, SafeError } from "./safe-output";
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { Pool } from "pg";
+import { ENV_MIGRATE, ENV_PROD_MIGRATE, readEnv } from "./local-secrets";
 import { mapImportCsv, readImportCsv, externalKeyColumn } from "@autograph/csv-workspace/mapping";
 import { applyRecordImport } from "@autograph/work-session-tools/records";
 import { createLabelIndex, WorkSessionToolInputError } from "@autograph/work-session-tools/labels";
@@ -102,11 +103,10 @@ if (import.meta.main) {
       throw new Error(
         "Usage: bun run records:import [--production] <table> <file.csv> [--key column]",
       );
-    let databaseUrl = process.env.MIGRATION_DATABASE_URL;
+    const appDir = path.resolve(import.meta.dirname, "..");
+    let databaseUrl: string | undefined;
     if (production) {
-      const { existsSync } = await import("node:fs");
-      const { ENV_PROD_MIGRATE, readEnv } = await import("./local-secrets");
-      const prodMigratePath = path.resolve(import.meta.dirname, "..", ENV_PROD_MIGRATE);
+      const prodMigratePath = path.join(appDir, ENV_PROD_MIGRATE);
       if (!existsSync(prodMigratePath))
         throw new SafeError(
           `Missing ${ENV_PROD_MIGRATE}. Run bun run setup:env --production and edit it in a local editor first.`,
@@ -114,9 +114,14 @@ if (import.meta.main) {
       const prodMigrate = readEnv(prodMigratePath);
       redactEnv = { ...process.env, ...prodMigrate };
       databaseUrl = prodMigrate.MIGRATION_DATABASE_URL || undefined;
+    } else {
+      const localMigrate = readEnv(path.join(appDir, ENV_MIGRATE));
+      redactEnv = { ...localMigrate, ...process.env };
+      databaseUrl = process.env.MIGRATION_DATABASE_URL ?? localMigrate.MIGRATION_DATABASE_URL;
     }
     if (!databaseUrl)
       throw new Error("MIGRATION_DATABASE_URL is required (deployment owner connection).");
+    if (production) requireNonLoopback("MIGRATION_DATABASE_URL", databaseUrl);
     await productionGate(
       databaseUrl,
       "Import CSV records through ordinary writes. Matching external keys update existing records; new keys create records.",

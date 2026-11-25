@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { confirm, gateIO, loopback, type GateIO } from "./production-gate";
+import { confirm, gateIO, requireNonLoopback, type GateIO } from "./production-gate";
 import { SafeError, redact, reportError } from "./safe-output";
 
 export const ENV_LOCAL = ".env.local";
@@ -123,7 +123,11 @@ export function setupEnv(directory: string, log = console.log, production = fals
     log(name);
 }
 
-function validatedOrigin(raw: string | undefined, envName: string, production: boolean): URL {
+export function validatedOrigin(
+  raw: string | undefined,
+  envName: string,
+  production: boolean,
+): URL {
   if (!raw) throw new SafeError(`Configure BETTER_AUTH_URL in ${envName} in a local editor first.`);
   let origin: URL;
   try {
@@ -174,12 +178,8 @@ export async function pushSecrets(
     if (!env[name])
       throw new SafeError(`Configure ${name} in ${ENV_PROD_SECRETS} in a local editor first.`);
   validatedOrigin(env.BETTER_AUTH_URL, ENV_PROD_SECRETS, true);
-  for (const dbVar of ["APP_DATABASE_URL", "AUTH_DATABASE_URL"] as const) {
-    const value = env[dbVar];
-    if (!value) continue;
-    if (loopback(value))
-      throw new SafeError(`${dbVar} must not target a loopback host for production.`);
-  }
+  requireNonLoopback("APP_DATABASE_URL", env.APP_DATABASE_URL!);
+  if (env.AUTH_DATABASE_URL) requireNonLoopback("AUTH_DATABASE_URL", env.AUTH_DATABASE_URL);
   if (env.BETTER_AUTH_SECRET!.length < 32)
     throw new SafeError("BETTER_AUTH_SECRET must contain at least 32 characters.");
 

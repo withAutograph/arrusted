@@ -87,6 +87,8 @@ describe.skipIf(!testUrl)("people add/remove and closed sign-up", () => {
     const added = await addPerson({
       pool,
       auth: identity.auth,
+      organizationId: "starter",
+      name: "Starter",
       origin,
       email: "  Alice@Example.Test ",
     });
@@ -130,6 +132,8 @@ describe.skipIf(!testUrl)("people add/remove and closed sign-up", () => {
     const firstReset = await addPerson({
       pool,
       auth: identity.auth,
+      organizationId: "starter",
+      name: "Starter",
       origin,
       email: "alice@example.test",
     });
@@ -137,6 +141,8 @@ describe.skipIf(!testUrl)("people add/remove and closed sign-up", () => {
     const secondReset = await addPerson({
       pool,
       auth: identity.auth,
+      organizationId: "starter",
+      name: "Starter",
       origin,
       email: "alice@example.test",
     });
@@ -181,6 +187,8 @@ describe.skipIf(!testUrl)("people add/remove and closed sign-up", () => {
     const pendingLink = await addPerson({
       pool,
       auth: identity.auth,
+      organizationId: "starter",
+      name: "Starter",
       origin,
       email: "alice@example.test",
     });
@@ -252,5 +260,64 @@ describe.skipIf(!testUrl)("people add/remove and closed sign-up", () => {
       (await pool.query('select "userId" from "oauthClient" where "clientId" = $1', [clientId]))
         .rows,
     ).toEqual([{ userId: null }]);
+  });
+
+  test("addPerson repairs missing membership for an existing user and matches email by lower(email)", async () => {
+    await pool.query(
+      `insert into "user" ("id", "name", "email", "emailVerified")
+       values ('mixed-case-user', 'Mixed', 'Mixed.Case@Example.Test', false)`,
+    );
+    const repaired = await addPerson({
+      pool,
+      auth: identity.auth,
+      organizationId: "starter",
+      name: "Starter",
+      origin,
+      email: "mixed.case@example.test",
+    });
+    expect(repaired.created).toBe(false);
+    expect(repaired.userId).toBe("mixed-case-user");
+    expect(
+      (
+        await pool.query(
+          'select count(*)::int as n from "member" where "organizationId" = $1 and "userId" = $2',
+          ["starter", "mixed-case-user"],
+        )
+      ).rows[0].n,
+    ).toBe(1);
+    expect(
+      (
+        await pool.query("select active from kernel_actor_membership where actor_id = $1", [
+          "mixed-case-user",
+        ])
+      ).rows,
+    ).toEqual([{ active: true }]);
+
+    // Re-running addPerson does not create a duplicate member row.
+    await addPerson({
+      pool,
+      auth: identity.auth,
+      organizationId: "starter",
+      name: "Starter",
+      origin,
+      email: "MIXED.CASE@EXAMPLE.TEST",
+    });
+    expect(
+      (
+        await pool.query(
+          'select count(*)::int as n from "member" where "organizationId" = $1 and "userId" = $2',
+          ["starter", "mixed-case-user"],
+        )
+      ).rows[0].n,
+    ).toBe(1);
+
+    // removePerson matches the same user via lower(email).
+    expect(
+      await removePerson({ pool, organizationId: "starter", email: "mixed.case@example.test" }),
+    ).toBe(true);
+    expect(
+      (await pool.query('select count(*)::int as n from "user" where id = $1', ["mixed-case-user"]))
+        .rows[0].n,
+    ).toBe(0);
   });
 });

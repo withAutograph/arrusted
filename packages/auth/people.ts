@@ -10,19 +10,50 @@ export function normalizeEmail(raw: string): string {
   return email;
 }
 
+export async function ensureMembership(input: {
+  pool: Pool;
+  organizationId: string;
+  name: string;
+  userId: string;
+}): Promise<void> {
+  await input.pool.query(
+    `with deployment as (
+      insert into organization (id,name,slug,"createdAt") values ($1,$2,$1,now())
+      on conflict (id) do update set id=excluded.id returning id
+    )
+    insert into member (id,"organizationId","userId",role,"createdAt")
+    select $3,id,$4,'member',now() from deployment
+    where not exists (
+      select 1 from member where "organizationId" = deployment.id and "userId" = $4
+    )`,
+    [input.organizationId, input.name, randomBytes(24).toString("hex"), input.userId],
+  );
+}
+
 export async function addPerson(input: {
   pool: Pool;
   auth: ReturnType<typeof createSingleOrganizationAuth>["auth"];
+  organizationId: string;
+  name?: string;
   origin: string;
   email: string;
 }): Promise<{ userId: string; email: string; token: string; link: string; created: boolean }> {
   const email = normalizeEmail(input.email);
   const ctx = await input.auth.$context;
-  const existing = await ctx.internalAdapter.findUserByEmail(email);
+  const found = await input.pool.query<{ id: string }>(
+    'select id from "user" where lower(email) = $1 limit 1',
+    [email],
+  );
   let userId: string;
   let created = false;
-  if (existing) {
-    userId = existing.user.id;
+  if (found.rows[0]) {
+    userId = found.rows[0].id;
+    await ensureMembership({
+      pool: input.pool,
+      organizationId: input.organizationId,
+      name: input.name ?? input.organizationId,
+      userId,
+    });
   } else {
     const user = await ctx.internalAdapter.createUser(
       { email, name: email, emailVerified: false },

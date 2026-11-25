@@ -10,8 +10,10 @@ import {
   ENV_PROD_MIGRATE,
   ENV_PROD_SECRETS,
   readEnv,
+  validatedOrigin,
 } from "./local-secrets";
-import { confirm, loopback } from "./production-gate";
+import { connectionTarget } from "./migrate";
+import { confirm, loopback, requireNonLoopback } from "./production-gate";
 import { SafeError, reportError } from "./safe-output";
 
 export function safeEmailFileName(email: string): string {
@@ -73,10 +75,10 @@ if (import.meta.main) {
     } else {
       const localSecrets = readEnv(path.join(appDir, ENV_LOCAL));
       const localMigrate = readEnv(path.join(appDir, ENV_MIGRATE));
-      redactEnv = { ...process.env, ...localSecrets, ...localMigrate };
-      databaseUrl = process.env.MIGRATION_DATABASE_URL || localMigrate.MIGRATION_DATABASE_URL;
-      origin = process.env.BETTER_AUTH_URL || localSecrets.BETTER_AUTH_URL;
-      secret = process.env.BETTER_AUTH_SECRET || localSecrets.BETTER_AUTH_SECRET;
+      redactEnv = { ...localSecrets, ...localMigrate, ...process.env };
+      databaseUrl = process.env.MIGRATION_DATABASE_URL ?? localMigrate.MIGRATION_DATABASE_URL;
+      origin = process.env.BETTER_AUTH_URL ?? localSecrets.BETTER_AUTH_URL;
+      secret = process.env.BETTER_AUTH_SECRET ?? localSecrets.BETTER_AUTH_SECRET;
     }
     if (!databaseUrl || !origin || !secret)
       throw new SafeError(
@@ -84,19 +86,17 @@ if (import.meta.main) {
           ? `Configure MIGRATION_DATABASE_URL in ${ENV_PROD_MIGRATE}, and BETTER_AUTH_URL and BETTER_AUTH_SECRET in ${ENV_PROD_SECRETS}.`
           : `Configure MIGRATION_DATABASE_URL in ${ENV_MIGRATE}, and BETTER_AUTH_URL and BETTER_AUTH_SECRET in ${ENV_LOCAL}.`,
       );
+    validatedOrigin(origin, production ? ENV_PROD_SECRETS : ENV_LOCAL, production);
+    if (production) requireNonLoopback("MIGRATION_DATABASE_URL", databaseUrl);
     const isLocal = loopback(databaseUrl);
-    if (production && isLocal)
-      throw new SafeError("Production MIGRATION_DATABASE_URL must not target a loopback host.");
+    const { url: targetUrl } = connectionTarget(databaseUrl);
     if (production || !isLocal) {
       console.log(
         `${action === "add" ? "Add or reset sign-in link for" : "Remove"} ${email} in ${config.name}.`,
       );
       await confirm();
     }
-    const parsed = new URL(databaseUrl);
-    if (!parsed.searchParams.has("sslmode"))
-      parsed.searchParams.set("sslmode", isLocal ? "disable" : "verify-full");
-    const pool = new Pool({ connectionString: parsed.toString(), max: 2 });
+    const pool = new Pool({ connectionString: targetUrl, max: 2 });
     try {
       const { auth } = createSingleOrganizationAuth({
         database: pool,
@@ -105,7 +105,14 @@ if (import.meta.main) {
         ...config,
       });
       if (action === "add") {
-        const result = await addPerson({ pool, auth, origin, email });
+        const result = await addPerson({
+          pool,
+          auth,
+          organizationId: config.organizationId,
+          name: config.name,
+          origin,
+          email,
+        });
         const filePath = writePersonLink(appDir, result.email, result.link);
         console.log(filePath);
         console.log(
