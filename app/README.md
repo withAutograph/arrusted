@@ -2,12 +2,12 @@
 
 One Next.js app uses the existing kernel, compiler, Canvas Host and Better Auth
 packages from source. The deployment scope is `starter/starter`. The organization
-is created on first email/password signup and never appears as a picker. Every
-member may open each table, review drafts and save. OAuth agents can stage work;
-the kernel still refuses their canonical writes. Membership and OAuth consent
-are rechecked for every data operation. The migrator derives the kernel actor
-membership from the Auth member row in the same database transaction; there is
-no separate app grant to provision.
+is created when the first person is added and never appears as a picker. Every
+signed-in person has equal access: they may open each table, review drafts and
+save. OAuth agents can stage work; the kernel still refuses their canonical
+writes. Membership and OAuth consent are rechecked for every data operation.
+The migrator derives the kernel actor membership from the Auth member row in
+the same database transaction; there is no separate app grant to provision.
 
 From the repository root, install dependencies with the pinned Bun. In `app/`,
 run `bun run setup:env` for local development. It creates missing values in
@@ -17,9 +17,10 @@ Production runtime values live separately in ignored `app/.env.production.secret
 (not auto-loaded by Next or Bun) and `app/.env.production.migrate`, prepared with
 `bun run setup:env --production`. Configure connection hosts and credentials
 privately in a **local editor**; generated local defaults do not provision
-PostgreSQL. Never paste env files, passwords, setup links or invite links into
-agent chat. Never ask an agent to read secret files or browser form values.
-The owner chooses their own password in their browser.
+PostgreSQL. Never paste env files, passwords, or password-setup links into
+agent chat. Never ask an agent to read secret files, `.local/people/*` link
+files, or browser form values. Each person chooses their own password in their
+browser.
 
 Never put migration credentials (`MIGRATION_DATABASE_URL`) or Neon API keys in
 `.env.local`, `.env.production.secrets`, or Vercel's runtime environment. Use a
@@ -27,7 +28,7 @@ separate restricted login for `APP_DATABASE_URL`. Package scripts wrap explicit
 `--env-file` loading so bare `bun run migrate`, `bun run migrate:undo`,
 `bun run records:import`, `bun run start` use local files while
 `bun run release` (and `--production` on `migrate`, `migrate:undo`,
-`records:import`, `owner:claim`) uses production files.
+`records:import`, `people`) uses production files.
 
 For a disposable local PostgreSQL server, create the database as its owner:
 
@@ -41,11 +42,12 @@ at least 32 characters; migrate creates it. Run these from `app/`:
 ```sh
 bun run compile
 bun run migrate
-bun run owner:setup
+bun run people add you@example.com
 bun run dev
-# In another terminal once dev is listening:
-bun run owner:open
 ```
+
+Open the private `.local/people/*.txt` file printed by `people add`, open that
+link in your browser to set your password, then sign in.
 
 The migrator grants the runtime login only
 the generated kernel capabilities and Auth table access (never direct access to
@@ -102,7 +104,7 @@ Use `bun run secrets:push` to send runtime values from
 confirmation. It refuses loopback hosts and non-`https://` origins, excludes
 migration and Neon credentials, sends values on stdin only (never argv or
 output), and overwrites existing variables with `--force`. Error messages are
-redacted (stripping URL credentials, secret env var values, and setup/invite
+redacted (stripping URL credentials, secret env var values, and token
 fragments) rather than suppressed, so actionable refusals and PostgreSQL error
 codes remain visible without leaking credentials. Do not troubleshoot by pasting
 raw secret files into chat.
@@ -144,65 +146,41 @@ keys for repeat imports and copy/fill updates; blank/omitted fields stay unchang
 Without keys, rerunning creates new records. The owner connection stays out of
 the running app's environment.
 
-### Owner setup and invitations
+### Managing people
 
-Signup is closed by default. Before any members exist, even open signup requires
-a one-time setup code. Run `bun run owner:setup` (or `bun run owner:setup --production`
-for production): it rotates `APP_OWNER_SETUP_HASH` in `.env.local` (or
-`.env.production.secrets`) and writes a private `0600` link file under
-`app/.local/` without opening a browser or printing the code. Re-running
-`owner:setup` rotates the code deliberately. For production, push with
-`bun run secrets:push` and deploy with `bun run release` first.
+Sign-up is always closed and everyone signed in has equal access. All
+organization-plugin HTTP endpoints are blocked (Agent OAuth uses
+`/agent-grant/*` and `/oauth2/*`). People are managed with two commands from
+`app/`:
 
-Once the app is answering at `BETTER_AUTH_URL`, run `bun run owner:open` (or
-`bun run owner:open --production`). It checks `/api/auth/owner-setup-status`
-(unauthenticated boolean only, plus a constant-time hash-of-hash match check so
-a stale deployed `APP_OWNER_SETUP_HASH` is caught before opening without
-exposing the hash) and opens the local HTML file in the browser (never passing
-the setup URL on argv). If the app does not answer yet or is running an older
-setup hash, it tells you to start or push and release the app first. The link
-file remains on disk until owner setup finishes so reloading the tab cannot lose
-the code; delete it afterwards or re-run `owner:open`, which deletes the file
-automatically once setup is complete. First successful signup becomes owner;
-simultaneous claims serialize, merge into `organization.metadata`, and
-subsequent claims are refused. Missing `APP_OWNER_SETUP_HASH` refuses signup
-with setup instructions.
+- `bun run people add <email>` (optional `--production`): creates the user and
+  deployment membership if missing, invalidates any earlier unused password
+  link for that person, and writes a single-use 7-day `/auth/set-password` link
+  to an ignored `0600` file under `app/.local/people/`. The command prints only
+  the file path and instructions, never the link. Open the file yourself and
+  send the link privately; re-running issues a new link for a lost password. An
+  agent may run `people add` locally; with `--production`, the human runs it in
+  their own terminal and confirms by typing the app name. Nobody puts a
+  password or link in chat.
+- `bun run people remove <email>` (optional `--production`): revokes reset
+  tokens, sessions, OAuth tokens/consents/codes, device codes, and kernel
+  membership, clears `oauthClient."userId"`, and deletes the user in one
+  transaction without deleting business records.
 
-Owners use `/members` to view members, promote a member to owner, remove members
-(never the last owner; removal revokes browser sessions, OAuth grants/tokens,
-and deactivates the kernel projection), and create or revoke email-bound
-invitation links. Copy the link at creation: only its SHA-256 hash is stored in
-Better Auth's existing invitation row. Links expire in seven days, work once,
-and roll back with failed account creation. Previously removed members can open
-a new invite link and sign in with their existing password to rejoin (no account
-takeover by email alone and no password reset from an invite). No email delivery
-is configured.
-Setup and invitation secrets use URL fragments, which the sign-in page reads and
-clears on load. The sign-in page offers account creation only for a proof link
-or `APP_ALLOW_SIGN_UP=true` (exactly). Open signup still grants only member
-access after initial owner setup. All organization-plugin HTTP endpoints are
-blocked in this deployment (Agent OAuth uses `/agent-grant/*` and `/oauth2/*`);
-its server-only `addMember` is also refused. `autograph_sync_member` projects
-both owners and members to kernel role `member`.
-
-Existing members remain signed in after upgrade. If no owner exists, a human
-runs `bun run owner:claim <existing-member-email>` (or
-`bun run owner:claim --production <existing-member-email>`) and confirms in a
-real terminal. This promotes only an existing member and refuses if an owner
-already exists. There is no automatic promotion at sign-in.
+In-app management can be added later on the same Better Auth tables.
 
 The example currently uses tenant isolation without a declared fine-grained
 schema policy; it does not claim per-field or per-role restrictions.
 
-Local checks: `bun run check`; the Auth regression test accepts an explicit
-loopback `SINGLE_ORG_TEST_DATABASE_URL`, creates a unique database, and drops it
+Local checks: `bun run check`; the Auth regression tests accept an explicit
+loopback `SINGLE_ORG_TEST_DATABASE_URL`, create a unique database, and drop it
 when complete. Provider deployment and connector UI behavior require separate
 hosted proof.
 
 Mise exposes the same app-owned commands from the repository root:
 `mise //app:compile`, `mise //app:dev`, `mise //app:build`,
-`mise //app:migrate`, `mise //app:migrate:undo`, and
-`mise //app:migrate:rehearse`, and `mise //app:records:import`. All four owner
+`mise //app:migrate`, `mise //app:migrate:undo`, `mise //app:migrate:rehearse`,
+`mise //app:records:import`, `mise //app:people`, and `mise //app:release`. All four owner
 commands use `MIGRATION_DATABASE_URL` for the target connection. Apply and
 rehearsal also require `APP_DATABASE_URL`; omission is refused before migration.
 For rehearsal, point both URLs at the disposable database and supply
@@ -236,7 +214,7 @@ export CARGO_TARGET_DIR="$PWD/target"
 export CARGO_INCREMENTAL=0
 mise exec -- ./node_modules/.bin/vp test --config app/vite.config.ts --run
 mise exec -- bun test app/scripts/restore-points.test.ts
-mise exec -- ./node_modules/.bin/vp test --config packages/auth/vite.config.ts --run packages/auth/__tests__/single-organization.test.ts
+mise exec -- ./node_modules/.bin/vp test --config packages/auth/vite.config.ts --run packages/auth/__tests__/single-organization.test.ts packages/auth/__tests__/people.test.ts
 ```
 
 The migration suite covers table/field additions, rename aliases with rows,

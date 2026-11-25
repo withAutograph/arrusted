@@ -2,7 +2,6 @@ import { test, expect } from "bun:test";
 import { execFileSync, spawnSync } from "node:child_process";
 import {
   copyFileSync,
-  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -22,22 +21,26 @@ import {
   productionGate,
   type GateIO,
 } from "./production-gate";
-import { release, schemaForPlan, schemaPlan } from "./release";
+import {
+  appliedRelease,
+  release,
+  resolveProductionEnv,
+  schemaForPlan,
+  schemaPlan,
+  validateProductionDatabaseUrls,
+} from "./release";
 import {
   ENV_LOCAL,
   ENV_MIGRATE,
   ENV_PROD_MIGRATE,
   ENV_PROD_SECRETS,
-  OWNER_LINK_LOCAL,
-  OWNER_LINK_PROD,
-  digest,
-  ownerOpen,
-  ownerSetup,
+  applyProductionNeonEnv,
   pushSecrets,
   putEnv,
   readEnv,
   setupEnv,
 } from "./local-secrets";
+import { writePersonLink } from "./people";
 import { SafeError, redact, reportError } from "./safe-output";
 
 const pgTestUrl =
@@ -48,6 +51,27 @@ const pgTestUrl =
 if (!pgTestUrl && process.env.CI)
   throw new Error("SAFETY_TEST_DATABASE_URL (or SINGLE_ORG_TEST_DATABASE_URL) is required in CI.");
 const pgTest = pgTestUrl ? test : test.skip;
+
+const ROOT_VERCELIGNORE = [
+  ".env",
+  ".env.*",
+  "app/.env",
+  "app/.env.*",
+  ".local/",
+  "app/.local/",
+  ".config/fnox/",
+  "fnox.local.toml",
+  ".config/pitchfork.local.toml",
+  ".claude/",
+  ".codex/",
+  ".devin/",
+  "log/",
+  "debug-*.log",
+  ".scratch/",
+  "target/",
+  ".cargo-target/",
+  ".turbo/",
+].join("\n") + "\n";
 
 function fake(overrides: Partial<GateIO> = {}): GateIO {
   return {
@@ -175,10 +199,7 @@ test("real gateIO against real temp git repos with bare remote: ok, repo-level l
     );
     writeFileSync(path.join(repo, ".gitignore"), "app/.generated/\n.vercel/\napp/.vercel/\n");
     writeFileSync(path.join(appDir, ".vercelignore"), ".env\n.env.*\n.local/\n");
-    writeFileSync(
-      path.join(repo, ".vercelignore"),
-      ".env\n.env.*\napp/.env\napp/.env.*\n.local/\napp/.local/\n",
-    );
+    writeFileSync(path.join(repo, ".vercelignore"), ROOT_VERCELIGNORE);
     writeFileSync(path.join(repo, "tracked.txt"), "v1\n");
     git(repo, "add", ".");
     git(repo, "commit", "-m", "initial");
@@ -204,7 +225,7 @@ test("real gateIO against real temp git repos with bare remote: ok, repo-level l
     rmSync(path.join(appDir, ".vercelignore"));
     expect(() => checkVercelIgnore(appDir, repo)).toThrow(/\.vercelignore/);
     writeFileSync(path.join(appDir, ".vercelignore"), ".env\n.env.*\n");
-    expect(() => checkVercelIgnore(appDir, repo)).toThrow(/\.local\/owner-setup\.html/);
+    expect(() => checkVercelIgnore(appDir, repo)).toThrow(/\.local\/people\/member\.txt/);
     writeFileSync(
       path.join(appDir, ".vercelignore"),
       ".env\n.env.*\n!.env.production.secrets\n.local/\n",
@@ -212,7 +233,7 @@ test("real gateIO against real temp git repos with bare remote: ok, repo-level l
     expect(() => checkVercelIgnore(appDir, repo)).toThrow(/\.env\.production\.secrets/);
     writeFileSync(path.join(appDir, ".vercelignore"), ".env\n.env.*\n.local/\n");
 
-    // 2. ok (with repo-level Vercel link and root .vercelignore); missing root .vercelignore refuses
+    // 2. ok (with repo-level Vercel link and root .vercelignore); missing or incomplete root .vercelignore refuses
     rmSync(path.join(appDir, ".vercel"), { recursive: true, force: true });
     await expect(preflight(false, io, { requireTty: false })).rejects.toThrow("Vercel");
     mkdirSync(path.join(repo, ".vercel"), { recursive: true });
@@ -226,6 +247,8 @@ test("real gateIO against real temp git repos with bare remote: ok, repo-level l
       path.join(repo, ".vercelignore"),
       ".env\n.env.*\napp/.env\napp/.env.*\n.local/\napp/.local/\n",
     );
+    expect(() => checkVercelIgnore(appDir, repo)).toThrow(/\.config\/fnox\/local\.toml/);
+    writeFileSync(path.join(repo, ".vercelignore"), ROOT_VERCELIGNORE);
     await preflight(false, io, { requireTty: false });
 
     // 3. dirty tracked file
@@ -262,10 +285,9 @@ test("real gateIO against real temp git repos with bare remote: ok, repo-level l
   }
 });
 
-test("repository app/.vercelignore and root .vercelignore cover every secret file and restore point", () => {
+test("repository app/.vercelignore and root .vercelignore cover every secret, tooling, and restore-point path", () => {
   const realApp = path.resolve(import.meta.dirname, "..");
   const realRoot = path.resolve(realApp, "..");
-  // Check both app-cwd and root-cwd semantics against the checked-in .vercelignore files.
   const tmp = mkdtempSync(path.join(tmpdir(), "vercelignore-repo-check-"));
   try {
     const tmpApp = path.join(tmp, "app");
@@ -413,6 +435,99 @@ test("release order, progress logs, deployment URL, release --check (no TTY/no s
   ).rejects.toThrow("Database migration succeeded");
 });
 
+test("release validates production DB URLs (refuses loopback, same role, mismatched target, pooler) and appliedRelease uses connectionTarget", async () => {
+  const mig = "postgresql://owner:owner-secret-pw@ep-prod.neon.tech/app?sslmode=verify-full";
+  const app = "postgresql://runtime:runtime-secret-pw@ep-prod.neon.tech/app?sslmode=verify-full";
+  expect(
+    validateProductionDatabaseUrls({ migrationDatabaseUrl: mig, appDatabaseUrl: app }),
+  ).toMatchObject({ runtimeRole: "runtime", authRole: "runtime" });
+
+  // Loopback production URLs refused.
+  expect(() =>
+    validateProductionDatabaseUrls({
+      migrationDatabaseUrl: "postgresql://owner:pw@127.0.0.1:5432/app",
+      appDatabaseUrl: app,
+    }),
+  ).toThrow(/loopback/i);
+  expect(() =>
+    validateProductionDatabaseUrls({
+      migrationDatabaseUrl: mig,
+      appDatabaseUrl: "postgresql://runtime:pw@localhost:5432/app",
+    }),
+  ).toThrow(/loopback/i);
+
+  // Same login as migrator refused via runtimeRoles.
+  expect(() =>
+    validateProductionDatabaseUrls({
+      migrationDatabaseUrl: mig,
+      appDatabaseUrl: "postgresql://owner:runtime-secret-pw@ep-prod.neon.tech/app?sslmode=verify-full",
+    }),
+  ).toThrow(/separate unprivileged/);
+
+  // Pooler or mismatched database refused via connectionTarget/runtimeRoles.
+  expect(() =>
+    validateProductionDatabaseUrls({
+      migrationDatabaseUrl:
+        "postgresql://owner:owner-secret-pw@ep-prod-pooler.neon.tech/app?sslmode=verify-full",
+      appDatabaseUrl: app,
+    }),
+  ).toThrow(/protected_installer_identity_mismatch/);
+  expect(() =>
+    validateProductionDatabaseUrls({
+      migrationDatabaseUrl: mig,
+      appDatabaseUrl:
+        "postgresql://runtime:runtime-secret-pw@ep-prod.neon.tech/other_db?sslmode=verify-full",
+    }),
+  ).toThrow(/protected_installer_identity_mismatch/);
+
+  // appliedRelease validates URL via connectionTarget before opening a Pool.
+  await expect(
+    appliedRelease("postgresql://owner:pw@ep-prod-pooler.neon.tech/app?sslmode=verify-full"),
+  ).rejects.toThrow(/protected_installer_identity_mismatch/);
+});
+
+test("production mode reads NEON_* exclusively from .env.production.migrate and deletes inherited values when absent", () => {
+  const target: Record<string, string | undefined> = {
+    NEON_API_KEY: "inherited-key",
+    NEON_PROJECT_ID: "inherited-proj",
+    NEON_BRANCH_ID: "inherited-branch",
+    UNRELATED: "keep",
+  };
+  applyProductionNeonEnv({}, target);
+  expect(target.NEON_API_KEY).toBeUndefined();
+  expect(target.NEON_PROJECT_ID).toBeUndefined();
+  expect(target.NEON_BRANCH_ID).toBeUndefined();
+  expect(target.UNRELATED).toBe("keep");
+
+  applyProductionNeonEnv(
+    { NEON_API_KEY: "prod-key", NEON_PROJECT_ID: "prod-proj" },
+    target,
+  );
+  expect(target.NEON_API_KEY).toBe("prod-key");
+  expect(target.NEON_PROJECT_ID).toBe("prod-proj");
+  expect(target.NEON_BRANCH_ID).toBeUndefined();
+
+  const dir = mkdtempSync(path.join(tmpdir(), "neon-env-test-"));
+  try {
+    putEnv(path.join(dir, ENV_PROD_MIGRATE), {
+      MIGRATION_DATABASE_URL: "postgresql://owner:pw@ep.neon.tech/app?sslmode=verify-full",
+    });
+    const envObj: Record<string, string | undefined> = {
+      NEON_API_KEY: "stale-local-key",
+      NEON_PROJECT_ID: "stale-proj",
+      NEON_BRANCH_ID: "stale-branch",
+    };
+    const resolved = resolveProductionEnv(dir, envObj);
+    expect(envObj.NEON_API_KEY).toBeUndefined();
+    expect(envObj.NEON_PROJECT_ID).toBeUndefined();
+    expect(envObj.NEON_BRANCH_ID).toBeUndefined();
+    // Redact map still retained the inherited secret for error redaction.
+    expect(resolved.secretEnv.NEON_API_KEY).toBe("stale-local-key");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("schema plan describes additions, renames, archives, required fields and no changes", () => {
   const old = {
     models: [
@@ -454,95 +569,14 @@ test("schema plan describes additions, renames, archives, required fields and no
   expect(schemaPlan(next, next)).toContain("No table or field changes");
 });
 
-test("owner:setup creates 0600 link file without browser; owner:open checks status, opens file path, and deletes when complete", async () => {
-  const dir = mkdtempSync(path.join(tmpdir(), "owner-flow-test-"));
-  const output: string[] = [];
+test("writePersonLink writes mode 0600 file inside mode 0700 .local/people directory", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "people-link-test-"));
   try {
-    setupEnv(dir, (s) => output.push(s), false);
-    const localEnvPath = path.join(dir, ENV_LOCAL);
-    const linkFile = path.join(dir, OWNER_LINK_LOCAL);
-
-    // 1. owner:setup writes hash and 0600 file, never opens browser or prints code.
-    ownerSetup(dir, { log: (s) => output.push(s) });
-    expect(statSync(linkFile).mode & 0o777).toBe(0o600);
-    const html1 = readFileSync(linkFile, "utf8");
-    const code1 = /#setup=([^"<]+)/.exec(html1)![1]!;
-    expect(readEnv(localEnvPath).APP_OWNER_SETUP_HASH).toBe(digest(code1));
-    expect(output.join("\n")).not.toContain(code1);
-
-    // 2. Re-running owner:setup deliberately rotates the code and hash.
-    ownerSetup(dir, { log: (s) => output.push(s) });
-    const html2 = readFileSync(linkFile, "utf8");
-    const code2 = /#setup=([^"<]+)/.exec(html2)![1]!;
-    expect(code2).not.toBe(code1);
-    expect(readEnv(localEnvPath).APP_OWNER_SETUP_HASH).toBe(digest(code2));
-
-    // 3. owner:open refuses when app does not answer and keeps the file.
-    let openedArg = "";
-    await expect(
-      ownerOpen(dir, {
-        fetch: async () => {
-          throw new Error("ECONNREFUSED");
-        },
-        open: (arg) => {
-          openedArg = arg;
-          return true;
-        },
-        log: (s) => output.push(s),
-      }),
-    ).rejects.toThrow("did not answer");
-    expect(openedArg).toBe("");
-    expect(existsSync(linkFile)).toBe(true);
-
-    // 3b. owner:open sends hash-of-hash commitment (never raw code or hash) and refuses stale hash.
-    let sentHashHeader: string | null = null;
-    const expectedCheck = digest(`owner-setup-hash-check:${digest(code2)}`);
-    await expect(
-      ownerOpen(dir, {
-        fetch: async (_url, init) => {
-          sentHashHeader = new Headers(init?.headers).get("x-owner-setup-hash-check");
-          return Response.json({ complete: false, hashMatches: false });
-        },
-        open: (arg) => {
-          openedArg = arg;
-          return true;
-        },
-        log: (s) => output.push(s),
-      }),
-    ).rejects.toThrow("Restart bun run dev");
-    expect(sentHashHeader).toBe(expectedCheck);
-    expect(sentHashHeader).not.toBe(code2);
-    expect(sentHashHeader).not.toBe(digest(code2));
-    expect(openedArg).toBe("");
-    expect(existsSync(linkFile)).toBe(true);
-
-    // 4. owner:open opens the FILE path (not URL or code) when complete === false and hashMatches === true, and keeps the file.
-    await ownerOpen(dir, {
-      fetch: async () => Response.json({ complete: false, hashMatches: true }),
-      open: (arg) => {
-        openedArg = arg;
-        return true;
-      },
-      log: (s) => output.push(s),
-    });
-    expect(openedArg).toBe(linkFile);
-    expect(openedArg).not.toContain(code2);
-    expect(existsSync(linkFile)).toBe(true);
-
-    // 5. owner:open deletes the file and does not launch browser when complete === true.
-    openedArg = "";
-    await ownerOpen(dir, {
-      fetch: async () => Response.json({ complete: true }),
-      open: (arg) => {
-        openedArg = arg;
-        return true;
-      },
-      log: (s) => output.push(s),
-    });
-    expect(openedArg).toBe("");
-    expect(existsSync(linkFile)).toBe(false);
-    expect(output.join("\n")).not.toContain(code1);
-    expect(output.join("\n")).not.toContain(code2);
+    const file = writePersonLink(dir, "alice@example.test", "http://localhost:3000/auth/set-password#token=abc");
+    expect(file).toBe(path.join(dir, ".local/people/alice_example.test.txt"));
+    expect(statSync(path.join(dir, ".local/people")).mode & 0o777).toBe(0o700);
+    expect(statSync(file).mode & 0o777).toBe(0o600);
+    expect(readFileSync(file, "utf8")).toBe("http://localhost:3000/auth/set-password#token=abc\n");
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -607,16 +641,6 @@ test("production secrets stay separate from .env.local; secrets:push refuses loo
       },
       true,
     );
-    ownerSetup(dir, { production: true, log: (s) => output.push(s) });
-    expect(existsSync(path.join(dir, OWNER_LINK_PROD))).toBe(true);
-    await expect(
-      ownerOpen(dir, {
-        production: true,
-        fetch: async () => Response.json({ complete: false, hashMatches: false }),
-        open: () => true,
-        log: (s) => output.push(s),
-      }),
-    ).rejects.toThrow("bun run secrets:push and bun run release");
     const sent: [string, string][] = [];
     await pushSecrets(dir, fake({ log: (s) => output.push(s) }), (name, value) => {
       sent.push([name, value]);
@@ -638,11 +662,10 @@ test("production secrets stay separate from .env.local; secrets:push refuses loo
   }
 });
 
-test("error redaction strips URL credentials, env secrets, and setup/invite fragments while preserving refusals and record IDs", () => {
+test("error redaction strips URL credentials, env secrets, and token fragments while preserving refusals and record IDs", () => {
   const env = {
     APP_DATABASE_URL: "postgresql://owner:private-password@db.example/app",
     BETTER_AUTH_SECRET: "super-secret-auth-key-32-characters-long",
-    APP_OWNER_SETUP_HASH: "a".repeat(64),
     NEON_API_KEY: "provider-token",
   };
   const output: string[] = [];
@@ -653,7 +676,7 @@ test("error redaction strips URL credentials, env secrets, and setup/invite frag
   try {
     reportError(
       new Error(
-        `Failed postgresql://owner:private-password@db.example/app with provider-token and ${env.BETTER_AUTH_SECRET} and ${env.APP_OWNER_SETUP_HASH} and https://app.example/auth/sign-in#setup=code123&invite=inv456`,
+        `Failed postgresql://owner:private-password@db.example/app with provider-token and ${env.BETTER_AUTH_SECRET} and https://app.example/auth/set-password#token=tok456`,
       ),
       "Migration",
       env,
@@ -683,9 +706,7 @@ test("error redaction strips URL credentials, env secrets, and setup/invite frag
   expect(combined).not.toContain("private-password");
   expect(combined).not.toContain("provider-token");
   expect(combined).not.toContain(env.BETTER_AUTH_SECRET);
-  expect(combined).not.toContain(env.APP_OWNER_SETUP_HASH);
-  expect(combined).not.toContain("code123");
-  expect(combined).not.toContain("inv456");
+  expect(combined).not.toContain("tok456");
   expect(combined).not.toContain("secret-row-data");
   expect(combined).toContain("Field detail cannot change type");
   expect(combined).toContain("11111111-2222-3333-4444-555555555555");
@@ -699,7 +720,6 @@ pgTest(
     if (!pgTestUrl) throw new Error("Database URL required.");
     const base = new URL(pgTestUrl);
     const missingDbUrl = new URL(base);
-    // The password is checked before the database name, so use the real one when there is one.
     if (!base.password) missingDbUrl.password = "real-pg-secret-pw-1";
     missingDbUrl.pathname = "/nonexistent_safety_test_db_xyz";
 
@@ -755,7 +775,6 @@ pgTest(
     if (!pgTestUrl) throw new Error("Database URL required.");
     const base = new URL(pgTestUrl);
     const missingDbUrl = new URL(base);
-    // The password is checked before the database name, so use the real one when there is one.
     if (!base.password) missingDbUrl.password = "real-cli-pg-secret-pw-1";
     missingDbUrl.pathname = "/nonexistent_cli_safety_db_xyz";
 
@@ -793,6 +812,7 @@ test("real CLI failures redact supplied secrets without contacting a provider", 
     ...process.env,
     MIGRATION_DATABASE_URL: sentinel,
     APP_DATABASE_URL: sentinel,
+    BETTER_AUTH_URL: "http://localhost:3000",
     BETTER_AUTH_SECRET: sentinel,
     NEON_API_KEY: sentinel,
   };
@@ -802,8 +822,9 @@ test("real CLI failures redact supplied secrets without contacting a provider", 
     ["migrate.ts", ["rehearse"]],
     ["records-import.ts", ["notes", "missing.csv"]],
     ["release.ts", []],
+    ["release.ts", ["--check"]],
     ["serve.ts", []],
-    ["owner-claim.ts", ["member@example.test"]],
+    ["people.ts", ["add", "member@example.test"]],
   ] as const) {
     const result = spawnSync(process.execPath, [path.join(import.meta.dirname, script), ...args], {
       env: environment,
@@ -832,7 +853,7 @@ test("startup never migrates hosted targets, refuses pending migrations, allows 
   expect(applied).toBe(1);
 });
 
-test("setup, owner:setup and secrets:push CLI output excludes generated values", () => {
+test("setup and secrets:push CLI output excludes generated values", () => {
   const root = mkdtempSync(path.join(tmpdir(), "secret-cli-test-"));
   try {
     const appDir = path.join(root, "app");
@@ -861,7 +882,6 @@ test("setup, owner:setup and secrets:push CLI output excludes generated values",
     let output = "";
     for (const [args, expectedStatus] of [
       [["setup"], 0],
-      [["owner"], 0],
       [["setup", "--production"], 0],
       [["push"], 1],
     ] as const) {
@@ -876,16 +896,11 @@ test("setup, owner:setup and secrets:push CLI output excludes generated values",
     const env = readEnv(path.join(appDir, ENV_LOCAL));
     const migration = readEnv(path.join(appDir, ENV_MIGRATE));
     const prod = readEnv(path.join(appDir, ENV_PROD_SECRETS));
-    const html = readFileSync(path.join(appDir, OWNER_LINK_LOCAL), "utf8");
-    const code = /#setup=([^"<]+)/.exec(html)![1]!;
     for (const value of [
-      code,
       env.BETTER_AUTH_SECRET!,
-      env.APP_OWNER_SETUP_HASH!,
       env.APP_DATABASE_URL!,
       migration.MIGRATION_DATABASE_URL!,
       prod.BETTER_AUTH_SECRET!,
-      prod.APP_OWNER_SETUP_HASH!,
     ])
       expect(output).not.toContain(value);
   } finally {
@@ -951,11 +966,7 @@ test("Vercel adapter sends values only on stdin, uses --force, and redacts/suppr
     const output: string[] = [];
     await pushSecrets(dir, fake({ log: (message) => output.push(message) }));
     const env = readEnv(path.join(dir, ENV_PROD_SECRETS));
-    for (const value of [
-      env.APP_DATABASE_URL!,
-      env.BETTER_AUTH_SECRET!,
-      env.APP_OWNER_SETUP_HASH!,
-    ]) {
+    for (const value of [env.APP_DATABASE_URL!, env.BETTER_AUTH_SECRET!]) {
       expect(readFileSync(args, "utf8")).not.toContain(value);
       expect(readFileSync(input, "utf8")).toContain(value);
       expect(output.join("\n")).not.toContain(value);
@@ -969,13 +980,13 @@ test("Vercel adapter sends values only on stdin, uses --force, and redacts/suppr
   }
 });
 
-test("redact helper handles URL credentials (including raw slash), password= forms, bearer tokens, fragments, and avoids over-redacting unrelated or short env values", () => {
+test("redact helper handles URL credentials (including raw slash), password= forms, bearer tokens, token fragments, and avoids over-redacting unrelated or short env values", () => {
   expect(
     redact(
-      "failed postgresql://u:p/with/slash@host/db Bearer tok123 https://x.test/#setup=s1&invite=i2",
+      "failed postgresql://u:p/with/slash@host/db Bearer tok123 https://x.test/auth/set-password#token=t1",
     ),
   ).toBe(
-    "failed postgresql://[REDACTED]@host/db Bearer [REDACTED] https://x.test/#setup=[REDACTED]&invite=[REDACTED]",
+    "failed postgresql://[REDACTED]@host/db Bearer [REDACTED] https://x.test/auth/set-password#token=[REDACTED]",
   );
   expect(
     redact(
@@ -992,12 +1003,10 @@ test("redact helper handles URL credentials (including raw slash), password= for
     PGPASSWORD: "postgres",
     BETTER_AUTH_SECRET: "real-auth-secret-at-least-32-characters",
     NEON_API_KEY: "napi_secret_key_value",
-    APP_OWNER_SETUP_HASH: "b".repeat(64),
   };
   const message =
     'database "postgres" failed on 10.0.0.1 12345 10.0.0.2 22 at commit deadbeef12345678; leaked real-auth-secret-at-least-32-characters napi_secret_key_value ' +
-    "b".repeat(64) +
-    " postgresql://postgres:postgres@127.0.0.1:5432/postgres https://app.example/users/alice@example.com";
+    "postgresql://postgres:postgres@127.0.0.1:5432/postgres https://app.example/users/alice@example.com";
   const redacted = redact(message, noisyEnv);
   expect(redacted).toContain('database "postgres" failed');
   expect(redacted).toContain("10.0.0.1 12345 10.0.0.2 22");
@@ -1005,6 +1014,5 @@ test("redact helper handles URL credentials (including raw slash), password= for
   expect(redacted).toContain("https://app.example/users/alice@example.com");
   expect(redacted).not.toContain("real-auth-secret-at-least-32-characters");
   expect(redacted).not.toContain("napi_secret_key_value");
-  expect(redacted).not.toContain("b".repeat(64));
   expect(redacted).not.toContain("postgresql://postgres:postgres@");
 });

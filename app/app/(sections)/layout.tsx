@@ -30,7 +30,6 @@ export default function SectionsLayout({ children }: { children: ReactNode }) {
               {model.name}
             </Link>
           ))}
-          <Link href="/members">Members</Link>
           <Link href="/overview">Overview</Link>
         </nav>
         <SignOut />

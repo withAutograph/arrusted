@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: Put a merged change live from the builder's machine, invite people, or undo the last schema change. Use only after the change is merged to main through ship-change.
+description: Put a merged change live from the builder's machine, manage people's access, or undo the last schema change. Use only after the change is merged to main through ship-change.
 ---
 
 # Deploy
@@ -45,9 +45,9 @@ behavior is unproved until exercised. Check current provider documentation when
 executing provider steps.
 
 Local commands (`bun run migrate`, `bun run migrate:undo`, `bun run records:import`,
-`bun run start`) wrap `app/.env.local` and `app/.env.migrate` automatically.
+`bun run people`, `bun run start`) use `app/.env.local` and `app/.env.migrate`.
 Production commands (`bun run release`, or `--production` on `migrate`,
-`migrate:undo`, `records:import`, `owner:claim`) read `app/.env.production.secrets`
+`migrate:undo`, `records:import`, `people`) read `app/.env.production.secrets`
 and `app/.env.production.migrate`. Never put `MIGRATION_DATABASE_URL` or `NEON_*`
 in `.env.local`, `.env.production.secrets`, or Vercel's runtime environment.
 
@@ -56,7 +56,10 @@ hostname is loopback (`localhost`, `127.0.0.1`, `[::1]`). An SSH tunnel or local
 proxy forwarding to a production database looks like loopback and bypasses that
 guard — never point a local tunnel at production.
 
-On an upgraded deployment with existing members and no owner, ask the builder to
-run `bun run owner:claim --production <existing-member-email>` in their terminal.
-Owners manage invitations, promote additional owners, and remove members from
-**/members**.
+Sign-up is always closed and everyone signed in has equal access. To add a
+person, reset a lost password, or remove a person in production, ask the builder
+to run `bun run people add <email> --production` or
+`bun run people remove <email> --production` in their own terminal (typing the
+app name to confirm). `people add` saves a one-time 7-day set-password link to
+an ignored `0600` file under `app/.local/people/`; the builder opens that file
+themselves and sends the link privately. Nobody puts a password or link in chat.

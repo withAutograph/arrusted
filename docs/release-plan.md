@@ -91,6 +91,12 @@ None of these steps may depend on a service we host.
   apps with an agent and checks the expected numbers. Gate releases on it.
 - Use semver tags and a changelog. Publish the npm package under the chosen name.
 
+### After 1.0: people screen
+- One shared component to add, list and remove people, calling `@autograph/auth/people`
+  (`addPerson`, `removePerson`) from server actions. Better Auth UI already ships
+  invitation hooks to evaluate. Decide first: who may invite (everyone has equal
+  access today), and email delivery or a copyable link.
+
 ## Out of scope for 1.0
 - Multi-app hosting, a hosted builder, and org and app provisioning services.
 - Integrations beyond `importRecords()` and CSV import.

@@ -1,5 +1,5 @@
-import { createHash, randomBytes } from "node:crypto";
-import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { confirm, gateIO, loopback, type GateIO } from "./production-gate";
@@ -9,11 +9,20 @@ export const ENV_LOCAL = ".env.local";
 export const ENV_MIGRATE = ".env.migrate";
 export const ENV_PROD_SECRETS = ".env.production.secrets";
 export const ENV_PROD_MIGRATE = ".env.production.migrate";
-export const OWNER_LINK_LOCAL = ".local/owner-setup.html";
-export const OWNER_LINK_PROD = ".local/owner-setup.production.html";
+export const NEON_ENV_KEYS = ["NEON_API_KEY", "NEON_PROJECT_ID", "NEON_BRANCH_ID"] as const;
 
 export const secret = () => randomBytes(32).toString("base64url");
-export const digest = (value: string) => createHash("sha256").update(value).digest("hex");
+
+/** In production mode, Neon restore-point settings come only from .env.production.migrate. */
+export function applyProductionNeonEnv(
+  prodMigrate: Record<string, string>,
+  targetEnv: Record<string, string | undefined> = process.env,
+) {
+  for (const key of NEON_ENV_KEYS) {
+    if (prodMigrate[key]) targetEnv[key] = prodMigrate[key];
+    else delete targetEnv[key];
+  }
+}
 
 function isLoopbackHost(hostname: string): boolean {
   const host = hostname.toLowerCase();
@@ -80,8 +89,6 @@ export function setupEnv(directory: string, log = console.log, production = fals
         APP_DATABASE_URL: "",
         BETTER_AUTH_URL: "",
         BETTER_AUTH_SECRET: secret(),
-        APP_OWNER_SETUP_HASH: digest(secret()),
-        APP_ALLOW_SIGN_UP: "false",
       },
       false,
       "# Production runtime values. Edit in a local editor; never paste into chat. Not auto-loaded by Next or Bun.",
@@ -108,8 +115,6 @@ export function setupEnv(directory: string, log = console.log, production = fals
     APP_DATABASE_URL: `postgresql://starter_runtime:${password}@127.0.0.1:5432/starter`,
     BETTER_AUTH_URL: "http://localhost:3000",
     BETTER_AUTH_SECRET: secret(),
-    APP_OWNER_SETUP_HASH: digest(secret()),
-    APP_ALLOW_SIGN_UP: "false",
   }))
     log(name);
   for (const name of putEnv(migration, {
@@ -137,127 +142,11 @@ function validatedOrigin(raw: string | undefined, envName: string, production: b
   return origin;
 }
 
-/** Rotate APP_OWNER_SETUP_HASH and write a private 0600 link file without launching a browser. */
-export function ownerSetup(
-  directory: string,
-  options: { production?: boolean; log?: (message: string) => void } = {},
-) {
-  const production = options.production ?? false;
-  const log = options.log ?? console.log;
-  const envName = production ? ENV_PROD_SECRETS : ENV_LOCAL;
-  const file = path.join(directory, envName);
-  const env = readEnv(file);
-  const origin = validatedOrigin(env.BETTER_AUTH_URL, envName, production);
-  const code = secret();
-  putEnv(file, { APP_OWNER_SETUP_HASH: digest(code) }, true);
-  const url = `${origin.origin}/auth/sign-in#setup=${code}`;
-  const folder = path.join(directory, ".local");
-  mkdirSync(folder, { recursive: true, mode: 0o700 });
-  chmodSync(folder, 0o700);
-  const linkFile = path.join(directory, production ? OWNER_LINK_PROD : OWNER_LINK_LOCAL);
-  writeFileSync(
-    linkFile,
-    `<!doctype html><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>Owner setup</title><p><a href="${url.replaceAll("&", "&amp;").replaceAll('"', "&quot;")}">Set up owner account</a></p>\n`,
-    { mode: 0o600 },
-  );
-  chmodSync(linkFile, 0o600);
-  log(`Updated APP_OWNER_SETUP_HASH in ${envName}.`);
-  log(`Saved private setup link file: ${linkFile}`);
-  if (production) {
-    log(
-      "Next: run bun run secrets:push and bun run release, then run bun run owner:open --production once the app is live.",
-    );
-  } else {
-    log("Next: start the app (bun run dev), then run bun run owner:open.");
-  }
-  log(
-    "The link file stays until owner setup completes so reloading the tab does not lose the code. Delete it afterwards or re-run owner:open to delete it automatically once setup is complete.",
-  );
-  return { linkFile };
-}
-
-/** Open the private owner-setup HTML file (never the URL on argv) only when the app answers. */
-export async function ownerOpen(
-  directory: string,
-  options: {
-    production?: boolean;
-    fetch?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
-    open?: (filePath: string) => boolean;
-    log?: (message: string) => void;
-  } = {},
-) {
-  const production = options.production ?? false;
-  const log = options.log ?? console.log;
-  const fetchFn = options.fetch ?? fetch;
-  const open =
-    options.open ??
-    ((filePath: string) => {
-      // Pass ONLY the local file path to the browser launcher, never the setup URL or code.
-      const command = process.platform === "darwin" ? "open" : "xdg-open";
-      return spawnSync(command, [filePath], { stdio: "ignore" }).status === 0;
-    });
-  const envName = production ? ENV_PROD_SECRETS : ENV_LOCAL;
-  const env = readEnv(path.join(directory, envName));
-  const origin = validatedOrigin(env.BETTER_AUTH_URL, envName, production);
-  const linkFile = path.join(directory, production ? OWNER_LINK_PROD : OWNER_LINK_LOCAL);
-  if (!existsSync(linkFile))
-    throw new SafeError(
-      `No owner setup file found at ${linkFile}. Run bun run owner:setup${production ? " --production" : ""} first.`,
-    );
-  const hashCheck =
-    env.APP_OWNER_SETUP_HASH && /^[a-f0-9]{64}$/.test(env.APP_OWNER_SETUP_HASH)
-      ? digest(`owner-setup-hash-check:${env.APP_OWNER_SETUP_HASH}`)
-      : undefined;
-  let complete: boolean;
-  let hashMatches: boolean | undefined;
-  try {
-    const response = await fetchFn(`${origin.origin}/api/auth/owner-setup-status`, {
-      method: "GET",
-      headers: hashCheck ? { "x-owner-setup-hash-check": hashCheck } : undefined,
-      redirect: "error",
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const body = (await response.json()) as { complete?: unknown; hashMatches?: unknown };
-    if (typeof body?.complete !== "boolean") throw new Error("Unexpected status response");
-    complete = body.complete;
-    if (typeof body.hashMatches === "boolean") hashMatches = body.hashMatches;
-  } catch {
-    throw new SafeError(
-      production
-        ? `The app did not answer at ${origin.origin}. Run bun run secrets:push and bun run release first, then retry bun run owner:open --production.`
-        : `The app did not answer at ${origin.origin}. Start the app (bun run dev) first, then retry bun run owner:open.`,
-    );
-  }
-  if (complete) {
-    rmSync(linkFile, { force: true });
-    log(`Owner setup is already complete. Deleted ${linkFile}.`);
-    return { status: "complete" as const };
-  }
-  if (hashMatches === false) {
-    throw new SafeError(
-      production
-        ? `The deployed app at ${origin.origin} is not using the current APP_OWNER_SETUP_HASH from ${ENV_PROD_SECRETS}. Run bun run secrets:push and bun run release first, then retry bun run owner:open --production.`
-        : `The running app at ${origin.origin} is not using the current APP_OWNER_SETUP_HASH from ${ENV_LOCAL}. Restart bun run dev, then retry bun run owner:open.`,
-    );
-  }
-  if (open(linkFile)) {
-    log(
-      `Opened ${linkFile} in your browser. After completing setup, delete the file or re-run bun run owner:open${production ? " --production" : ""} to remove it.`,
-    );
-  } else {
-    log(`Open this file yourself in your browser: ${linkFile}`);
-  }
-  return { status: "opened" as const, linkFile };
-}
-
 export const runtimeVariables = [
   "APP_DATABASE_URL",
   "AUTH_DATABASE_URL",
   "BETTER_AUTH_URL",
   "BETTER_AUTH_SECRET",
-  "APP_OWNER_SETUP_HASH",
-  "APP_ALLOW_SIGN_UP",
   "CANVAS_FRAME_ORIGINS",
   "NEXT_PUBLIC_AG_GRID_LICENSE_KEY",
   "NEXT_PUBLIC_AG_CHARTS_LICENSE_KEY",
@@ -281,12 +170,7 @@ export async function pushSecrets(
       `Missing ${ENV_PROD_SECRETS}. Run bun run setup:env --production and fill production values in a local editor first.`,
     );
   const env = readEnv(file);
-  for (const name of [
-    "APP_DATABASE_URL",
-    "BETTER_AUTH_URL",
-    "BETTER_AUTH_SECRET",
-    "APP_OWNER_SETUP_HASH",
-  ])
+  for (const name of ["APP_DATABASE_URL", "BETTER_AUTH_URL", "BETTER_AUTH_SECRET"])
     if (!env[name])
       throw new SafeError(`Configure ${name} in ${ENV_PROD_SECRETS} in a local editor first.`);
   validatedOrigin(env.BETTER_AUTH_URL, ENV_PROD_SECRETS, true);
@@ -298,8 +182,6 @@ export async function pushSecrets(
   }
   if (env.BETTER_AUTH_SECRET!.length < 32)
     throw new SafeError("BETTER_AUTH_SECRET must contain at least 32 characters.");
-  if (!/^[a-f0-9]{64}$/.test(env.APP_OWNER_SETUP_HASH!))
-    throw new SafeError("APP_OWNER_SETUP_HASH must be a 64-character SHA-256 hex digest.");
 
   const sender =
     send ??
@@ -331,22 +213,23 @@ export async function pushSecrets(
 }
 
 if (import.meta.main) {
+  const directory = path.resolve(import.meta.dirname, "..");
+  let redactEnv: Record<string, string | undefined> = process.env;
   try {
-    const directory = path.resolve(import.meta.dirname, "..");
     const [command, ...flags] = process.argv.slice(2);
     const production = flags.includes("--production");
     const extra = flags.filter((f) => f !== "--production");
     if (!command || extra.length > 0 || (command === "push" && production))
-      throw new SafeError(
-        "Usage: setup:env [--production], owner:setup [--production], owner:open [--production], or secrets:push.",
-      );
-    if (command === "setup") setupEnv(directory, console.log, production);
-    else if (command === "owner") ownerSetup(directory, { production });
-    else if (command === "open") await ownerOpen(directory, { production });
-    else if (command === "push") await pushSecrets(directory);
-    else throw new SafeError("Unknown secrets command.");
+      throw new SafeError("Usage: setup:env [--production] or secrets:push.");
+    if (command === "push") {
+      const prodPath = path.join(directory, ENV_PROD_SECRETS);
+      if (existsSync(prodPath)) redactEnv = { ...process.env, ...readEnv(prodPath) };
+      await pushSecrets(directory);
+    } else if (command === "setup") {
+      setupEnv(directory, console.log, production);
+    } else throw new SafeError("Unknown secrets command.");
   } catch (error) {
-    reportError(error, "Secret operation");
+    reportError(error, "Secret operation", redactEnv);
     process.exitCode = 1;
   }
 }

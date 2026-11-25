@@ -186,7 +186,7 @@ description = "Test Auth organization provisioning, identity preservation and id
 run = "mise run repository:exec -- test-auth-tenant-migration.sh"
 
 [tasks."test:starter-safety"]
-description = "Prove single-organization admission, owner/invite flows, release gate, and redaction against isolated PostgreSQL"
+description = "Prove single-organization auth, people commands, release gate, and redaction against isolated PostgreSQL"
 run = "bun .config/mise/scripts/repository/test-starter-safety.ts"
 
 [tasks."generate:package"]

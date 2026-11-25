@@ -1,10 +1,11 @@
 // @vitest-environment node
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { Pool } from "pg";
 import { createSingleOrganizationAuth } from "../single-organization";
 import { eligibleAgentOrganizations } from "../agent-grant";
+import { addPerson } from "../people";
 import { authorize, call, register, type Realm } from "./agent-grant-fixture";
 
 // Explicitly opted-in local test server only; every run owns and removes its database.
@@ -34,8 +35,6 @@ describe.skipIf(!testUrl)("single-organization sign-in and OAuth", () => {
       appId: "canvas",
       organizationId: "team",
       name: "Test team",
-      allowSignUp: true,
-      ownerSetupHash: createHash("sha256").update("owner-test-code").digest("hex"),
     });
   });
   afterAll(async () => {
@@ -45,21 +44,28 @@ describe.skipIf(!testUrl)("single-organization sign-in and OAuth", () => {
       await admin.end();
     }
   });
-  test("signup creates exactly one organization and sessions require current membership", async () => {
+  test("added members share one organization and sessions require current membership", async () => {
     for (let index = 0; index < 2; index++) {
-      const response = await identity.auth.handler(
-        new Request("http://127.0.0.1:4555/api/auth/sign-up/email", {
+      const email = `member${index}@example.test`;
+      const added = await addPerson({
+        pool,
+        auth: identity.auth,
+        origin: "http://127.0.0.1:4555",
+        email,
+      });
+      const reset = await identity.auth.handler(
+        new Request("http://127.0.0.1:4555/api/auth/reset-password", {
           method: "POST",
-          headers: {
-            "content-type": "application/json",
-            origin: "http://127.0.0.1:4555",
-            ...(index === 0 ? { "x-owner-setup": "owner-test-code" } : {}),
-          },
-          body: JSON.stringify({
-            name: "Member",
-            email: `member${index}@example.test`,
-            password: "test-password-123",
-          }),
+          headers: { "content-type": "application/json", origin: "http://127.0.0.1:4555" },
+          body: JSON.stringify({ token: added.token, newPassword: "test-password-123" }),
+        }),
+      );
+      expect(reset.status).toBe(200);
+      const response = await identity.auth.handler(
+        new Request("http://127.0.0.1:4555/api/auth/sign-in/email", {
+          method: "POST",
+          headers: { "content-type": "application/json", origin: "http://127.0.0.1:4555" },
+          body: JSON.stringify({ email, password: "test-password-123" }),
         }),
       );
       const body = await response.json();

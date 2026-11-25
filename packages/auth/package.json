@@ -23,11 +23,12 @@
     "./styles.css": "./styles.css",
     "./ui": "./ui.tsx",
     "./ui-view-paths": "./ui-view-paths.ts",
+    "./people": "./people.ts",
     "./single-organization": "./single-organization.ts"
   },
   "scripts": {
     "check": "tsc -p tsconfig.json --noEmit",
-    "test": "AUTH_AGENT_GRANT_POSTGRES=1 vp test --config vite.config.ts --run --exclude '__tests__/single-organization*.test.ts'"
+    "test": "AUTH_AGENT_GRANT_POSTGRES=1 vp test --config vite.config.ts --run --exclude '__tests__/single-organization*.test.ts' --exclude '__tests__/people.test.ts'"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",

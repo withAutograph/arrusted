@@ -111,15 +111,31 @@ function isIgnoredByVercelIgnore(content: string, relPath: string): boolean {
   return ignored;
 }
 
-const REQUIRED_IGNORED_SECRET_PATHS = [
+const REQUIRED_IGNORED_APP_PATHS = [
   ".env",
   ".env.local",
   ".env.migrate",
   ".env.production.secrets",
   ".env.production.migrate",
-  ".local/owner-setup.html",
-  ".local/owner-setup.production.html",
+  ".local/people/member.txt",
   ".local/restore-points/backup.sql",
+];
+
+const REQUIRED_IGNORED_ROOT_PATHS = [
+  ".env",
+  ".env.local",
+  ".config/fnox/local.toml",
+  "fnox.local.toml",
+  ".config/pitchfork.local.toml",
+  ".claude/settings.json",
+  ".codex/config.toml",
+  ".devin/state.json",
+  "log/dev.log",
+  "debug-1.log",
+  ".scratch/tmp.txt",
+  "target/debug/schema-compiler",
+  ".cargo-target/debug/schema-compiler",
+  ".turbo/cache.json",
 ];
 
 /** Refuse deployment unless the .vercelignore at deployCwd excludes every secret/private file. */
@@ -133,12 +149,14 @@ export function checkVercelIgnore(appDir = defaultApp, repoRoot = defaultRoot): 
   const content = readFileSync(ignorePath, "utf8");
   const relApp = path.relative(deployCwd, appDir).replaceAll("\\", "/");
   const prefix = relApp && relApp !== "." ? `${relApp}/` : "";
-  const uncovered = REQUIRED_IGNORED_SECRET_PATHS.map((file) => `${prefix}${file}`).filter(
-    (file) => !isIgnoredByVercelIgnore(content, file),
-  );
+  const required = [
+    ...REQUIRED_IGNORED_APP_PATHS.map((file) => `${prefix}${file}`),
+    ...(path.resolve(deployCwd) === path.resolve(repoRoot) ? REQUIRED_IGNORED_ROOT_PATHS : []),
+  ];
+  const uncovered = [...new Set(required)].filter((file) => !isIgnoredByVercelIgnore(content, file));
   if (uncovered.length > 0)
     throw new SafeError(
-      `${ignorePath} does not ignore ${uncovered.join(", ")}. Update .vercelignore before deploying so secret files and restore points are never uploaded to Vercel.`,
+      `${ignorePath} does not ignore ${uncovered.join(", ")}. Update .vercelignore before deploying so secret files, local state, and restore points are never uploaded to Vercel.`,
     );
 }
 

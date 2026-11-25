@@ -60,7 +60,7 @@ export type MigrationInput = {
   runtimeLogins?: { role: string; password: string }[];
 };
 
-function connectionTarget(databaseUrl: string): { url: string; resource: DatabaseTarget } {
+export function connectionTarget(databaseUrl: string): { url: string; resource: DatabaseTarget } {
   const url = new URL(databaseUrl);
   const local = ["localhost", "127.0.0.1"].includes(url.hostname);
   if (local) url.hostname = "127.0.0.1";
@@ -549,7 +549,8 @@ if (import.meta.main) {
     let authUrl = process.env.AUTH_DATABASE_URL;
     if (production) {
       const { existsSync } = await import("node:fs");
-      const { ENV_PROD_MIGRATE, ENV_PROD_SECRETS, readEnv } = await import("./local-secrets");
+      const { applyProductionNeonEnv, ENV_PROD_MIGRATE, ENV_PROD_SECRETS, readEnv } =
+        await import("./local-secrets");
       const appDir = path.join(root, "app");
       const prodSecretsPath = path.join(appDir, ENV_PROD_SECRETS);
       const prodMigratePath = path.join(appDir, ENV_PROD_MIGRATE);
@@ -560,12 +561,10 @@ if (import.meta.main) {
       const prodRuntime = existsSync(prodSecretsPath) ? readEnv(prodSecretsPath) : {};
       const prodMigrate = readEnv(prodMigratePath);
       redactEnv = { ...process.env, ...prodRuntime, ...prodMigrate };
+      applyProductionNeonEnv(prodMigrate);
       databaseUrl = prodMigrate.MIGRATION_DATABASE_URL || undefined;
       appUrl = prodRuntime.APP_DATABASE_URL || undefined;
       authUrl = prodRuntime.AUTH_DATABASE_URL || undefined;
-      for (const key of ["NEON_API_KEY", "NEON_PROJECT_ID", "NEON_BRANCH_ID"]) {
-        if (prodMigrate[key] && !(key in process.env)) process.env[key] = prodMigrate[key];
-      }
     }
     if (!databaseUrl) throw new SafeError("MIGRATION_DATABASE_URL is required.");
     if (["apply", "rehearse"].includes(command) && !appUrl?.trim())

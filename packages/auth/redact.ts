@@ -1,7 +1,7 @@
 const MIN_STANDALONE_SECRET_LEN = 9;
 
 const SECRET_ENV_NAME =
-  /(?:^|_)(?:DATABASE_URL|POSTGRES_URL|PGURI|PGPASSWORD|SECRET|PASSWORD|PASSWD|API_KEY|PRIVATE_KEY|LICENSE_KEY|ACCESS_KEY|AUTH_TOKEN|ACCESS_TOKEN|REFRESH_TOKEN|VERCEL_TOKEN|SIGNUP_SETUP_TOKEN|SIGNUP_INVITE_TOKEN|OWNER_SETUP_HASH)$/i;
+  /(?:^|_)(?:DATABASE_URL|POSTGRES_URL|PGURI|PGPASSWORD|SECRET|PASSWORD|PASSWD|API_KEY|PRIVATE_KEY|LICENSE_KEY|ACCESS_KEY|AUTH_TOKEN|ACCESS_TOKEN|REFRESH_TOKEN|VERCEL_TOKEN)$/i;
 
 const DB_URL_ENV_NAME = /(?:^|_)(?:DATABASE_URL|POSTGRES_URL|PGURI)$/i;
 
@@ -58,7 +58,7 @@ export function redact(
       /\b(password\s*=\s*)(?:'(?:\\'|[^'])*'|"(?:\\"|[^"])*"|[^\s&;,)"'`<>]+)/gi,
       "$1[REDACTED]",
     )
-    .replace(/([#&?](?:setup|invite)=)[^\s&"'<>]+/gi, "$1[REDACTED]")
+    .replace(/([#&?]token=)[^\s&"'<>]+/gi, "$1[REDACTED]")
     .replace(/\b(Bearer\s+)[^\s"'`]+/gi, "$1[REDACTED]");
 }
 

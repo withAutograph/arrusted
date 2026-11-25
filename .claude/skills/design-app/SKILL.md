@@ -114,12 +114,13 @@ Read `references/information-composition.md` while composing any page and
 ## 3. Run it and iterate
 
 - Run `bun run dev` from `app/` and open the section in the browser pane if
-  one is available. A fresh local app needs a local database, migration, and
-  first-owner setup before anyone can sign in: run `bun run setup:env`,
-  `bun run migrate`, `bun run owner:setup`, start `bun run dev`, then run
-  `bun run owner:open` so the builder creates their own local owner account in
-  the browser (see `app/README.md`). If that is not set up yet, guide them
-  through it or say so.
+  one is available. A fresh local app needs a local database, migration, and a
+  local account before anyone can sign in: run `bun run setup:env`,
+  `bun run migrate`, `bun run people add <email>` (you may run this locally;
+  the builder opens the saved `app/.local/people/*.txt` link file themselves in
+  their browser to set their password — never put passwords or links in chat),
+  and start `bun run dev` (see `app/README.md`). If that is not set up yet,
+  guide them through it or say so.
 - Click through every enabled control yourself before showing it: navigation,
   Back/Forward, forms (validate, submit, cancel), dialogs, filters. A
   successful compile is not proof that it works. Run `bun run check` for type

@@ -77,7 +77,7 @@ and run `bun run records:import <table> <file.csv> --key <column>` with
 Headers name fields; the key column also writes its value when it names a field.
 The key addresses existing rows, omitted/empty
 fields stay unchanged, and up to 100 rows / 512 KiB are accepted. The command
-acts as the deployment’s first member (the builder’s initial signup) and writes
+acts as the deployment’s first member and writes
 through the kernel. Use stable keys on the initial contact/company imports so
 later copy/fill imports update those records. Without `--key`, each run creates
 new records. MCP proposals remain unpersisted. Alternatively, copy through generated operations
@@ -112,9 +112,10 @@ uses Deals yet").
   `.env.migrate` automatically). It takes a restore point, applies under a
   lock, and records the applied schema. Owner credentials live only in
   `.env.migrate`, never in `.env.local`.
-- On a brand-new local database with no users yet, run `bun run owner:setup`,
-  start `bun run dev`, and run `bun run owner:open` so the builder can create
-  the first local owner account in their browser before signing in.
+- On a brand-new local database with no users yet, run
+  `bun run people add <email>` locally so the builder can open the saved
+  `app/.local/people/*.txt` link file in their browser and set their password
+  before signing in (never put passwords or links in chat).
 - Rehearse against an isolated database, never the real database. Set
   `MIGRATION_DATABASE_URL` to its owner connection,
   `APP_DATABASE_URL` to its restricted runtime login, and

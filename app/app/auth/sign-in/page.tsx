@@ -5,7 +5,6 @@ async function SignInForm({ searchParams }: { searchParams: Query }) {
   const query = await searchParams;
   return (
     <SignIn
-      openSignUp={process.env.APP_ALLOW_SIGN_UP === "true"}
       redirectTo={typeof query.redirectTo === "string" ? query.redirectTo : "/"}
       oauth={typeof query.sig === "string"}
     />

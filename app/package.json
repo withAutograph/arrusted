@@ -13,10 +13,8 @@
     "compile": "bun scripts/compile.ts",
     "records:import": "bun --env-file=.env.local --env-file=.env.migrate scripts/records-import.ts",
     "setup:env": "bun scripts/local-secrets.ts setup",
-    "owner:setup": "bun scripts/local-secrets.ts owner",
-    "owner:open": "bun scripts/local-secrets.ts open",
     "secrets:push": "bun scripts/local-secrets.ts push",
-    "owner:claim": "bun --env-file=.env.migrate scripts/owner-claim.ts",
+    "people": "bun scripts/people.ts",
     "release": "bun --env-file=.env.production.secrets --env-file=.env.production.migrate scripts/release.ts"
   },
   "dependencies": {

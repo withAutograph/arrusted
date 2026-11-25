@@ -37,8 +37,6 @@ export function getIdentity() {
     appId,
     organizationId,
     name: appName,
-    ownerSetupHash: process.env.APP_OWNER_SETUP_HASH,
-    allowSignUp: process.env.APP_ALLOW_SIGN_UP === "true",
   }));
 }
 export function frameOrigins() {

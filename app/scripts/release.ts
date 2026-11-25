@@ -3,11 +3,17 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { Pool } from "pg";
-import { ENV_PROD_MIGRATE, ENV_PROD_SECRETS, readEnv } from "./local-secrets";
-import { migrate, runtimeRoles } from "./migrate";
+import {
+  ENV_PROD_MIGRATE,
+  ENV_PROD_SECRETS,
+  applyProductionNeonEnv,
+  readEnv,
+} from "./local-secrets";
+import { connectionTarget, migrate, runtimeRoles } from "./migrate";
 import {
   confirm,
   gateIO,
+  loopback,
   preflight,
   resolveAppName,
   resolveDeployCwd,
@@ -112,7 +118,8 @@ export function schemaPlan(previous: Schema | undefined, next: Schema) {
 export async function appliedRelease(
   databaseUrl: string,
 ): Promise<{ release_hash: string; schema: Schema } | undefined> {
-  const pool = new Pool({ connectionString: databaseUrl });
+  const { url } = connectionTarget(databaseUrl);
+  const pool = new Pool({ connectionString: url, max: 1 });
   try {
     if (
       !(await pool.query("select to_regclass('public.autograph_applied_schema') as present"))
@@ -190,39 +197,64 @@ export async function release(
   );
 }
 
-function resolveProductionEnv(): {
+export function resolveProductionEnv(
+  appDir = app,
+  targetEnv: Record<string, string | undefined> = process.env,
+): {
   migrationDatabaseUrl?: string;
   appDatabaseUrl?: string;
   authDatabaseUrl?: string;
   secretEnv: Record<string, string | undefined>;
 } {
-  const prodSecretsPath = path.join(app, ENV_PROD_SECRETS);
-  const prodMigratePath = path.join(app, ENV_PROD_MIGRATE);
+  const prodSecretsPath = path.join(appDir, ENV_PROD_SECRETS);
+  const prodMigratePath = path.join(appDir, ENV_PROD_MIGRATE);
   const hasProdSecrets = existsSync(prodSecretsPath);
   const hasProdMigrate = existsSync(prodMigratePath);
   const prodRuntime = hasProdSecrets ? readEnv(prodSecretsPath) : {};
   const prodMigrate = hasProdMigrate ? readEnv(prodMigratePath) : {};
+  const secretEnv: Record<string, string | undefined> = {
+    ...targetEnv,
+    ...prodRuntime,
+    ...prodMigrate,
+  };
+  applyProductionNeonEnv(prodMigrate, targetEnv);
   // When production files exist, read runtime DB URLs from them rather than .env.local.
   const migrationDatabaseUrl = hasProdMigrate
     ? prodMigrate.MIGRATION_DATABASE_URL || undefined
-    : process.env.MIGRATION_DATABASE_URL;
+    : targetEnv.MIGRATION_DATABASE_URL;
   const appDatabaseUrl = hasProdSecrets
     ? prodRuntime.APP_DATABASE_URL || undefined
-    : process.env.APP_DATABASE_URL;
+    : targetEnv.APP_DATABASE_URL;
   const authDatabaseUrl = hasProdSecrets
     ? prodRuntime.AUTH_DATABASE_URL || undefined
-    : process.env.AUTH_DATABASE_URL;
-  if (hasProdMigrate) {
-    for (const key of ["NEON_API_KEY", "NEON_PROJECT_ID", "NEON_BRANCH_ID"]) {
-      if (prodMigrate[key] && !(key in process.env)) process.env[key] = prodMigrate[key];
-    }
-  }
+    : targetEnv.AUTH_DATABASE_URL;
   return {
     migrationDatabaseUrl,
     appDatabaseUrl,
     authDatabaseUrl,
-    secretEnv: { ...process.env, ...prodRuntime, ...prodMigrate },
+    secretEnv,
   };
+}
+
+export function validateProductionDatabaseUrls(input: {
+  migrationDatabaseUrl?: string;
+  appDatabaseUrl?: string;
+  authDatabaseUrl?: string;
+}) {
+  const { migrationDatabaseUrl, appDatabaseUrl, authDatabaseUrl } = input;
+  if (!migrationDatabaseUrl || !appDatabaseUrl)
+    throw new SafeError(
+      `Configure MIGRATION_DATABASE_URL in ${ENV_PROD_MIGRATE} and APP_DATABASE_URL in ${ENV_PROD_SECRETS} in a local editor first.`,
+    );
+  for (const [name, value] of [
+    ["MIGRATION_DATABASE_URL", migrationDatabaseUrl],
+    ["APP_DATABASE_URL", appDatabaseUrl],
+    ...(authDatabaseUrl ? ([["AUTH_DATABASE_URL", authDatabaseUrl]] as const) : []),
+  ] as const) {
+    if (loopback(value))
+      throw new SafeError(`${name} must not target a loopback host for production.`);
+  }
+  return runtimeRoles(migrationDatabaseUrl, appDatabaseUrl, authDatabaseUrl);
 }
 
 if (import.meta.main) {
@@ -236,11 +268,8 @@ if (import.meta.main) {
     const localOnly = args.includes("--local-only-repo");
     const env = resolveProductionEnv();
     redactEnv = env.secretEnv;
-    const databaseUrl = env.migrationDatabaseUrl;
-    if (!databaseUrl || !env.appDatabaseUrl)
-      throw new SafeError(
-        `Configure MIGRATION_DATABASE_URL in ${ENV_PROD_MIGRATE} and APP_DATABASE_URL in ${ENV_PROD_SECRETS} in a local editor first.`,
-      );
+    const roles = validateProductionDatabaseUrls(env);
+    const databaseUrl = env.migrationDatabaseUrl!;
     const deployCwd = resolveDeployCwd(app, root);
     await release(
       {
@@ -250,7 +279,7 @@ if (import.meta.main) {
         migrate: async () => {
           await migrate({
             databaseUrl,
-            ...runtimeRoles(databaseUrl, env.appDatabaseUrl, env.authDatabaseUrl),
+            ...roles,
           });
         },
         matches: async () => (await appliedRelease(databaseUrl))?.release_hash === compiled().hash,

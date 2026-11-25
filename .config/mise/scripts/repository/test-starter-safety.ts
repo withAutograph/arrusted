@@ -104,7 +104,7 @@ try {
         "packages/auth/vite.config.ts",
         "--run",
         "packages/auth/__tests__/single-organization.test.ts",
-        "packages/auth/__tests__/single-organization-admission.test.ts",
+        "packages/auth/__tests__/people.test.ts",
       ],
     ],
     ["bun", ["test", "app/scripts/safety.test.ts"]],

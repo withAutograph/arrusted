@@ -26,38 +26,28 @@ disconnected (`app/vercel.json` sets `git.deploymentEnabled: false`).
 3. Configure the Vercel build for the repository's pinned Bun, Rust and CUE
    toolchain.
 
-## Owner and team
+## Adding people
 
-1. Run `bun run owner:setup --production`. It rotates `APP_OWNER_SETUP_HASH` in
-   `app/.env.production.secrets` and writes a private `0600` link file at
-   `app/.local/owner-setup.production.html` without opening a browser. Re-running
-   `owner:setup --production` rotates the code deliberately.
-2. Push runtime variables to Vercel with `bun run secrets:push`. It reads only
+1. Push runtime variables to Vercel with `bun run secrets:push`. It reads only
    `app/.env.production.secrets`, refuses loopback hosts or non-`https://`
    origins, excludes migration/Neon credentials, updates existing variables with
    `--force`, and never prints values.
-3. Run `bun run release` (follow the `deploy` skill) so the database is migrated
+2. Run `bun run release` (follow the `deploy` skill) so the database is migrated
    and the updated runtime environment is live.
-4. Once the app is live, run `bun run owner:open --production`. It checks that
-   the app answers at `BETTER_AUTH_URL` and is running the current
-   `APP_OWNER_SETUP_HASH` (refusing to open if you still need to push and
-   release), then opens the local HTML file (never the setup URL on argv) in the
-   builder's browser. They choose their own password; never ask for it, suggest
-   it or type it.
-5. The link file stays on disk until owner setup finishes so reloading the tab
-   will not lose the code. After finishing setup, delete
-   `app/.local/owner-setup.production.html` or re-run
-   `bun run owner:open --production` to delete it automatically once the server
-   reports setup is complete.
-6. Sign-up is closed to everyone else. From **/members**, an owner can create
-   and revoke seven-day single-use email-bound invite links, promote another
-   member to owner, and remove members (which revokes their sessions and OAuth
-   grants and deactivates kernel access; the last owner cannot be removed).
-   Previously removed members can be re-admitted by opening a new invite link
-   for their email and signing in with their existing password.
-7. Check it: open the app in a private window and confirm there is no way to
+3. Ask the builder to add themselves in their own terminal:
+   `bun run people add <email> --production` (they type the app name to
+   confirm). It creates the user and membership and writes a single-use 7-day
+   `/auth/set-password` link to an ignored `0600` file under
+   `app/.local/people/`. They open that file themselves and choose their own
+   password in the browser; never ask for, suggest, or paste a password or link
+   in chat.
+4. Sign-up is always closed and everyone signed in has equal access. To add
+   teammates or issue a new password link, the builder runs
+   `bun run people add <email> --production` in their terminal and sends the
+   saved link privately. To remove someone (ending sessions, OAuth grants, and
+   kernel access while keeping business records), the builder runs
+   `bun run people remove <email> --production` in their terminal.
+5. Check it: open the app in a private window and confirm there is no way to
    create an account.
 
-If an upgraded deployment already has members but no owner, the builder runs
-`bun run owner:claim --production <existing-member-email>` in their terminal.
 The first member is the terminal CSV import actor.

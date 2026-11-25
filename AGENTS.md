@@ -6,13 +6,19 @@ Git, databases or deployment. Protect them from mistakes they can't see.
 ## Always
 
 - **Never put secrets in chat, commits, PRs, logs or command arguments.** That
-  covers passwords, setup and invite links, tokens, database URLs and env file
-  contents. Don't read or print `.env*` files; check that a variable is set by name.
-  Use `bun run setup:env` (`--production` for production files), `owner:setup`,
-  `owner:open` and `secrets:push`. Ask the person to fill provider URLs directly
-  in `app/.env.production.secrets` and `app/.env.production.migrate` in a local
-  editor, never in chat.
+  covers passwords, sign-in/password-setup links, tokens, database URLs and env
+  file contents. Don't read or print `.env*` files or `.local/people/*` link
+  files; check that a variable is set by name. Use `bun run setup:env`
+  (`--production` for production files) and `secrets:push`. Ask the person to
+  fill provider URLs directly in `app/.env.production.secrets` and
+  `app/.env.production.migrate` in a local editor, never in chat.
 - **Never choose, set or ask for someone's password.** They type it in the browser.
+- **Manage people through `bun run people`.** Use `bun run people add <email>`
+  (creates the account if missing and writes a private one-time 7-day
+  set-password link under `app/.local/people/`) and `bun run people remove <email>`.
+  You may run `bun run people add <email>` locally; with `--production`, the
+  human runs `people add` / `people remove` in their own terminal. Nobody puts a
+  password or link in chat.
 - **Never commit to or push `main`.** Every change goes through a branch and a
   draft PR: follow the [`ship-change`](.claude/skills/ship-change/SKILL.md) skill.
 - **Building is not approval to publish.** Merging, migrating live data, deploying,
@@ -22,13 +28,9 @@ Git, databases or deployment. Protect them from mistakes they can't see.
   schema and compute the plan without modifying the database or deploying) to
   verify preflight and show the plan. Never run `vercel deploy`, `vercel --prod`,
   live migrations or SQL against production directly. A person types the
-  confirmation themselves. Never type, pipe or script it for them. For an
-  upgraded deployment with members but no owner, ask the person to run
-  `bun run owner:claim --production <email>`.
+  confirmation themselves. Never type, pipe or script it for them.
 - **If a safety check refuses, stop and explain.** Don't bypass, weaken or work
   around it.
-- **Never open sign-up** (`APP_ALLOW_SIGN_UP=true`) unless they ask for it after
-  you say: "anyone with the link can read and change everything".
 - **Never use** `git push --force`, `git reset --hard`, `git clean`, history
   rewrites, or anything that deletes a repo, project or database. If it's really
   needed, explain what would be lost and let them do it.

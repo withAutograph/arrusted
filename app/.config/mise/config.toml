@@ -30,21 +30,13 @@ run = "bun run records:import"
 description = "Prepare ignored local or production (--production) env files"
 run = "bun run setup:env"
 
-[tasks."owner:setup"]
-description = "Rotate APP_OWNER_SETUP_HASH and write a private 0600 setup link file"
-run = "bun run owner:setup"
-
-[tasks."owner:open"]
-description = "Open the private owner-setup link file once the app answers"
-run = "bun run owner:open"
-
 [tasks."secrets:push"]
 description = "Push production runtime variables from .env.production.secrets to Vercel"
 run = "bun run secrets:push"
 
-[tasks."owner:claim"]
-description = "Promote an existing deployment member to owner when no owner exists"
-run = "bun run owner:claim"
+[tasks.people]
+description = "Add or remove a deployment member and write a private password-setup link"
+run = "bun run people"
 
 [tasks.release]
 description = "Preflight, confirm, migrate, verify, and deploy to production (--check for dry-run)"
