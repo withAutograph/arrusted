@@ -52,6 +52,52 @@
         "RUSTUP_HOME"
       ]
     },
+    "@autograph/currency-rates#test": {
+      "dependsOn": [
+        "^test",
+        "http-transport#test",
+        "kernel#test",
+        "platform-service-runtime#test",
+        "protected-installer#test",
+        "rust-auth#test",
+        "schema-compiler#test",
+        "typegen#test"
+      ],
+      "passThroughEnv": [
+        "KERNEL_TEST_DATABASE_URL",
+        "TMPDIR",
+        "SCHEMA_COMPILER_DIAGNOSTICS",
+        "CARGO_TARGET_DIR",
+        "CARGO_HOME",
+        "MISE_CARGO_HOME",
+        "MISE_DATA_DIR",
+        "MISE_RUSTUP_HOME",
+        "RUSTUP_HOME"
+      ]
+    },
+    "@autograph/work-session-tools#test": {
+      "dependsOn": [
+        "^test",
+        "http-transport#test",
+        "kernel#test",
+        "platform-service-runtime#test",
+        "protected-installer#test",
+        "rust-auth#test",
+        "schema-compiler#test",
+        "typegen#test"
+      ],
+      "passThroughEnv": [
+        "KERNEL_TEST_DATABASE_URL",
+        "TMPDIR",
+        "SCHEMA_COMPILER_DIAGNOSTICS",
+        "CARGO_TARGET_DIR",
+        "CARGO_HOME",
+        "MISE_CARGO_HOME",
+        "MISE_DATA_DIR",
+        "MISE_RUSTUP_HOME",
+        "RUSTUP_HOME"
+      ]
+    },
     "check": {
       "dependsOn": ["^check"],
       "passThroughEnv": [
