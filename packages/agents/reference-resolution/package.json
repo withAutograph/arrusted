@@ -11,6 +11,8 @@
   },
   "devDependencies": {
     "@autograph/typescript-config": "workspace:*",
+    "@autograph/vite-config": "workspace:*",
+    "vite-plus": "catalog:",
     "vitest": "catalog:"
   }
 }
