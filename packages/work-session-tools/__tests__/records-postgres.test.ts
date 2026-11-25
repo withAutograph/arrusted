@@ -2,7 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, expect, test } from "vitest";
 import { createDataClient } from "@autograph/generated-app-runtime/data";
-import { mapImportCsv } from "../../csv-workspace/mapping";
+import { mapImportCsv } from "@autograph/csv-workspace/mapping";
 import { applyRecordImport, prepareRecordImport } from "../records";
 import {
   agent,

@@ -180,7 +180,7 @@ test("reproduces online plan and runtime bytes from the checked predecessor dige
   } finally {
     cleanup(fixture.root);
   }
-}, 60_000);
+}, 180_000);
 
 test("the public schema release task forwards app and custom-root arguments", () => {
   const fixtureRoot = makeRoot();

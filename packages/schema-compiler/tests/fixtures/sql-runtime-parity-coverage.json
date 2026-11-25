@@ -2,69 +2,302 @@
   "format_version": 1,
   "reference": "packages/kernel/src/facade.rs",
   "operations": [
-    { "rust": "materialize_schema", "target": "installer_protocol", "parity": "retirement_replacement", "status": "behavioral_parity" },
-    { "rust": "preflight_schema_materialization", "target": "installer_protocol", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "reconcile_schema_materialization_policies", "target": "installer_protocol", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "ensure_schema_activation_head_policy", "target": "transactional_sql_bundle_policy_artifact", "parity": "retirement_replacement", "status": "behavioral_parity" },
-    { "rust": "preflight_schema_materialization_guarded", "target": "installer_protocol", "parity": "typed_activation_replacement", "status": "behavioral_parity" },
-    { "rust": "materialize_schema_with_provenance", "target": "installer_protocol", "parity": "retirement_replacement", "status": "behavioral_parity" },
-    { "rust": "materialize_schema_with_provenance_guarded", "target": "installer_protocol", "parity": "typed_activation_replacement", "status": "behavioral_parity" },
-    { "rust": "schema_hash", "target": "compiler", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "schema_revision_is_active_with_materialized_tables", "target": "kernel_schema_revision_is_active_with_materialized_tables", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "read_active_schema_revision", "target": "kernel_read_active_schema_revision", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "commit_enum_option_set_revision", "target": "kernel_commit_tenant_schema_revision", "parity": "typed_activation_replacement", "status": "behavioral_parity" },
-    { "rust": "apply_change_set", "target": "kernel_apply_change_set", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "begin_tenant_transaction", "target": "generated_client_protocol", "parity": "generated_client_protocol", "status": "behavioral_parity" },
-    { "rust": "apply_change_set_in_transaction", "target": "kernel_apply_change_set_in_transaction", "parity": "generated_client_protocol", "status": "behavioral_parity" },
-    { "rust": "validate_change_set_dry_run", "target": "kernel_validate_change_set_dry_run", "parity": "generated_client_protocol", "status": "behavioral_parity" },
-    { "rust": "validate_change_sets_dry_run", "target": "kernel_validate_change_sets_dry_run", "parity": "generated_client_protocol", "status": "behavioral_parity" },
-    { "rust": "record_agent_run", "target": "kernel_record_agent_run", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "update_agent_run_status", "target": "kernel_update_agent_run_status", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "list_draft_change_sets", "target": "kernel_list_draft_change_sets", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "read_draft_change_set", "target": "kernel_read_draft_change_set", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "approve_draft_change_set", "target": "kernel_approve_draft_change_set", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "discard_draft_change_set", "target": "kernel_discard_draft_change_set", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "revert_change_set", "target": "kernel_revert_change_set", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "update_draft_notes", "target": "kernel_update_draft_notes", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "read_visible_records", "target": "kernel_read_visible_records", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "read_visible_records_in_transaction", "target": "kernel_read_visible_records", "parity": "generated_client_protocol", "status": "behavioral_parity" },
-    { "rust": "read_visible_records_by_text_fields_in_transaction", "target": "kernel_read_visible_records_by_text_fields", "parity": "generated_client_protocol", "status": "behavioral_parity" },
-    { "rust": "read_visible_record", "target": "kernel_read_visible_record", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "read_visible_record_for_update_in_transaction", "target": "kernel_read_visible_record_for_update", "parity": "generated_client_protocol", "status": "behavioral_parity" },
-    { "rust": "read_visible_records_by_model", "target": "kernel_read_visible_records_by_model", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "query_visible_sql", "target": "generated_safe_query_protocol", "parity": "generated_client_protocol", "status": "behavioral_parity" },
-    { "rust": "change_set_diff", "target": "kernel_change_set_diff", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "field_history", "target": "kernel_field_history", "parity": "exact", "status": "behavioral_parity" },
-    { "rust": "recent_activity", "target": "kernel_recent_activity", "parity": "exact", "status": "behavioral_parity" }
+    {
+      "rust": "materialize_schema",
+      "target": "installer_protocol",
+      "parity": "retirement_replacement",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "preflight_schema_materialization",
+      "target": "installer_protocol",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "reconcile_schema_materialization_policies",
+      "target": "installer_protocol",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "ensure_schema_activation_head_policy",
+      "target": "transactional_sql_bundle_policy_artifact",
+      "parity": "retirement_replacement",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "preflight_schema_materialization_guarded",
+      "target": "installer_protocol",
+      "parity": "typed_activation_replacement",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "materialize_schema_with_provenance",
+      "target": "installer_protocol",
+      "parity": "retirement_replacement",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "materialize_schema_with_provenance_guarded",
+      "target": "installer_protocol",
+      "parity": "typed_activation_replacement",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "schema_hash",
+      "target": "compiler",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "schema_revision_is_active_with_materialized_tables",
+      "target": "kernel_schema_revision_is_active_with_materialized_tables",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "read_active_schema_revision",
+      "target": "kernel_read_active_schema_revision",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "commit_enum_option_set_revision",
+      "target": "kernel_commit_tenant_schema_revision",
+      "parity": "typed_activation_replacement",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "apply_change_set",
+      "target": "kernel_apply_change_set",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "begin_tenant_transaction",
+      "target": "generated_client_protocol",
+      "parity": "generated_client_protocol",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "apply_change_set_in_transaction",
+      "target": "kernel_apply_change_set_in_transaction",
+      "parity": "generated_client_protocol",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "validate_change_set_dry_run",
+      "target": "kernel_validate_change_set_dry_run",
+      "parity": "generated_client_protocol",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "validate_change_sets_dry_run",
+      "target": "kernel_validate_change_sets_dry_run",
+      "parity": "generated_client_protocol",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "record_agent_run",
+      "target": "kernel_record_agent_run",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "update_agent_run_status",
+      "target": "kernel_update_agent_run_status",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "list_draft_change_sets",
+      "target": "kernel_list_draft_change_sets",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "read_draft_change_set",
+      "target": "kernel_read_draft_change_set",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "approve_draft_change_set",
+      "target": "kernel_approve_draft_change_set",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "discard_draft_change_set",
+      "target": "kernel_discard_draft_change_set",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "revert_change_set",
+      "target": "kernel_revert_change_set",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "update_draft_notes",
+      "target": "kernel_update_draft_notes",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "read_visible_records",
+      "target": "kernel_read_visible_records",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "read_visible_records_in_transaction",
+      "target": "kernel_read_visible_records",
+      "parity": "generated_client_protocol",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "read_visible_records_by_text_fields_in_transaction",
+      "target": "kernel_read_visible_records_by_text_fields",
+      "parity": "generated_client_protocol",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "read_visible_record",
+      "target": "kernel_read_visible_record",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "read_visible_record_for_update_in_transaction",
+      "target": "kernel_read_visible_record_for_update",
+      "parity": "generated_client_protocol",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "read_visible_records_by_model",
+      "target": "kernel_read_visible_records_by_model",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "query_visible_sql",
+      "target": "generated_safe_query_protocol",
+      "parity": "generated_client_protocol",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "change_set_diff",
+      "target": "kernel_change_set_diff",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "field_history",
+      "target": "kernel_field_history",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    },
+    {
+      "rust": "recent_activity",
+      "target": "kernel_recent_activity",
+      "parity": "exact",
+      "status": "behavioral_parity"
+    }
   ],
   "semantic_replacements": [
-    {"kind": "platform_work_sessions", "target": "kernel_work_session", "supersedes": ["app_owned_bitemporal_session_blob", "per_record_working_drafts_proposal"], "requires": ["owner_authorization", "revision_guards", "replay_authorization", "first_baseline", "replaced_human_edits", "human_only_save", "one_change_set", "stale_confirmation", "duplicate_sessions", "proposal_shown_set", "query_overlay", "derived_expression_rules"], "sql_counterparts": ["sessions_preserve_first_baseline_and_replay_without_restaging", "sessions_agents_change_human_edits_keeping_the_replaced_value_and_pull_keeps_proposal_provenance", "sessions_duplicate_copies_metadata_rules_and_staged_entries", "sessions_save_one_change_set_in_each_mode_and_require_stale_confirmation", "sessions_cannot_stage_hidden_fields_or_records", "rule_parameters_restage_without_compounding_and_removal_deletes_outputs", "rule_arithmetic_is_derived_arithmetic"]},
+    {
+      "kind": "platform_work_sessions",
+      "target": "kernel_work_session",
+      "supersedes": ["app_owned_bitemporal_session_blob", "per_record_working_drafts_proposal"],
+      "requires": [
+        "owner_authorization",
+        "revision_guards",
+        "replay_authorization",
+        "first_baseline",
+        "replaced_human_edits",
+        "human_only_save",
+        "one_change_set",
+        "stale_confirmation",
+        "duplicate_sessions",
+        "proposal_shown_set",
+        "query_overlay",
+        "derived_expression_rules"
+      ],
+      "sql_counterparts": [
+        "sessions_preserve_first_baseline_and_replay_without_restaging",
+        "sessions_agents_change_human_edits_keeping_the_replaced_value_and_pull_keeps_proposal_provenance",
+        "sessions_duplicate_copies_metadata_rules_and_staged_entries",
+        "sessions_save_one_change_set_in_each_mode_and_require_stale_confirmation",
+        "sessions_cannot_stage_hidden_fields_or_records",
+        "rule_parameters_restage_without_compounding_and_removal_deletes_outputs",
+        "rule_arithmetic_is_derived_arithmetic"
+      ]
+    },
     {
       "kind": "declarative_aggregation_replacement",
       "target": "kernel_data_query",
       "supersedes": ["kind_count", "single_group_count"],
-      "requires": ["aggregate_count_metric", "decimal_metrics", "null_and_empty_sets", "bounded_groups", "numeric_bins", "money_units", "authorization_fields", "authorized_rows", "temporal_visibility", "unpaged_exact_totals"],
-      "sql_counterparts": ["policy_enabled_data_query_requires_exact_actor_membership_and_filters_rows_before_query_expressions", "policy_relation_navigation_authorizes_source_target_and_internal_link_separately"]
+      "requires": [
+        "aggregate_count_metric",
+        "decimal_metrics",
+        "null_and_empty_sets",
+        "bounded_groups",
+        "numeric_bins",
+        "money_units",
+        "authorization_fields",
+        "authorized_rows",
+        "temporal_visibility",
+        "unpaged_exact_totals"
+      ],
+      "sql_counterparts": [
+        "policy_enabled_data_query_requires_exact_actor_membership_and_filters_rows_before_query_expressions",
+        "policy_relation_navigation_authorizes_source_target_and_internal_link_separately"
+      ]
     },
     {
       "kind": "retirement_replacement",
       "supersedes": ["materialize_schema_drops_removed_version_field_column"],
-      "requires": ["removed_field_is_hidden", "removed_field_data_is_preserved", "generated_plan_contains_no_drop"]
+      "requires": [
+        "removed_field_is_hidden",
+        "removed_field_data_is_preserved",
+        "generated_plan_contains_no_drop"
+      ]
     },
     {
       "kind": "typed_activation_replacement",
-      "supersedes": ["preflight_schema_materialization_guarded<F>", "materialize_schema_with_provenance_guarded<F>"],
-      "requires": ["typed_assertion_positive", "typed_assertion_negative", "expected_hash_cas", "failed_activation_preserves_active_revision"]
+      "supersedes": [
+        "preflight_schema_materialization_guarded<F>",
+        "materialize_schema_with_provenance_guarded<F>"
+      ],
+      "requires": [
+        "typed_assertion_positive",
+        "typed_assertion_negative",
+        "expected_hash_cas",
+        "failed_activation_preserves_active_revision"
+      ]
     },
     {
       "kind": "typed_activation_replacement",
       "supersedes": ["commit_enum_option_set_revision"],
-      "requires": ["typed_enum_option_operations", "revision_and_hash_cas", "idempotency", "retirement_and_restore", "audit_parity"]
+      "requires": [
+        "typed_enum_option_operations",
+        "revision_and_hash_cas",
+        "idempotency",
+        "retirement_and_restore",
+        "audit_parity"
+      ]
     },
     {
       "kind": "retirement_replacement",
       "supersedes": ["ensure_schema_activation_head_policy"],
-      "requires": ["legacy_activation_head_repair_is_superseded_by_transactional_policy_artifact", "generated_bundle_reconciles_activation_head_policy_without_touching_app_owned_tables", "materialize_schema_rolls_back_partial_model_tables_on_failure_via_generated_installer"]
+      "requires": [
+        "legacy_activation_head_repair_is_superseded_by_transactional_policy_artifact",
+        "generated_bundle_reconciles_activation_head_policy_without_touching_app_owned_tables",
+        "materialize_schema_rolls_back_partial_model_tables_on_failure_via_generated_installer"
+      ]
     }
   ]
 }

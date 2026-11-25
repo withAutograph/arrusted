@@ -210,6 +210,8 @@ export async function install(app: string, policy: boolean) {
     releaseDirectory: directory,
   });
   const owner = new Pool({ connectionString: url("postgres", database) });
+  // Dropping the database at the end terminates idle connections.
+  owner.on("error", () => {});
   pools.push(owner);
   const runtimeRole = `${database}_runtime`;
   const capability = (await owner.query("select kernel_installer_capability_role('runtime') role"))
@@ -241,6 +243,7 @@ export async function install(app: string, policy: boolean) {
     assert.equal(result.ok, true, `${operation}: ${JSON.stringify(result)}`);
   }
   const runtime = new Pool({ connectionString: url(runtimeRole, database) });
+  runtime.on("error", () => {});
   pools.push(runtime);
   return { app, database, definition, owner, runtime, runtimeRole, policy };
 }

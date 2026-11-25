@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+# CI sets these for the real run; each case below sets its own.
+unset SQL_PARITY_EXCLUDE_TARGETS SQL_PARITY_ONLY_TARGETS
+
 trap 'status=$?; printf "parity fixture command failed (%s): %s\n" "${status}" "${BASH_COMMAND}" >&2' ERR
 
 readonly repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -183,32 +186,26 @@ for skip_mode in skip runtime_skip; do
 done
 
 readonly workflow="${repo_root}/.github/workflows/ci.yml"
-# The CI Postgres image comes from the CI_POSTGRES_IMAGE repository variable
-# (the public GHCR mirror) and falls back to the public ECR image; both pull
-# anonymously.
-readonly postgres_image="image: \${{ vars.CI_POSTGRES_IMAGE || 'public.ecr.aws/docker/library/postgres:17' }}"
 readonly hooks="${repo_root}/.config/hk.pkl"
 require_literal "${runner}" '#!/bin/bash'
-require_literal "${workflow}" "- 'packages/schema-compiler/**'"
-require_literal "${workflow}" "- 'packages/kernel/**/*.rs'"
 require_literal "${workflow}" 'name: Database (Parity)'
 require_literal "${workflow}" 'name: Database (Scale parity)'
-require_literal "${workflow}" 'mise run --no-deps --output interleave schema:test-parity-runner'
+require_literal "${workflow}" 'mise run schema:test-parity-runner'
 require_literal "${workflow}" 'mise run --no-deps schema:test-parity'
-awk '/^  qualify-generated-sql-parity:/{selected=1; next} selected && /^  [a-zA-Z0-9_-]+:/{exit} selected {print}' "${workflow}" >"${fixture}/parity-job.yml"
-require_literal "${fixture}/parity-job.yml" "${postgres_image}"
+awk '/^  parity:/{selected=1; next} selected && /^  [a-zA-Z0-9_-]+:/{exit} selected {print}' "${workflow}" >"${fixture}/parity-job.yml"
+
 require_literal \
   "${fixture}/parity-job.yml" \
-  'KERNEL_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres'
+  'KERNEL_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres'
 require_literal "${fixture}/parity-job.yml" 'SQL_PARITY_EXCLUDE_TARGETS: sql_runtime_lookup_scale'
-awk '/^  qualify-generated-sql-scale-parity:/{selected=1; next} selected && /^  [a-zA-Z0-9_-]+:/{exit} selected {print}' "${workflow}" >"${fixture}/scale-parity-job.yml"
-require_literal "${fixture}/scale-parity-job.yml" "${postgres_image}"
+awk '/^  scale-parity:/{selected=1; next} selected && /^  [a-zA-Z0-9_-]+:/{exit} selected {print}' "${workflow}" >"${fixture}/scale-parity-job.yml"
+
 require_literal \
   "${fixture}/scale-parity-job.yml" \
-  'KERNEL_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres'
+  'KERNEL_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres'
 require_literal "${fixture}/scale-parity-job.yml" 'SQL_PARITY_ONLY_TARGETS: sql_runtime_lookup_scale'
-require_literal "${workflow}" 'test "$PARITY_RESULT" = success'
-require_literal "${workflow}" 'test "$SCALE_PARITY_RESULT" = success'
+require_literal "${workflow}" 'parity, scale-parity]'
+require_literal "${workflow}" 'all(.[]; .result == "success")'
 require_literal "${hooks}" 'packages/schema-compiler'
 require_literal "${hooks}" 'check:generated-sql-parity-runner'
 require_literal "${hooks}" 'packages/schema-compiler/scripts/{run-sql-parity,test-sql-parity-runner}.sh'

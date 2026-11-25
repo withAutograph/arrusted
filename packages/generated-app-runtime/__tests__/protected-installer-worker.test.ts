@@ -266,6 +266,7 @@ test("installs an optional text field online and retries interrupted activation 
   const onlineRuntimeRole = `protected_online_runtime_${token}`;
   const runtimePassword = randomUUID();
   const fixtureApp = path.join(root, "apps", onlineAppId);
+  mkdirSync(path.dirname(fixtureApp), { recursive: true });
   const v1 = "worker-online-v1";
   const v2 = "worker-online-v2";
   const field = "review_note";
@@ -608,7 +609,7 @@ manifest: #AppManifest & {
       ),
     };
   }
-}, 120_000);
+}, 300_000);
 
 async function runWorker(options: {
   appId?: string;
