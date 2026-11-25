@@ -5,9 +5,9 @@ model vocabulary.
 
 ## Library Source
 
-`packages/domain-libs/` is a TypeScript domain-model snapshot copied from
+`packages/domain-libs/catalog.json` was exported from a domain-model snapshot copied from
 AG2's baseline model catalog in
-`/Users/graphy/ag2-1/agworld/src/baseline/models` at
+`agworld/src/baseline/models` at
 `b25565da6ecfff992e4d24a6d984ed05cf7e35e2`. It preserves semantic names,
 field grouping, lookup fields, seed rows, and primary/lookup model structure
 inside domain libraries. It intentionally drops platform/runtime

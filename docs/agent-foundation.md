@@ -283,7 +283,7 @@ and cannot publish.
 one transient draft, capture of current grid edits, and optional bounded pure-JavaScript
 preparation that emits the same proposal shape. There is no mapping-plan DSL, durable unfinished
 session/resume lifecycle, or alias-confirmation machine. Exact identity resolution is tool-owned
-and ordered policy comes from `packages/domain-libs/`; models without a policy remain searchable reference
+and ordered policy comes from the app; models without a policy remain searchable reference
 context. HC and Vendor supply authenticated adapters, frozen scope/date/schema context, app write
 guards, domain instructions and canonical kernel transport.
 
