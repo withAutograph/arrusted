@@ -15,7 +15,7 @@ Start in this order:
    kernel, API contracts, or UI layers.
 5. [Adopting a route-owned application](adopting-a-route-owned-app.md) before
    moving an existing Next.js or Vite project under `apps/`; it is the
-   application-facing setup contract and links the runnable examples.
+   application-facing setup contract.
 
 AG2 is reference evidence only. Autograph contracts in `docs/` are authoritative.
 
