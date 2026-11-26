@@ -47,15 +47,12 @@ test("rejects product identity in paths and raster product assets", () => {
   );
 });
 
-test("requires referenced semantic tokens in both core and AON themes", () => {
+test("requires referenced semantic tokens in the core theme", () => {
   const violations = checkFiles({
     "Button.css": ".button { color: var(--missing-color); }\n",
     "tokens/theme.css": ":root { --present-color: black; }\n",
   });
-  expect(violations).toContain(
+  expect(violations).toEqual([
     "packages/design-systems/core: runtime semantic token --missing-color is missing from the core theme",
-  );
-  expect(violations).toContain(
-    "packages/design-systems/aon/tokens/theme.css: runtime semantic token --missing-color is missing from the AON implementation",
-  );
+  ]);
 });

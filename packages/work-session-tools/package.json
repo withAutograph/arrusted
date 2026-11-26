@@ -1,6 +1,7 @@
 {
   "name": "@autograph/work-session-tools",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": "./index.ts",
@@ -15,10 +16,10 @@
     "test": "mise run --no-deps test:work-session-tools"
   },
   "dependencies": {
+    "@autograph/csv-workspace": "workspace:*",
     "@autograph/generated-app-runtime": "workspace:*",
     "@modelcontextprotocol/server": "2.3.1",
-    "zod": "catalog:",
-    "@autograph/csv-workspace": "workspace:*"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@autograph/typescript-config": "workspace:*",

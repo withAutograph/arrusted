@@ -59,7 +59,7 @@ export type AuthSchemaPlan = {
   version: 1;
   resource: AuthDatabaseResource;
   authOperatorRole?: string;
-  toolchain: "better-auth@1.7.3";
+  toolchain: "better-auth@1.7.28";
   history: typeof historyContract;
   catalogAppIds: string[];
   targetDigest: string;
@@ -276,7 +276,7 @@ async function desiredAuthSchema(input: AuthDesiredInput) {
   const preview = input.previewSql ?? "";
   await assertGeneratedAuthSqlIsAdditive(preview);
   const targetDigest = digest({
-    toolchain: "better-auth@1.7.3",
+    toolchain: "better-auth@1.7.28",
     resource: input.resource,
     catalogAppIds,
     schema: getSchema(input.options),
@@ -341,7 +341,7 @@ function buildAuthSchemaPlan(
     ...(input.authOperatorRole === undefined ? {} : { authOperatorRole: input.authOperatorRole }),
     history: historyContract,
     catalogAppIds,
-    toolchain: "better-auth@1.7.3" as const,
+    toolchain: "better-auth@1.7.28" as const,
     targetDigest,
     beforeSchemaHash,
     effects,

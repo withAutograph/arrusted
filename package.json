@@ -1,6 +1,7 @@
 {
   "name": "development-workspace",
   "private": true,
+  "license": "MIT",
   "workspaces": [
     "app",
     "packages/*",
@@ -61,7 +62,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "ajv": "8.20.0",
-    "auth": "1.7.3",
+    "auth": "1.7.28",
     "babel-plugin-react-compiler": "catalog:",
     "dotenv": "17.4.2",
     "jsdom": "catalog:",
@@ -105,11 +106,11 @@
   "catalog": {
     "@better-auth-ui/core": "1.7.23",
     "@better-auth-ui/react": "1.7.23",
-    "@better-auth/api-key": "1.7.3",
-    "@better-auth/cimd": "1.7.3",
-    "@better-auth/memory-adapter": "1.7.3",
-    "@better-auth/oauth-provider": "1.7.3",
-    "@better-auth/passkey": "1.7.3",
+    "@better-auth/api-key": "1.7.28",
+    "@better-auth/cimd": "1.7.28",
+    "@better-auth/memory-adapter": "1.7.28",
+    "@better-auth/oauth-provider": "1.7.28",
+    "@better-auth/passkey": "1.7.28",
     "@libpg-query/parser": "17.6.10",
     "@modelcontextprotocol/client": "2.3.1",
     "@modelcontextprotocol/ext-apps": "2.0.3",
@@ -130,7 +131,7 @@
     "ai": "7.0.95",
     "autoprefixer": "10.5.5",
     "babel-plugin-react-compiler": "1.0.0",
-    "better-auth": "1.7.3",
+    "better-auth": "1.7.28",
     "brace-expansion": "5.0.8",
     "clsx": "2.1.1",
     "eslint-plugin-github": "6.1.2",
@@ -158,7 +159,7 @@
     "vite-plus": "0.3.1",
     "vitest": "4.1.11",
     "yaml": "2.9.0",
-    "zod": "4.5.4"
+    "zod": "4.6.7"
   },
   "reactDoctor": {
     "ignore": {
