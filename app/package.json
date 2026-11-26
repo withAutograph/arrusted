@@ -1,6 +1,7 @@
 {
   "name": "@autograph/starter",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "bun scripts/compile.ts && bun run --cwd ../packages/canvas-host build && next dev",

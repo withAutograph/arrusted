@@ -1,6 +1,7 @@
 {
   "name": "@autograph/canvas",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": "./index.ts",

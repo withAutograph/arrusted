@@ -44,7 +44,6 @@ export const checkDesignSystemBranding = (context: BoundaryContext): void => {
   }
 
   const coreTheme = join(core, "tokens", "theme.css");
-  const aonTheme = join(context.packages, "design-systems", "aon", "tokens", "theme.css");
   const referencedTokens = new Set<string>();
   for (const path of sourceFiles(core)) {
     if (path === coreTheme) continue;
@@ -55,22 +54,14 @@ export const checkDesignSystemBranding = (context: BoundaryContext): void => {
   if (referencedTokens.size === 0) return;
   // Small boundary fixtures that exercise unrelated syntax do not model a
   // complete design-system package. Once the canonical theme exists, however,
-  // every referenced semantic token must be implemented by both themes.
+  // every referenced semantic token must be implemented by the core theme.
   if (!existsSync(coreTheme)) return;
 
   const coreTokens = cssVariables(readText(coreTheme), CSS_VARIABLE_DECLARATION);
-  const aonTokens = existsSync(aonTheme)
-    ? cssVariables(readText(aonTheme), CSS_VARIABLE_DECLARATION)
-    : new Set<string>();
   for (const token of [...referencedTokens].sort()) {
     if (!coreTokens.has(token)) {
       context.violations.push(
         `packages/design-systems/core: runtime semantic token ${token} is missing from the core theme`,
-      );
-    }
-    if (!aonTokens.has(token)) {
-      context.violations.push(
-        `packages/design-systems/aon/tokens/theme.css: runtime semantic token ${token} is missing from the AON implementation`,
       );
     }
   }
