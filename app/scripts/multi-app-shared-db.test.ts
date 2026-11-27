@@ -9,7 +9,7 @@ import { ResilientPool } from "../../packages/generated-app-runtime/pool";
 import { createDataClient, type DataDefinition } from "../../packages/generated-app-runtime/data";
 import { createGeneratedAppRuntime } from "../../packages/generated-app-runtime/server";
 import { createSingleOrganizationAuth } from "../../packages/auth/single-organization";
-import { migrate, rehearse, undo } from "./migrate";
+import { migrate, rehearse, runtimeRoles, undo } from "./migrate";
 import { PgDumpRestorePoints } from "./restore-points";
 
 const databaseURL = process.env.KERNEL_TEST_DATABASE_URL;
@@ -252,7 +252,43 @@ suite(
       kernelRole: "crm_user",
     });
 
-    // Also prove on rehearsal DB that a separate authRole bound to public."user" cannot be reused on an auth_* schema
+    // Verify Neon -pooler runtime/auth/production URL handling while keeping MIGRATION_DATABASE_URL direct:
+    expect(
+      runtimeRoles(
+        "postgres://neondb_owner:ownerpass@ep-sunlight-123.us-east-2.aws.neon.tech/sunlight?sslmode=verify-full",
+        `postgres://crm_app:${rolePassword}@ep-sunlight-123-pooler.us-east-2.aws.neon.tech/sunlight?sslmode=verify-full`,
+        `postgres://crm_auth:${rolePassword}@ep-sunlight-123-pooler.us-east-2.aws.neon.tech/sunlight?sslmode=verify-full`,
+      ),
+    ).toEqual({
+      runtimeRole: "crm_app",
+      authRole: "crm_auth",
+      runtimeLogins: [
+        { role: "crm_app", password: rolePassword },
+        { role: "crm_auth", password: rolePassword },
+      ],
+    });
+    expect(() =>
+      runtimeRoles(
+        "postgres://neondb_owner:ownerpass@ep-sunlight-123-pooler.us-east-2.aws.neon.tech/sunlight?sslmode=verify-full",
+        `postgres://crm_app:${rolePassword}@ep-sunlight-123-pooler.us-east-2.aws.neon.tech/sunlight?sslmode=verify-full`,
+      ),
+    ).toThrow(/protected_installer_identity_mismatch/);
+    await expect(
+      rehearse({
+        databaseUrl:
+          "postgres://neondb_owner:ownerpass@ep-sunlight-123.us-east-2.aws.neon.tech/sunlight?sslmode=verify-full",
+        runtimeDatabaseUrl: `postgres://crm_app:${rolePassword}@ep-sunlight-123-pooler.us-east-2.aws.neon.tech/sunlight?sslmode=verify-full`,
+        productionDatabaseUrl: `postgres://crm_app:${rolePassword}@ep-sunlight-123-pooler.us-east-2.aws.neon.tech/sunlight?sslmode=verify-full`,
+        releaseDirectory: crmV1Out,
+        sourceCommit: "commit-v1",
+        sourceDirty: false,
+        authSchema: "auth_crm",
+        kernelRole: "crm_user",
+      }),
+    ).rejects.toThrow(/must not target the production database during rehearsal/);
+
+    // Also prove on rehearsal DB that a separate authRole bound to public."user" cannot be reused on an auth_* schema,
+    // AND reverse exclusivity: a second login cannot bind onto an already-bound public or auth_* schema!
     const publicAuthRole = `${database}_pub_auth`;
     const publicRuntimeRole = `${database}_pub_rt`;
     await migrate({
@@ -291,6 +327,22 @@ suite(
         ],
       }),
     ).rejects.toThrow(/already has access to auth schema 'public'/);
+    await expect(
+      migrate({
+        databaseUrl: rehearsalOwnerUrl.toString(),
+        releaseDirectory: cdV1Out,
+        restorePoints: new PgDumpRestorePoints({
+          directory: path.join(scratchDir, "rehearsal-backups"),
+        }),
+        sourceCommit: "commit-v1",
+        sourceDirty: false,
+        runtimeRole: `${database}_reh_cd`,
+        authRole: `${database}_reh_cd`,
+        authSchema: "public",
+        kernelRole: "company_data_user",
+        runtimeLogins: [{ role: `${database}_reh_cd`, password: rolePassword }],
+      }),
+    ).rejects.toThrow(/Auth schema 'public' is already bound to runtime login/);
 
     // 1. Migrate CRM app first (provisions crm_app login + auth_crm schema + crm_user trigger)
     const crmMigrateV1 = await migrate({
@@ -321,6 +373,36 @@ suite(
         kernelRole: "company_data_user",
       }),
     ).rejects.toThrow(/already bound to auth schema 'auth_crm'/);
+
+    // Reverse exclusivity: a second app/login attempting to reuse CRM's auth_crm schema is also refused before changing the DB
+    await expect(
+      migrate({
+        databaseUrl: ownerConnectionString,
+        releaseDirectory: cdV1Out,
+        restorePoints,
+        sourceCommit: "commit-v1",
+        sourceDirty: false,
+        runtimeRole: companyDataRole,
+        authRole: companyDataRole,
+        authSchema: "auth_crm",
+        kernelRole: "company_data_user",
+        runtimeLogins: [{ role: companyDataRole, password: rolePassword }],
+      }),
+    ).rejects.toThrow(/Auth schema 'auth_crm' is already bound to runtime login/);
+    await expect(
+      migrate({
+        databaseUrl: ownerConnectionString,
+        releaseDirectory: cdV1Out,
+        restorePoints,
+        sourceCommit: "commit-v1",
+        sourceDirty: false,
+        runtimeRole: crmRole,
+        authRole: companyDataRole,
+        authSchema: "auth_crm",
+        kernelRole: "crm_user",
+        runtimeLogins: [{ role: companyDataRole, password: rolePassword }],
+      }),
+    ).rejects.toThrow(/Auth schema 'auth_crm' already grants Auth access to login/);
 
     // 2. Migrate Company Data app second against the same DB (idempotent schema, provisions company_data_app + auth_company_data + company_data_user trigger)
     const cdMigrateV1 = await migrate({

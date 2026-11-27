@@ -189,22 +189,36 @@ function bindPoolToAuthSchema(pool: Pool, authSchema: string | undefined): Pool 
     }
     return acquire();
   };
-  const query = async (queryText: unknown, values?: unknown) => {
-    const client = await acquire();
-    let releaseErr: Error | boolean | undefined;
-    const onError = (err: Error) => {
-      releaseErr = err;
-    };
-    client.on("error", onError);
-    try {
-      return await (client.query as (q: unknown, v?: unknown) => Promise<unknown>)(
-        queryText,
-        values,
+  const query = (...args: unknown[]) => {
+    const last = args[args.length - 1];
+    const callback =
+      typeof last === "function" &&
+      !(args.length === 1 && typeof (last as { submit?: unknown }).submit === "function")
+        ? (last as (err: Error | undefined, result?: unknown) => void)
+        : undefined;
+    const forwardArgs = callback ? args.slice(0, -1) : args;
+    const run = (async () => {
+      const client = await acquire();
+      let releaseErr: Error | boolean | undefined;
+      const onError = (err: Error) => {
+        releaseErr = err;
+      };
+      client.on("error", onError);
+      try {
+        return await (client.query as (...a: unknown[]) => Promise<unknown>)(...forwardArgs);
+      } finally {
+        client.removeListener("error", onError);
+        client.release(releaseErr);
+      }
+    })();
+    if (callback) {
+      run.then(
+        (res) => callback(undefined, res),
+        (err) => callback(err as Error),
       );
-    } finally {
-      client.removeListener("error", onError);
-      client.release(releaseErr);
+      return undefined;
     }
+    return run;
   };
   return new Proxy(pool, {
     get(target, prop) {

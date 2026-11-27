@@ -188,6 +188,10 @@ function resolveMigrationCompiler(
   return resolved;
 }
 
+function normalizeEndpointHost(hostname: string): string {
+  return hostname.toLowerCase().replace(/-pooler(?=\.)/u, "");
+}
+
 function connectionTarget(databaseUrl: string): { url: string; resource: DatabaseTarget } {
   const url = new URL(databaseUrl);
   const local = ["localhost", "127.0.0.1"].includes(url.hostname);
@@ -207,33 +211,103 @@ function connectionTarget(databaseUrl: string): { url: string; resource: Databas
   return { url: url.toString(), resource };
 }
 
-/** Bind configured runtime URLs to the same target before selecting their login names. */
+function parseRuntimeConnection(databaseUrl: string): {
+  url: string;
+  hostname: string;
+  endpointHost: string;
+  port: number;
+  database: string;
+  role: string;
+  password: string;
+  local: boolean;
+} {
+  let url: URL;
+  try {
+    url = new URL(databaseUrl);
+  } catch {
+    throw new Error("protected_installer_identity_mismatch");
+  }
+  const local = ["localhost", "127.0.0.1"].includes(url.hostname);
+  if (local) url.hostname = "127.0.0.1";
+  if (!url.searchParams.has("sslmode"))
+    url.searchParams.set("sslmode", local ? "disable" : "verify-full");
+  let database: string;
+  let role: string;
+  let password: string;
+  try {
+    database = decodeURIComponent(url.pathname.slice(1));
+    role = decodeURIComponent(url.username);
+    password = decodeURIComponent(url.password);
+  } catch {
+    throw new Error("protected_installer_identity_mismatch");
+  }
+  if (
+    !["postgres:", "postgresql:"].includes(url.protocol) ||
+    !url.hostname ||
+    !database ||
+    !role ||
+    url.hash ||
+    [...url.searchParams.keys()].some((key) => !["sslmode", "channel_binding"].includes(key)) ||
+    url.searchParams.getAll("sslmode").length !== 1 ||
+    url.searchParams.getAll("channel_binding").length > 1 ||
+    (url.searchParams.has("channel_binding") &&
+      url.searchParams.get("channel_binding") !== "require")
+  ) {
+    throw new Error("protected_installer_identity_mismatch");
+  }
+  if (local) {
+    if (url.hostname !== "127.0.0.1" || url.searchParams.get("sslmode") !== "disable") {
+      throw new Error("protected_installer_identity_mismatch");
+    }
+  } else if (url.searchParams.get("sslmode") !== "verify-full") {
+    throw new Error("protected_installer_identity_mismatch");
+  }
+  return {
+    url: url.toString(),
+    hostname: url.hostname,
+    endpointHost: normalizeEndpointHost(url.hostname),
+    port: Number(url.port || 5432),
+    database,
+    role,
+    password,
+    local,
+  };
+}
+
+/** Bind configured runtime URLs (including Neon -pooler endpoints) to the same target before selecting their login names. */
 export function runtimeRoles(
   databaseUrl: string,
   appUrl?: string,
   authUrl?: string,
 ): Pick<MigrationInput, "runtimeRole" | "authRole" | "runtimeLogins"> {
   const { resource } = connectionTarget(databaseUrl);
-  const role = (value: string) => {
-    const normalized = connectionTarget(value);
-    const runtimeRole = normalized.resource.migratorRole;
-    assertProtectedConnection(normalized.url, { ...resource, runtimeRole }, "runtime");
-    if (runtimeRole === resource.migratorRole)
+  const migratorEndpointHost = normalizeEndpointHost(resource.hostname);
+  const parseMatchingRole = (value: string) => {
+    const parsed = parseRuntimeConnection(value);
+    if (
+      parsed.local !== (resource.environment === "local") ||
+      parsed.endpointHost !== migratorEndpointHost ||
+      parsed.port !== resource.port ||
+      parsed.database !== resource.database
+    ) {
+      throw new Error("protected_installer_identity_mismatch");
+    }
+    if (parsed.role === resource.migratorRole)
       throw new Error("The application must use a separate unprivileged database login.");
-    return runtimeRole;
+    return parsed;
   };
-  const runtimeRole = appUrl ? role(appUrl) : undefined;
-  const authRole = authUrl ? role(authUrl) : runtimeRole;
-  const runtimeLogins = [
-    ...new Set([appUrl, authUrl].filter((url): url is string => Boolean(url))),
-  ].map((value) => {
-    const url = new URL(value);
-    return { role: role(value), password: decodeURIComponent(url.password) };
-  });
+  const appParsed = appUrl ? parseMatchingRole(appUrl) : undefined;
+  const authParsed = authUrl ? parseMatchingRole(authUrl) : appParsed;
+  const seenLogins = new Map<string, string>();
+  for (const candidate of [appParsed, authParsed]) {
+    if (candidate && !seenLogins.has(candidate.role)) {
+      seenLogins.set(candidate.role, candidate.password);
+    }
+  }
   return {
-    ...(runtimeRole ? { runtimeRole } : {}),
-    ...(authRole ? { authRole } : {}),
-    runtimeLogins,
+    ...(appParsed ? { runtimeRole: appParsed.role } : {}),
+    ...(authParsed ? { authRole: authParsed.role } : {}),
+    runtimeLogins: [...seenLogins.entries()].map(([role, password]) => ({ role, password })),
   };
 }
 
@@ -594,6 +668,87 @@ async function bindRuntime(
   for (const login of input.runtimeLogins ?? []) {
     if (![input.runtimeRole, input.authRole].includes(login.role))
       throw new Error("Unexpected runtime login.");
+  }
+  if (input.runtimeRole) {
+    const existingTriggerOwner = (
+      await client.query<{ existing_principal: string }>(
+        `select convert_from(
+                  substring(t.tgargs from 1 for position(decode('00', 'hex') in t.tgargs) - 1),
+                  current_setting('server_encoding')
+                ) as existing_principal
+           from pg_trigger t
+           join pg_class c on c.oid = t.tgrelid
+           join pg_namespace ns_rel on ns_rel.oid = c.relnamespace
+          where t.tgname = 'autograph_member_kernel'
+            and c.relname = 'member'
+            and not t.tgisinternal
+            and ns_rel.nspname = $1
+            and position(decode('00', 'hex') in t.tgargs) > 1
+            and convert_from(
+                  substring(t.tgargs from 1 for position(decode('00', 'hex') in t.tgargs) - 1),
+                  current_setting('server_encoding')
+                ) <> $2
+          limit 1`,
+        [authSchema, input.runtimeRole],
+      )
+    ).rows[0];
+    if (existingTriggerOwner) {
+      throw new Error(
+        `Auth schema '${authSchema}' is already bound to runtime login '${existingTriggerOwner.existing_principal}'. Each app must use its own dedicated AUTH_SCHEMA.`,
+      );
+    }
+  }
+  if (input.authRole) {
+    const existingSchemaAuthOwner = (
+      await client.query<{ existing_auth_role: string }>(
+        `select r.rolname as existing_auth_role
+           from pg_class c
+           join pg_namespace ns on ns.oid = c.relnamespace
+           cross join lateral aclexplode(
+             case when cardinality(c.relacl) > 0 then c.relacl else null end
+           ) acl
+           join pg_roles r on r.oid = acl.grantee
+          where c.relname = 'user'
+            and c.relkind = 'r'
+            and ns.nspname = $1
+            and coalesce(obj_description(c.oid, 'pg_class'), '') ~ '^autograph:auth-schema:[0-9a-f]{64}$'
+            and acl.grantee <> 0
+            and acl.grantee <> c.relowner
+            and r.rolcanlogin
+            and not r.rolsuper
+            and r.rolname <> current_user
+            and r.oid <> (select datdba from pg_database where datname = current_database())
+            and acl.privilege_type in ('SELECT', 'INSERT', 'UPDATE', 'DELETE')
+            and r.rolname <> $2
+         union all
+         select r.rolname as existing_auth_role
+           from pg_namespace n
+           cross join lateral aclexplode(
+             case when cardinality(n.nspacl) > 0 then n.nspacl else null end
+           ) acl
+           join pg_roles r on r.oid = acl.grantee
+          where n.nspname = $1
+            and n.nspname ~ '^auth_[a-z0-9_]{1,57}$'
+            and coalesce(obj_description(n.oid, 'pg_namespace'), '') ~ '^autograph:auth-schema:[0-9a-f]{64}$'
+            and acl.grantee <> 0
+            and acl.grantee <> n.nspowner
+            and r.rolcanlogin
+            and not r.rolsuper
+            and r.rolname <> current_user
+            and r.oid <> (select datdba from pg_database where datname = current_database())
+            and acl.privilege_type = 'USAGE'
+            and r.rolname <> $2
+          limit 1`,
+        [authSchema, input.authRole],
+      )
+    ).rows[0];
+    if (existingSchemaAuthOwner) {
+      throw new Error(
+        `Auth schema '${authSchema}' already grants Auth access to login '${existingSchemaAuthOwner.existing_auth_role}'. Each app must use its own dedicated AUTH_SCHEMA.`,
+      );
+    }
+  }
+  for (const login of input.runtimeLogins ?? []) {
     await provisionRuntimeLogin(client, login.role, login.password);
   }
   const candidateRoles = [
@@ -757,9 +912,9 @@ export async function rehearse(
   input: MigrationInput & { runtimeDatabaseUrl: string; productionDatabaseUrl: string },
 ): Promise<void> {
   const rehearsal = connectionTarget(input.databaseUrl).resource;
-  const production = connectionTarget(input.productionDatabaseUrl).resource;
+  const production = parseRuntimeConnection(input.productionDatabaseUrl);
   if (
-    rehearsal.hostname === production.hostname &&
+    normalizeEndpointHost(rehearsal.hostname) === production.endpointHost &&
     rehearsal.port === production.port &&
     rehearsal.database === production.database
   )
@@ -848,38 +1003,40 @@ if (import.meta.main) {
     const command = process.argv[2] ?? "apply";
     const databaseUrl = process.env.MIGRATION_DATABASE_URL;
     if (!databaseUrl) throw new Error("MIGRATION_DATABASE_URL is required.");
-    if (["apply", "rehearse"].includes(command) && !process.env.APP_DATABASE_URL?.trim())
-      throw new Error("APP_DATABASE_URL is required (separate restricted runtime login).");
-    const roles = runtimeRoles(
-      databaseUrl,
-      process.env.APP_DATABASE_URL,
-      process.env.AUTH_DATABASE_URL,
-    );
-    const authSchema = process.env.AUTH_SCHEMA?.trim() || undefined;
-    const kernelRole = process.env.APP_KERNEL_ROLE?.trim() || undefined;
-    const input: MigrationInput = {
-      databaseUrl,
-      ...roles,
-      ...(authSchema ? { authSchema } : {}),
-      ...(kernelRole ? { kernelRole } : {}),
-    };
     if (command === "undo") {
-      const result = await undo(input);
+      const result = await undo({ databaseUrl });
       console.log(
         `Database and applied-schema record restored. Revert the schema source to ${result.sourceCommit}.${result.sourceDirty ? " That build included uncommitted schema edits; restore those source files too." : ""}`,
       );
-    } else if (command === "rehearse") {
-      if (!process.env.PRODUCTION_APP_DATABASE_URL)
-        throw new Error("Rehearsal requires PRODUCTION_APP_DATABASE_URL for target isolation.");
-      await rehearse({
-        ...input,
-        runtimeDatabaseUrl: process.env.APP_DATABASE_URL!,
-        productionDatabaseUrl: process.env.PRODUCTION_APP_DATABASE_URL,
-      });
-      console.log("Migration rehearsal and every section list query passed.");
-    } else if (command === "apply") {
-      const result = await migrate(input);
-      console.log(result.applied ? "Migration applied." : "Already applied; no changes.");
+    } else if (command === "rehearse" || command === "apply") {
+      if (!process.env.APP_DATABASE_URL?.trim())
+        throw new Error("APP_DATABASE_URL is required (separate restricted runtime login).");
+      const roles = runtimeRoles(
+        databaseUrl,
+        process.env.APP_DATABASE_URL,
+        process.env.AUTH_DATABASE_URL,
+      );
+      const authSchema = process.env.AUTH_SCHEMA?.trim() || undefined;
+      const kernelRole = process.env.APP_KERNEL_ROLE?.trim() || undefined;
+      const input: MigrationInput = {
+        databaseUrl,
+        ...roles,
+        ...(authSchema ? { authSchema } : {}),
+        ...(kernelRole ? { kernelRole } : {}),
+      };
+      if (command === "rehearse") {
+        if (!process.env.PRODUCTION_APP_DATABASE_URL)
+          throw new Error("Rehearsal requires PRODUCTION_APP_DATABASE_URL for target isolation.");
+        await rehearse({
+          ...input,
+          runtimeDatabaseUrl: process.env.APP_DATABASE_URL!,
+          productionDatabaseUrl: process.env.PRODUCTION_APP_DATABASE_URL,
+        });
+        console.log("Migration rehearsal and every section list query passed.");
+      } else {
+        const result = await migrate(input);
+        console.log(result.applied ? "Migration applied." : "Already applied; no changes.");
+      }
     } else throw new Error(`Unknown migration command: ${command}`);
   } catch (error) {
     console.error(error instanceof Error ? error.message : "Migration failed.");

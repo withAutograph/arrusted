@@ -36,12 +36,15 @@ When multiple apps share one PostgreSQL database and one CUE schema:
 COMMIT`) rather than caching session-level `SET` state, so `AUTH_SCHEMA`
   isolation holds on Neon transaction-pooled (`-pooler`) connections without
   leaking `search_path` onto shared runtime logins.
-- `migrate` marks each Better Auth schema and `"user"` table with
+- `migrate` (`apply` and `rehearse`) requires a direct connection on
+  `MIGRATION_DATABASE_URL` while accepting Neon `-pooler.` endpoints on
+  `APP_DATABASE_URL`, `AUTH_DATABASE_URL`, and `PRODUCTION_APP_DATABASE_URL`. It
+  marks each Better Auth schema and `"user"` table with
   `autograph:auth-schema:<sha256>`, grants schema/table DML only to that app's
   `authRole`, binds `autograph_member_kernel` on `<authSchema>.member` to sync
   human memberships for `(runtimeRole, app_id, customer_id, kernelRole)`, and
-  refuses reusing any `runtimeRole` or `authRole` across `public` and `auth_*`
-  schemas.
+  enforces bidirectional one-to-one exclusivity between each `AUTH_SCHEMA`
+  (`public` or `auth_*`) and its bound `runtimeRole` / `authRole` logins.
 - Sibling apps running an installed prior revision (verified through
   `kernel_read_runtime_release_observability`) continue reading and writing
   across strictly additive schema transitions; unselected full-record reads on
