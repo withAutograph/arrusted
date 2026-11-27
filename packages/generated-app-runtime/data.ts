@@ -806,6 +806,154 @@ export function createDataClient<const D extends DataDefinition>(
   const { decodeRecord, decodeAggregate, decodeActiveRevision, decodeReceipt, decodeHistory } =
     decoder;
   const compatibility = definition.predecessorCompatibility;
+  const isAdditiveActiveSchema = (activeSchema: Record<string, unknown>): boolean => {
+    if (
+      activeSchema.app_id !== scope.appId ||
+      activeSchema.customer_id !== scope.customerId ||
+      !Array.isArray(activeSchema.models)
+    )
+      return false;
+    const activeModels = new Map<string, Record<string, unknown>>();
+    for (const candidate of activeSchema.models) {
+      if (
+        candidate &&
+        typeof candidate === "object" &&
+        typeof (candidate as { id?: unknown }).id === "string"
+      ) {
+        activeModels.set((candidate as { id: string }).id, candidate as Record<string, unknown>);
+      }
+    }
+    const activeCustomByModel = new Map<string, Map<string, string>>();
+    if (Array.isArray(activeSchema.custom_fields)) {
+      for (const cf of activeSchema.custom_fields) {
+        if (cf && typeof cf === "object") {
+          const rec = cf as Record<string, unknown>;
+          if (rec.lifecycle === "retired" || rec.archived_at != null) continue;
+          const modelId = rec.model_id;
+          const fId = rec.field_id;
+          const fType = rec.type;
+          if (typeof modelId === "string" && typeof fId === "string" && typeof fType === "string") {
+            let map = activeCustomByModel.get(modelId);
+            if (!map) {
+              map = new Map();
+              activeCustomByModel.set(modelId, map);
+            }
+            map.set(fId, fType);
+          }
+        }
+      }
+    }
+    for (const model of definition.models) {
+      const activeModel = activeModels.get(model.id);
+      if (!activeModel || activeModel.lifecycle === "retired" || activeModel.archived_at != null)
+        return false;
+      const activeFields = new Map<string, Record<string, unknown>>();
+      if (Array.isArray(activeModel.fields)) {
+        for (const f of activeModel.fields) {
+          if (f && typeof f === "object" && typeof (f as { id?: unknown }).id === "string") {
+            activeFields.set((f as { id: string }).id, f as Record<string, unknown>);
+          }
+        }
+      }
+      const activeMany = new Set<string>();
+      if (Array.isArray(activeModel.many_relations)) {
+        for (const rel of activeModel.many_relations) {
+          if (rel && typeof rel === "object") {
+            const relObj = rel as Record<string, unknown>;
+            if (
+              typeof relObj.id === "string" &&
+              relObj.lifecycle !== "retired" &&
+              relObj.archived_at == null
+            ) {
+              activeMany.add(relObj.id);
+            }
+          }
+        }
+      }
+      for (const field of model.fields) {
+        if (field.lifecycle === "retired") continue;
+        if (field.storage === "many") {
+          const af = activeFields.get(field.id);
+          const validField =
+            af !== undefined && af.lifecycle !== "retired" && af.archived_at == null;
+          if (!activeMany.has(field.id) && !validField) return false;
+          continue;
+        }
+        if (field.storage === "custom") {
+          if (activeCustomByModel.get(model.id)?.get(field.id) !== field.type) return false;
+          continue;
+        }
+        const activeField = activeFields.get(field.id);
+        if (
+          !activeField ||
+          activeField.type !== field.type ||
+          activeField.lifecycle === "retired" ||
+          activeField.archived_at != null ||
+          (activeField.required === true && !field.required)
+        )
+          return false;
+      }
+      const knownFieldIds = new Set(model.fields.map((f) => f.id));
+      for (const [fId, activeField] of activeFields) {
+        if (
+          !knownFieldIds.has(fId) &&
+          activeField.required === true &&
+          activeField.lifecycle !== "retired" &&
+          activeField.archived_at == null
+        ) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+  const isVerifiedAdditiveSuccessor = async (
+    db: DataSession,
+    active: { schema_revision_id: string; schemaVersion: string; schema: Record<string, unknown> },
+  ): Promise<boolean> => {
+    if (
+      active.schemaVersion === definition.schemaVersion ||
+      !isAdditiveActiveSchema(active.schema)
+    ) {
+      return false;
+    }
+    try {
+      const obs = await db.call("kernel_read_runtime_release_observability", {});
+      if (
+        !obs ||
+        typeof obs !== "object" ||
+        !Array.isArray((obs as { releases?: unknown }).releases)
+      ) {
+        return false;
+      }
+      const activeId = BigInt(active.schema_revision_id);
+      return (obs as { releases: unknown[] }).releases.some((entry) => {
+        if (!entry || typeof entry !== "object") return false;
+        const row = entry as Record<string, unknown>;
+        const revIdRaw = row.schema_revision_id;
+        if (typeof revIdRaw !== "number" && typeof revIdRaw !== "string") return false;
+        let revId: bigint;
+        try {
+          revId = BigInt(revIdRaw);
+        } catch {
+          return false;
+        }
+        if (revId >= activeId) return false;
+        const timestamps =
+          row.timestamps && typeof row.timestamps === "object"
+            ? (row.timestamps as Record<string, unknown>)
+            : undefined;
+        if (timestamps?.ready_at == null) return false;
+        return (
+          row.effective_revision === definition.schemaVersion ||
+          row.base_revision === definition.schemaVersion ||
+          row.release_id === definition.schemaVersion
+        );
+      });
+    } catch {
+      return false;
+    }
+  };
   const activeSchemaForOperation = async (db: DataSession) => {
     const canUsePredecessor =
       compatibility?.kind === "optional-text-addition-v1" && db.lockSchemaActivation !== undefined;
@@ -837,6 +985,9 @@ export function createDataClient<const D extends DataDefinition>(
           return { active, canUsePredecessor, addedField: predecessor.field };
         }
       }
+    }
+    if (await isVerifiedAdditiveSuccessor(db, active)) {
+      return { active, canUsePredecessor: false, addedField: undefined };
     }
     invalid("generated schema version does not match active artifact");
   };
@@ -1080,7 +1231,30 @@ export function createDataClient<const D extends DataDefinition>(
           }
         }
       }
-      const response = await db.call("kernel_data_query", queryRequest);
+      let response: unknown;
+      try {
+        response = await db.call("kernel_data_query", queryRequest);
+      } catch (error) {
+        if (
+          error instanceof KernelFailure &&
+          error.envelope.code === "schema_drift" &&
+          queryRequest.schema_version === definition.schemaVersion
+        ) {
+          const active = decodeActiveRevision(
+            await db.call("kernel_read_active_schema_revision", {}),
+          );
+          if (await isVerifiedAdditiveSuccessor(db, active)) {
+            response = await db.call("kernel_data_query", {
+              ...queryRequest,
+              schema_version: active.schemaVersion,
+            });
+          } else {
+            throw error;
+          }
+        } else {
+          throw error;
+        }
+      }
       if (kind === "list") {
         if (!Array.isArray(response))
           responseFailure("kernel_data_query", "response", "record array");

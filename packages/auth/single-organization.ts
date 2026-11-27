@@ -2,15 +2,97 @@ import { randomUUID } from "node:crypto";
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { organization } from "better-auth/plugins";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { createAgentGrantPlugins, requireGrantContext } from "./agent-grant";
 import { agentGrantIssuer } from "./agent-grant-policy";
 import { canvasFrameOrigins, readCanvasFrameOrigins } from "./canvas-frame";
 import { emptySetAdapter } from "./empty-set-adapter";
 
+function bindPoolToAuthSchema(pool: Pool, authSchema: string | undefined): Pool {
+  if (authSchema === undefined) return pool;
+  const existing = (pool as { configuredSearchPath?: string }).configuredSearchPath;
+  if (existing !== undefined) {
+    if (existing !== authSchema) {
+      throw new Error(
+        `Database pool searchPath ('${existing}') disagrees with authSchema ('${authSchema}').`,
+      );
+    }
+    return pool;
+  }
+  const configured = new WeakSet<object>();
+  const targetSearchPath = `${authSchema}, pg_catalog`;
+  const acquire = async (): Promise<PoolClient> => {
+    const client = await pool.connect();
+    const onError = () => {};
+    client.on("error", onError);
+    try {
+      if (!configured.has(client)) {
+        await client.query("select set_config('search_path', $1, false)", [targetSearchPath]);
+        configured.add(client);
+      }
+      return client;
+    } catch (error) {
+      client.release(error instanceof Error ? error : true);
+      throw error;
+    } finally {
+      client.removeListener("error", onError);
+    }
+  };
+  const connect = (
+    callback?: (
+      err: Error | undefined,
+      client: PoolClient | undefined,
+      done: (release?: unknown) => void,
+    ) => void,
+  ): Promise<PoolClient> | void => {
+    if (callback) {
+      acquire().then(
+        (client) =>
+          callback(undefined, client, (release) =>
+            client.release(release as boolean | Error | undefined),
+          ),
+        (err) => callback(err as Error, undefined, () => {}),
+      );
+      return;
+    }
+    return acquire();
+  };
+  const query = async (queryText: unknown, values?: unknown) => {
+    const client = await acquire();
+    let releaseErr: Error | boolean | undefined;
+    const onError = (err: Error) => {
+      releaseErr = err;
+    };
+    client.on("error", onError);
+    try {
+      return await (client.query as (q: unknown, v?: unknown) => Promise<unknown>)(
+        queryText,
+        values,
+      );
+    } catch (error) {
+      releaseErr ??= error instanceof Error ? error : true;
+      throw error;
+    } finally {
+      client.removeListener("error", onError);
+      client.release(releaseErr);
+    }
+  };
+  return new Proxy(pool, {
+    get(target, prop) {
+      if (prop === "configuredSearchPath") return authSchema;
+      if (prop === "connect") return connect;
+      if (prop === "query") return query;
+      const value = Reflect.get(target, prop, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+}
+
 /** One deployment, one organization; OAuth consent remains separate from human sign-in. */
 export function createSingleOrganizationAuth(input: {
   database: Pool;
+  /** Optional PostgreSQL schema owning this app's Better Auth tables (e.g. auth_crm). */
+  authSchema?: string;
   origin: string;
   secret: string;
   appId: string;
@@ -18,6 +100,15 @@ export function createSingleOrganizationAuth(input: {
   name: string;
   allowSignUp: boolean;
 }) {
+  if (
+    input.authSchema !== undefined &&
+    !/^(?:public|auth_[a-z0-9_]{1,57})$/.test(input.authSchema)
+  ) {
+    throw new Error(
+      "Auth schema must be 'public' or an 'auth_<app>' identifier (lowercase alphanumeric/underscore).",
+    );
+  }
+  const database = bindPoolToAuthSchema(input.database, input.authSchema);
   const origin = new URL(input.origin);
   if (origin.origin !== input.origin || !["http:", "https:"].includes(origin.protocol))
     throw new Error("Auth origin must be an exact HTTP(S) origin.");
@@ -25,7 +116,7 @@ export function createSingleOrganizationAuth(input: {
   const auth = betterAuth({
     appName: input.name,
     baseURL: input.origin,
-    database: input.database,
+    database,
     secret: input.secret,
     trustedOrigins: [
       input.origin,
@@ -42,7 +133,7 @@ export function createSingleOrganizationAuth(input: {
           after: async (user) => {
             // One statement creates the deployment organization on the first signup;
             // concurrent signups join the same row. No browser-supplied scope is accepted.
-            await input.database.query(
+            await database.query(
               `with deployment as (
              insert into "organization" ("id", "name", "slug", "createdAt")
              values ($1, $2, $1, now()) on conflict ("id") do update set "id" = excluded."id"
@@ -77,7 +168,7 @@ export function createSingleOrganizationAuth(input: {
         },
       }),
       ...createAgentGrantPlugins({
-        database: input.database,
+        database,
         publicOrigin: input.origin,
         appIds: [input.appId],
         singleOrganizationId: input.organizationId,
@@ -86,7 +177,7 @@ export function createSingleOrganizationAuth(input: {
     ],
   });
   const requireMember = async (actorId: string) => {
-    const result = await input.database.query(
+    const result = await database.query(
       `select "id" from "member" where "userId" = $1 and "organizationId" = $2 limit 1`,
       [actorId, input.organizationId],
     );
@@ -114,7 +205,7 @@ export function createSingleOrganizationAuth(input: {
       return requireGrantContext(
         { token, kind, appId: input.appId },
         {
-          database: input.database,
+          database,
           issuer: agentGrantIssuer(input.origin),
           singleOrganization: { id: input.organizationId, appId: input.appId },
         },

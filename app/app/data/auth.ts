@@ -1,5 +1,5 @@
 import "server-only";
-import { Pool } from "pg";
+import { ResilientPool } from "./pool";
 import { createSingleOrganizationAuth } from "@autograph/auth/single-organization";
 import { canvasFrameOrigins, readCanvasFrameOrigins } from "@autograph/auth/canvas-frame";
 
@@ -12,11 +12,14 @@ export function requiredEnv(name: string, fallback?: string) {
 }
 let instance: ReturnType<typeof createSingleOrganizationAuth> | undefined;
 export function getIdentity() {
+  const authSchema = process.env.AUTH_SCHEMA?.trim() || undefined;
   return (instance ??= createSingleOrganizationAuth({
-    database: new Pool({
+    database: new ResilientPool({
       connectionString: requiredEnv("AUTH_DATABASE_URL", "APP_DATABASE_URL"),
+      ...(authSchema ? { searchPath: authSchema } : {}),
       max: 5,
     }),
+    ...(authSchema ? { authSchema } : {}),
     origin: requiredEnv("BETTER_AUTH_URL"),
     secret: requiredEnv("BETTER_AUTH_SECRET"),
     appId,

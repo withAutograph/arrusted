@@ -259,3 +259,117 @@ test.each([
     "kernel_read_active_schema_revision",
   ]);
 });
+
+test("sibling additive successor continuity allows an installed prior revision across additive changes and rejects fabricated or non-additive revisions", async () => {
+  const v1Def = {
+    formatVersion: 1,
+    schemaVersion: "v3",
+    models: [{ id: "item", name: "item", fields: [oldField], relations: [] }],
+  } as const satisfies DataDefinition;
+
+  let active = {
+    schema_revision_id: "4",
+    effective_hash: "b".repeat(64),
+    schema: {
+      app_id: scope.appId,
+      customer_id: scope.customerId,
+      version: "v4",
+      models: [
+        {
+          id: "item",
+          fields: [
+            { id: "label", type: "text", required: true },
+            { id: "note", type: "text", required: false },
+          ],
+        },
+      ],
+    },
+  };
+  let releases: unknown[] = [
+    {
+      schema_revision_id: 3,
+      effective_revision: "v3",
+      base_revision: "v3",
+      release_id: "v3",
+      timestamps: { ready_at: "2026-11-13T00:00:00Z" },
+    },
+    {
+      schema_revision_id: 4,
+      effective_revision: "v4",
+      base_revision: "v4",
+      release_id: "v4",
+      timestamps: { ready_at: "2026-11-13T01:00:00Z" },
+    },
+  ];
+
+  const makeClient = (def: DataDefinition) =>
+    createDataClient(def, {
+      scope,
+      authorize: async () => {},
+      transaction: (run) =>
+        run({
+          actorId: "authorized-actor",
+          sourceKind: "human",
+          call: async (operation, input) => {
+            if (operation === "kernel_read_active_schema_revision") return structuredClone(active);
+            if (operation === "kernel_read_runtime_release_observability") return { releases };
+            if (operation === "kernel_data_query") {
+              if (input.schema_version !== active.schema.version) {
+                const { KernelFailure } = await import("../../kernel-client/postgres");
+                throw new KernelFailure({
+                  code: "schema_drift",
+                  message: "Schema drift detected",
+                });
+              }
+              return [{ record_id: recordId, values: { label: { type: "text", value: "Kept" } } }];
+            }
+            if (operation === "kernel_apply_change_set") {
+              return { id: 1, schema_revision_id: active.schema_revision_id };
+            }
+            throw new Error(`unexpected ${operation}`);
+          },
+        }),
+    });
+
+  // 1. Installed prior v3 client reads & writes seamlessly when v4 is additive
+  const v1Ops = makeClient(v1Def);
+  await expect(v1Ops.item!.list({ asOf, select: ["id", "label"] })).resolves.toEqual([
+    { id: recordId, label: "Kept" },
+  ]);
+  await expect(
+    v1Ops.item!.create(
+      { label: "Written from v3" },
+      { effectiveStart: asOf, idempotencyKey: "k1" },
+    ),
+  ).resolves.toEqual({ id: 1, schema_revision_id: "4" });
+
+  // 2. Uninstalled / fabricated schemaVersion ("stale") is rejected on both list() and create()
+  const staleOps = makeClient({ ...v1Def, schemaVersion: "stale" });
+  await expect(staleOps.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow(
+    "Schema drift",
+  );
+  await expect(
+    staleOps.item!.create({ label: "Stale write" }, { effectiveStart: asOf, idempotencyKey: "k2" }),
+  ).rejects.toThrow("does not match active artifact");
+
+  // 3. Installed prior v3 client fails closed if active schema retired a field or added a required field
+  active = {
+    ...active,
+    schema: {
+      ...active.schema,
+      models: [
+        {
+          id: "item",
+          fields: [
+            { id: "label", type: "text", required: true, lifecycle: "retired" } as never,
+            { id: "note", type: "text", required: false },
+          ],
+        },
+      ],
+    },
+  };
+  await expect(v1Ops.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow("Schema drift");
+  await expect(
+    v1Ops.item!.create({ label: "Retired write" }, { effectiveStart: asOf, idempotencyKey: "k3" }),
+  ).rejects.toThrow("does not match active artifact");
+});

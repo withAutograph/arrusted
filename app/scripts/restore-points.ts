@@ -123,10 +123,18 @@ async function sync(path: string) {
   }
 }
 
-// This spike owns public only. CASCADE must not silently remove a second app's schema.
+// Only public and marked Better Auth app schemas (auth_*) are permitted; unmarked schemas fail closed.
 const publicOnly = `DO $$ BEGIN
-  IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname <> 'public'
-    AND nspname <> 'information_schema' AND left(nspname, 3) <> 'pg_') THEN
+  IF EXISTS (
+    SELECT 1 FROM pg_namespace
+    WHERE nspname <> 'public'
+      AND nspname <> 'information_schema'
+      AND left(nspname, 3) <> 'pg_'
+      AND NOT (
+        nspname ~ '^auth_[a-z0-9_]{1,57}$'
+        AND coalesce(obj_description(oid, 'pg_namespace'), '') ~ '^autograph:auth-schema:[0-9a-f]{64}$'
+      )
+  ) THEN
     RAISE EXCEPTION 'Restore requires a database dedicated to the public schema';
   END IF;
 END $$;`;
@@ -174,13 +182,33 @@ const authNames = authTables.map(literal).join(",");
 const preserveAuth = `
 CREATE SCHEMA autograph_undo_auth;
 CREATE TEMP TABLE autograph_undo_trigger AS
-  SELECT pg_get_triggerdef(t.oid) AS ddl, t.tgenabled AS enabled,
+  SELECT ns_rel.nspname AS member_schema,
+    (string_to_array(encode(t.tgargs, 'escape'), chr(92) || '000'))[1] AS principal_name,
+    (string_to_array(encode(t.tgargs, 'escape'), chr(92) || '000'))[2] AS app_id,
+    (string_to_array(encode(t.tgargs, 'escape'), chr(92) || '000'))[3] AS customer_id,
+    CASE WHEN t.tgnargs >= 4
+      THEN (string_to_array(encode(t.tgargs, 'escape'), chr(92) || '000'))[4]
+      ELSE 'member'
+    END AS role_name,
+    pg_get_triggerdef(t.oid) AS ddl, t.tgenabled AS enabled,
     pg_get_functiondef(p.oid) AS function_ddl,
     format('%I.%I(%s)', n.nspname, p.proname, pg_get_function_identity_arguments(p.oid)) AS function_identity,
     pg_get_userbyid(p.proowner) AS function_owner
-  FROM pg_trigger t JOIN pg_proc p ON p.oid=t.tgfoid
-    JOIN pg_namespace n ON n.oid=p.pronamespace
-  WHERE t.tgname = 'autograph_member_kernel' AND t.tgrelid = to_regclass('public.member');
+  FROM pg_trigger t
+    JOIN pg_class c ON c.oid = t.tgrelid
+    JOIN pg_namespace ns_rel ON ns_rel.oid = c.relnamespace
+    JOIN pg_proc p ON p.oid = t.tgfoid
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE t.tgname = 'autograph_member_kernel'
+    AND c.relname = 'member'
+    AND NOT t.tgisinternal
+    AND (
+      ns_rel.nspname = 'public'
+      OR (
+        ns_rel.nspname ~ '^auth_[a-z0-9_]{1,57}$'
+        AND coalesce(obj_description(ns_rel.oid, 'pg_namespace'), '') ~ '^autograph:auth-schema:[0-9a-f]{64}$'
+      )
+    );
 CREATE TEMP TABLE autograph_undo_runtime_scope (request jsonb);
 CREATE TEMP TABLE autograph_undo_scope_catalog AS
   SELECT to_regclass('public.kernel_principal_scope') IS NOT NULL AS present;
@@ -200,7 +228,7 @@ DO $$ DECLARE t text; BEGIN
 END $$;`;
 const recoverAuth = `
 SET LOCAL search_path = pg_catalog, public;
-DO $$ DECLARE t text; binding record; result jsonb; BEGIN
+DO $$ DECLARE t text; binding record; result jsonb; has_principal boolean; BEGIN
   FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'autograph_undo_auth' LOOP
     EXECUTE format('ALTER TABLE autograph_undo_auth.%I SET SCHEMA public', t);
   END LOOP;
@@ -222,16 +250,45 @@ DO $$ DECLARE t text; binding record; result jsonb; BEGIN
       EXECUTE binding.function_ddl;
       EXECUTE format('ALTER FUNCTION %s OWNER TO %I', binding.function_identity, binding.function_owner);
       EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC', binding.function_identity);
+      EXECUTE format('DROP TRIGGER IF EXISTS autograph_member_kernel ON %I.member', binding.member_schema);
       EXECUTE binding.ddl;
-      EXECUTE 'ALTER TABLE public.member ' || CASE binding.enabled
-        WHEN 'D' THEN 'DISABLE' WHEN 'R' THEN 'ENABLE REPLICA'
-        WHEN 'A' THEN 'ENABLE ALWAYS' ELSE 'ENABLE' END || ' TRIGGER autograph_member_kernel';
+      EXECUTE format('ALTER TABLE %I.member %s TRIGGER autograph_member_kernel',
+        binding.member_schema,
+        CASE binding.enabled
+          WHEN 'D' THEN 'DISABLE' WHEN 'R' THEN 'ENABLE REPLICA'
+          WHEN 'A' THEN 'ENABLE ALWAYS' ELSE 'ENABLE' END);
     END LOOP;
-    -- Membership may have been added or revoked since the snapshot.
-    UPDATE public.kernel_actor_membership k SET active = false
-      WHERE actor_kind = 'human' AND NOT EXISTS (
-        SELECT 1 FROM public.member m WHERE m."userId" = k.actor_id AND m."organizationId" = k.customer_id);
-    IF to_regclass('public.member') IS NOT NULL THEN UPDATE public.member SET "userId"="userId"; END IF;
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'kernel_actor_membership' AND column_name = 'principal_name'
+    ) INTO has_principal;
+    IF has_principal AND EXISTS (SELECT 1 FROM autograph_undo_trigger) THEN
+      FOR binding IN SELECT * FROM autograph_undo_trigger LOOP
+        EXECUTE format(
+          'UPDATE public.kernel_actor_membership k SET active = false
+             WHERE k.actor_kind = ''human''
+               AND k.active = true
+               AND k.fence_generation = 0
+               AND k.principal_name = $1::name
+               AND k.app_id = $2
+               AND k.customer_id = $3
+               AND (
+                 k.role <> $4
+                 OR NOT EXISTS (
+                   SELECT 1 FROM %I.member m
+                   WHERE m."userId" = k.actor_id AND m."organizationId" = k.customer_id
+                 )
+               )',
+          binding.member_schema
+        ) USING binding.principal_name, binding.app_id, binding.customer_id, binding.role_name;
+        EXECUTE format('UPDATE %I.member SET "userId"="userId"', binding.member_schema);
+      END LOOP;
+    ELSIF to_regclass('public.member') IS NOT NULL THEN
+      UPDATE public.kernel_actor_membership k SET active = false
+        WHERE actor_kind = 'human' AND NOT EXISTS (
+          SELECT 1 FROM public.member m WHERE m."userId" = k.actor_id AND m."organizationId" = k.customer_id);
+      UPDATE public.member SET "userId"="userId";
+    END IF;
   END IF;
 END $$;
 DROP SCHEMA autograph_undo_auth;`;

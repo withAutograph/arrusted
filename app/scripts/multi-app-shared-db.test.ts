@@ -1,0 +1,569 @@
+import { afterAll, beforeAll, expect, test } from "vite-plus/test";
+import { randomUUID } from "node:crypto";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { Pool } from "pg";
+import { compileSchema } from "../../packages/generated-app-runtime/compile-schema";
+import { ResilientPool } from "../../packages/generated-app-runtime/pool";
+import { createDataClient, type DataDefinition } from "../../packages/generated-app-runtime/data";
+import { createGeneratedAppRuntime } from "../../packages/generated-app-runtime/server";
+import { createSingleOrganizationAuth } from "../../packages/auth/single-organization";
+import { migrate, rehearse, undo } from "./migrate";
+import { PgDumpRestorePoints } from "./restore-points";
+
+const databaseURL = process.env.KERNEL_TEST_DATABASE_URL;
+const suite = databaseURL ? test : test.skip;
+
+const scratchDir = mkdtempSync(path.join(tmpdir(), "multi-app-shared-db-"));
+const database = `sunlight_${randomUUID().replaceAll("-", "").slice(0, 14)}`;
+const rehearsalDatabase = `${database}_rehearse`;
+const crmRole = `${database}_crm_app`;
+const companyDataRole = `${database}_cd_app`;
+const rolePassword = "local-runtime-password-at-least-32-characters";
+
+const adminUrl = new URL(databaseURL ?? "postgres://postgres@127.0.0.1:5432/postgres");
+if (adminUrl.hostname === "localhost") adminUrl.hostname = "127.0.0.1";
+const admin = new Pool({ connectionString: adminUrl.toString() });
+
+const ownerUrl = new URL(adminUrl.toString());
+ownerUrl.pathname = `/${database}`;
+if (!ownerUrl.searchParams.has("sslmode")) ownerUrl.searchParams.set("sslmode", "disable");
+const ownerConnectionString = ownerUrl.toString();
+
+const makeRuntimeUrl = (role: string) => {
+  const u = new URL(ownerConnectionString);
+  u.username = role;
+  u.password = rolePassword;
+  return u.toString();
+};
+const crmDatabaseUrl = makeRuntimeUrl(crmRole);
+const companyDataDatabaseUrl = makeRuntimeUrl(companyDataRole);
+
+const ownerPool = new Pool({ connectionString: ownerConnectionString });
+const restorePoints = new PgDumpRestorePoints({ directory: path.join(scratchDir, "backups") });
+let created = false;
+
+function sharedCueSchema(extraCompanyFields = "") {
+  return `package schema
+
+manifest: #AppManifest & {
+  app_id: "sunlight"
+  customer_id: "sunlight"
+  version: "ignored-authored-version"
+  label: "Sunlight Shared Workspace"
+  models: [
+    {
+      id: "company"
+      kind: "entity"
+      label: "Company"
+      fields: [
+        {id: "name", label: "Name", type: "text", required: true},
+        {id: "domain", label: "Domain", type: "text"}${extraCompanyFields}
+      ]
+    },
+    {
+      id: "deal"
+      kind: "entity"
+      label: "Deal"
+      fields: [
+        {id: "title", label: "Title", type: "text", required: true},
+        {id: "company", label: "Company", type: "relation", target_model: "company", required: true},
+        {id: "deal_stage", label: "Deal Stage", type: "text"}
+      ]
+    },
+    {
+      id: "company_financials"
+      kind: "entity"
+      label: "Company Financials"
+      fields: [
+        {id: "company", label: "Company", type: "relation", target_model: "company", required: true},
+        {id: "arr_usd", label: "ARR (USD)", type: "number", required: true},
+        {id: "notes", label: "Notes", type: "text"}
+      ]
+    }
+  ]
+  authorization: {
+    roles: [
+      {id: "crm_user", label: "CRM User"},
+      {id: "company_data_user", label: "Company Data User"}
+    ]
+    grants: [
+      {
+        role: "crm_user"
+        model: "company"
+        operations: ["read", "create", "update", "history"]
+        read_fields: ["$id", "$version", "name", "domain"${extraCompanyFields ? ', "linkedin_url"' : ""}]
+        write_fields: ["name", "domain"${extraCompanyFields ? ', "linkedin_url"' : ""}]
+        record: {kind: "all"}
+      },
+      {
+        role: "crm_user"
+        model: "deal"
+        operations: ["read", "create", "update", "delete", "history"]
+        read_fields: ["$id", "$version", "title", "company", "deal_stage"]
+        write_fields: ["title", "company", "deal_stage"]
+        record: {kind: "all"}
+      },
+      {
+        role: "company_data_user"
+        model: "company"
+        operations: ["read", "create", "update", "history"]
+        read_fields: ["$id", "$version", "name", "domain"]
+        write_fields: ["name", "domain"]
+        record: {kind: "all"}
+      },
+      {
+        role: "company_data_user"
+        model: "company_financials"
+        operations: ["read", "create", "update", "delete", "history"]
+        read_fields: ["$id", "$version", "company", "arr_usd", "notes"]
+        write_fields: ["company", "arr_usd", "notes"]
+        record: {kind: "all"}
+      }
+    ]
+  }
+}
+`;
+}
+
+beforeAll(async () => {
+  if (!databaseURL) return;
+  await admin.query(`create database "${database}"`);
+  await admin.query(`create database "${rehearsalDatabase}"`);
+  created = true;
+}, 120_000);
+
+afterAll(async () => {
+  await ownerPool.end();
+  if (created) {
+    const roles = (
+      await admin.query("select rolname from pg_roles where starts_with(rolname, $1)", [
+        `${database}_`,
+      ])
+    ).rows;
+    await admin.query(`drop database if exists "${database}" with (force)`);
+    await admin.query(`drop database if exists "${rehearsalDatabase}" with (force)`);
+    for (const { rolname } of roles) {
+      await admin.query(`drop role if exists "${String(rolname).replaceAll('"', '""')}"`);
+    }
+  }
+  await admin.end();
+  rmSync(scratchDir, { recursive: true, force: true });
+});
+
+suite(
+  "two apps share company on one Postgres DB with isolated auth_* users, DB-enforced private tables, portable compile, sibling additive continuity, and auth-preserving undo",
+  async () => {
+    const v1SchemaDir = path.join(scratchDir, "schema-v1");
+    mkdirSync(v1SchemaDir, { recursive: true });
+    writeFileSync(path.join(v1SchemaDir, "app.cue"), sharedCueSchema());
+
+    // Both apps compile the shared schema independently and get the identical portable buildHash
+    const crmV1Out = path.join(scratchDir, "crm-v1", "release");
+    const cdV1Out = path.join(scratchDir, "cd-v1", "release");
+    const crmCompiledV1 = compileSchema({
+      schemaPath: v1SchemaDir,
+      outDir: crmV1Out,
+      packageVersion: "0.1.0-alpha.1",
+      sourceCommit: "commit-v1",
+      sourceDirty: false,
+    });
+    const cdCompiledV1 = compileSchema({
+      schemaPath: v1SchemaDir,
+      outDir: cdV1Out,
+      packageVersion: "0.1.0-alpha.1",
+      sourceCommit: "commit-v1",
+      sourceDirty: false,
+    });
+    expect(crmCompiledV1.buildHash).toBe(cdCompiledV1.buildHash);
+    expect(crmCompiledV1.version).toBe(`build-${crmCompiledV1.buildHash}`);
+
+    // 0. Omitting kernelRole when CUE policy omits 'member' fails fast, and rehearse() succeeds with partial CUE read_fields
+    await expect(
+      migrate({
+        databaseUrl: ownerConnectionString,
+        releaseDirectory: crmV1Out,
+        restorePoints,
+        sourceCommit: "commit-v1",
+        sourceDirty: false,
+        runtimeRole: crmRole,
+        authRole: crmRole,
+        authSchema: "auth_crm",
+        runtimeLogins: [{ role: crmRole, password: rolePassword }],
+      }),
+    ).rejects.toThrow(/authorization policy does not declare role 'member'/);
+
+    const rehearsalOwnerUrl = new URL(ownerConnectionString);
+    rehearsalOwnerUrl.pathname = `/${rehearsalDatabase}`;
+    const rehearsalRuntimeUrl = new URL(rehearsalOwnerUrl.toString());
+    rehearsalRuntimeUrl.username = `${database}_reh_crm`;
+    rehearsalRuntimeUrl.password = rolePassword;
+    await rehearse({
+      databaseUrl: rehearsalOwnerUrl.toString(),
+      runtimeDatabaseUrl: rehearsalRuntimeUrl.toString(),
+      productionDatabaseUrl: ownerConnectionString,
+      releaseDirectory: crmV1Out,
+      restorePoints: new PgDumpRestorePoints({
+        directory: path.join(scratchDir, "rehearsal-backups"),
+      }),
+      sourceCommit: "commit-v1",
+      sourceDirty: false,
+      authSchema: "auth_crm",
+      kernelRole: "crm_user",
+    });
+
+    // 1. Migrate CRM app first (provisions crm_app login + auth_crm schema + crm_user trigger)
+    const crmMigrateV1 = await migrate({
+      databaseUrl: ownerConnectionString,
+      releaseDirectory: crmV1Out,
+      restorePoints,
+      sourceCommit: "commit-v1",
+      sourceDirty: false,
+      runtimeRole: crmRole,
+      authRole: crmRole,
+      authSchema: "auth_crm",
+      kernelRole: "crm_user",
+      runtimeLogins: [{ role: crmRole, password: rolePassword }],
+    });
+    expect(crmMigrateV1.applied).toBe(true);
+
+    // Reusing CRM's runtime/auth login for Company Data's auth_company_data schema is refused before changing the DB
+    await expect(
+      migrate({
+        databaseUrl: ownerConnectionString,
+        releaseDirectory: cdV1Out,
+        restorePoints,
+        sourceCommit: "commit-v1",
+        sourceDirty: false,
+        runtimeRole: crmRole,
+        authRole: crmRole,
+        authSchema: "auth_company_data",
+        kernelRole: "company_data_user",
+      }),
+    ).rejects.toThrow(/already bound to auth schema 'auth_crm'/);
+
+    // 2. Migrate Company Data app second against the same DB (idempotent schema, provisions company_data_app + auth_company_data + company_data_user trigger)
+    const cdMigrateV1 = await migrate({
+      databaseUrl: ownerConnectionString,
+      releaseDirectory: cdV1Out,
+      restorePoints,
+      sourceCommit: "commit-v1",
+      sourceDirty: false,
+      runtimeRole: companyDataRole,
+      authRole: companyDataRole,
+      authSchema: "auth_company_data",
+      kernelRole: "company_data_user",
+      runtimeLogins: [{ role: companyDataRole, password: rolePassword }],
+    });
+    expect(cdMigrateV1.applied).toBe(false);
+
+    // 3. Provision isolated Better Auth instances in auth_crm and auth_company_data
+    const crmAuthPool = new ResilientPool({
+      connectionString: crmDatabaseUrl,
+      searchPath: "auth_crm",
+      max: 2,
+    });
+    // Plain pg.Pool (without ResilientPool searchPath) exercises createSingleOrganizationAuth's authSchema search_path binding
+    const cdAuthPool = new Pool({
+      connectionString: companyDataDatabaseUrl,
+      max: 2,
+    });
+    const crmRawPool = new ResilientPool({ connectionString: crmDatabaseUrl, max: 2 });
+    const cdRawPool = new ResilientPool({ connectionString: companyDataDatabaseUrl, max: 2 });
+
+    const crmRuntimeV1 = createGeneratedAppRuntime({
+      databaseUrl: crmDatabaseUrl,
+      releaseDirectory: crmV1Out,
+      appId: "sunlight",
+      customerId: "sunlight",
+    });
+    const cdRuntimeV1 = createGeneratedAppRuntime({
+      databaseUrl: companyDataDatabaseUrl,
+      releaseDirectory: cdV1Out,
+      appId: "sunlight",
+      customerId: "sunlight",
+    });
+
+    try {
+      const authSecret = "0123456789abcdef0123456789abcdef";
+      const crmAuth = createSingleOrganizationAuth({
+        database: crmAuthPool,
+        authSchema: "auth_crm",
+        origin: "http://crm.localhost:3000",
+        secret: authSecret,
+        appId: "sunlight-crm",
+        organizationId: "sunlight",
+        name: "Sunlight CRM",
+        allowSignUp: true,
+      });
+      const cdAuth = createSingleOrganizationAuth({
+        database: cdAuthPool,
+        authSchema: "auth_company_data",
+        origin: "http://company-data.localhost:3001",
+        secret: authSecret,
+        appId: "sunlight-company-data",
+        organizationId: "sunlight",
+        name: "Sunlight Company Data",
+        allowSignUp: true,
+      });
+
+      const aliceSignup = await crmAuth.auth.api.signUpEmail({
+        body: { email: "alice@crm.test", password: "Password1234!", name: "Alice CRM" },
+        returnHeaders: true,
+      });
+      const bobSignup = await cdAuth.auth.api.signUpEmail({
+        body: { email: "bob@companydata.test", password: "Password1234!", name: "Bob Data" },
+        returnHeaders: true,
+      });
+      const aliceId = aliceSignup.response.user.id;
+      const bobId = bobSignup.response.user.id;
+
+      // Users and sessions are completely isolated per app auth_* schema
+      const aliceCookie = aliceSignup.headers.get("set-cookie") ?? "";
+      const aliceSession = await crmAuth.session(new Headers({ cookie: aliceCookie }));
+      expect(aliceSession).toEqual({ actorId: aliceId, customerId: "sunlight" });
+      await expect(cdAuth.session(new Headers({ cookie: aliceCookie }))).rejects.toMatchObject({
+        status: 401,
+      });
+      await expect(crmRawPool.query('select * from auth_company_data."user"')).rejects.toThrow(
+        /permission denied/i,
+      );
+      await expect(cdRawPool.query('select * from auth_crm."user"')).rejects.toThrow(
+        /permission denied/i,
+      );
+
+      // 4. Shared company + DB-enforced private tables
+      const v1Def = JSON.parse(
+        readFileSync(path.join(crmV1Out, "operation-manifest.json"), "utf8"),
+      ) as DataDefinition;
+      const crmOps = createDataClient(
+        v1Def,
+        crmRuntimeV1.dataContext({
+          actorId: aliceId,
+          sourceKind: "human",
+          authorize: async () => {},
+        }),
+      );
+      const cdOps = createDataClient(
+        v1Def,
+        cdRuntimeV1.dataContext({
+          actorId: bobId,
+          sourceKind: "human",
+          authorize: async () => {},
+        }),
+      );
+
+      const asOf = "2026-11-26";
+      const acmeId = randomUUID();
+      const dealId = randomUUID();
+      const finId = randomUUID();
+      const companySelect = ["id", "$version", "name", "domain"] as const;
+      const dealSelect = ["id", "$version", "title", "company", "dealStage"] as const;
+      const finSelect = ["id", "$version", "company", "arrUsd", "notes"] as const;
+
+      // Alice (CRM) creates shared company + private deal
+      await crmOps.apply({
+        effectiveStart: asOf,
+        idempotencyKey: "crm-create-acme-and-deal",
+        writes: [
+          crmOps.company!.writes.create(
+            { name: "Acme Corp", domain: "acme.example" },
+            { id: acmeId },
+          ),
+          crmOps.deal!.writes.create(
+            {
+              title: "Acme Enterprise",
+              company: { type: "record_id", value: acmeId },
+              dealStage: "qualified",
+            },
+            { id: dealId },
+          ),
+        ],
+      });
+
+      // Bob (Company Data) sees Acme Corp, updates it, and writes private company_financials
+      const cdCompanies = await cdOps.company!.list({ asOf, select: companySelect });
+      expect(cdCompanies).toMatchObject([
+        { id: acmeId, name: "Acme Corp", domain: "acme.example" },
+      ]);
+
+      await cdOps.apply({
+        effectiveStart: asOf,
+        idempotencyKey: "cd-update-acme-and-create-fin",
+        writes: [
+          cdOps.company!.writes.update(acmeId, { domain: "acme.io" }),
+          cdOps.companyFinancials!.writes.create(
+            {
+              company: { type: "record_id", value: acmeId },
+              arrUsd: "12500000",
+              notes: "Audited Q3",
+            },
+            { id: finId },
+          ),
+        ],
+      });
+
+      // Alice sees Bob's update on shared company
+      expect(await crmOps.company!.list({ asOf, select: companySelect })).toMatchObject([
+        { id: acmeId, name: "Acme Corp", domain: "acme.io" },
+      ]);
+
+      // Cross-app private table reads fail with clear grant_not_authorized error (ported 6d010829e)
+      await expect(
+        crmOps.companyFinancials!.list({ asOf, select: finSelect }),
+      ).rejects.toMatchObject({
+        envelope: {
+          code: "authorization_denied",
+          message: "Read is not authorized by the current grants",
+          details: [expect.objectContaining({ code: "grant_not_authorized" })],
+        },
+      });
+      await expect(cdOps.deal!.list({ asOf, select: dealSelect })).rejects.toMatchObject({
+        envelope: {
+          code: "authorization_denied",
+          message: "Read is not authorized by the current grants",
+          details: [expect.objectContaining({ code: "grant_not_authorized" })],
+        },
+      });
+
+      // Cross-app private table writes fail
+      await expect(
+        crmOps.apply({
+          effectiveStart: asOf,
+          idempotencyKey: "crm-forbidden-fin-write",
+          writes: [
+            crmOps.companyFinancials!.writes.create({
+              company: { type: "record_id", value: acmeId },
+              arrUsd: "999",
+            }),
+          ],
+        }),
+      ).rejects.toMatchObject({ envelope: { code: "authorization_denied" } });
+
+      await expect(
+        cdOps.apply({
+          effectiveStart: asOf,
+          idempotencyKey: "cd-forbidden-deal-write",
+          writes: [
+            cdOps.deal!.writes.create({
+              title: "Forbidden Deal",
+              company: { type: "record_id", value: acmeId },
+            }),
+          ],
+        }),
+      ).rejects.toMatchObject({ envelope: { code: "authorization_denied" } });
+
+      // Raw SQL & actor-spoofing attacks from crm_app connection are blocked by Postgres
+      await expect(crmRawPool.query("select * from company_financials_version")).rejects.toThrow(
+        /permission denied/i,
+      );
+      await expect(cdRawPool.query("select * from deal_version")).rejects.toThrow(
+        /permission denied/i,
+      );
+      const spoofedCrmOps = createDataClient(
+        v1Def,
+        crmRuntimeV1.dataContext({
+          actorId: bobId, // Bob is valid in company_data_app, NOT in crm_app!
+          sourceKind: "human",
+          authorize: async () => {},
+        }),
+      );
+      await expect(
+        spoofedCrmOps.companyFinancials!.list({ asOf, select: finSelect }),
+      ).rejects.toMatchObject({
+        envelope: { code: "authorization_denied" },
+      });
+
+      // 5. Additive shared-schema evolution (CRM deploys v2 adding CRM-only optional linkedin_url on company while Company Data stays on v1 build!)
+      const v2SchemaDir = path.join(scratchDir, "schema-v2");
+      mkdirSync(v2SchemaDir, { recursive: true });
+      writeFileSync(
+        path.join(v2SchemaDir, "app.cue"),
+        sharedCueSchema(',\n        {id: "linkedin_url", label: "LinkedIn URL", type: "text"}'),
+      );
+      const crmV2Out = path.join(scratchDir, "crm-v2", "release");
+      compileSchema({
+        schemaPath: v2SchemaDir,
+        outDir: crmV2Out,
+        packageVersion: "0.1.0-alpha.1",
+        sourceCommit: "commit-v2",
+        sourceDirty: false,
+      });
+
+      const crmMigrateV2 = await migrate({
+        databaseUrl: ownerConnectionString,
+        releaseDirectory: crmV2Out,
+        restorePoints,
+        sourceCommit: "commit-v2",
+        sourceDirty: false,
+        runtimeRole: crmRole,
+        authRole: crmRole,
+        authSchema: "auth_crm",
+        kernelRole: "crm_user",
+      });
+      expect(crmMigrateV2.applied).toBe(true);
+
+      // Company Data (STILL on v1 definition & runtime!) continues reading and writing seamlessly!
+      expect(await cdOps.company!.list({ asOf, select: companySelect })).toMatchObject([
+        { id: acmeId, name: "Acme Corp", domain: "acme.io" },
+      ]);
+      await cdOps.apply({
+        effectiveStart: asOf,
+        idempotencyKey: "cd-v1-write-during-v2-schema",
+        writes: [cdOps.companyFinancials!.writes.update(finId, { notes: "Audited Q4" })],
+      });
+      expect(await cdOps.companyFinancials!.list({ asOf, select: finSelect })).toMatchObject([
+        { id: finId, arrUsd: "12500000", notes: "Audited Q4" },
+      ]);
+
+      // 6. Post-restore-point sign-up in auth_crm + migrate:undo preserves auth_crm & auth_company_data and re-syncs Carol's kernel membership!
+      const carolSignup = await crmAuth.auth.api.signUpEmail({
+        body: { email: "carol@crm.test", password: "Password1234!", name: "Carol After Backup" },
+        returnHeaders: true,
+      });
+      const carolId = carolSignup.response.user.id;
+
+      const undone = await undo({
+        databaseUrl: ownerConnectionString,
+        releaseDirectory: crmV2Out,
+        restorePoints,
+      });
+      expect(undone.sourceCommit).toBe("commit-v1");
+
+      // Carol's login in auth_crm AND her kernel_actor_membership in public survive undo!
+      const carolCookie = carolSignup.headers.get("set-cookie") ?? "";
+      expect(await crmAuth.session(new Headers({ cookie: carolCookie }))).toEqual({
+        actorId: carolId,
+        customerId: "sunlight",
+      });
+
+      const carolOps = createDataClient(
+        v1Def,
+        crmRuntimeV1.dataContext({
+          actorId: carolId,
+          sourceKind: "human",
+          authorize: async () => {},
+        }),
+      );
+      expect(await carolOps.company!.list({ asOf, select: companySelect })).toMatchObject([
+        { id: acmeId, name: "Acme Corp", domain: "acme.io" },
+      ]);
+      expect(await carolOps.deal!.list({ asOf, select: dealSelect })).toMatchObject([
+        { id: dealId, title: "Acme Enterprise", dealStage: "qualified" },
+      ]);
+      // Bob in auth_company_data also retains full access after undo (and v2 write rolled back cleanly to Q3!)
+      expect(await cdOps.companyFinancials!.list({ asOf, select: finSelect })).toMatchObject([
+        { id: finId, arrUsd: "12500000", notes: "Audited Q3" },
+      ]);
+    } finally {
+      await crmRuntimeV1.close();
+      await cdRuntimeV1.close();
+      await crmRawPool.end();
+      await cdRawPool.end();
+      await crmAuthPool.end();
+      await cdAuthPool.end();
+    }
+  },
+  240_000,
+);

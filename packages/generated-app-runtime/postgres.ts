@@ -1,7 +1,8 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
-import { Pool } from "pg";
+import type { Pool } from "pg";
+import { ResilientPool } from "./pool";
 import { kernelCall, KernelFailure } from "../kernel-client/postgres";
 import { setTimeout as delay } from "node:timers/promises";
 import type { DataContext, DataSession } from "./data";
@@ -134,7 +135,7 @@ export function createPostgresDataContext(input: PostgresDataContextInput): Post
   const admission = async (operation: string, payload: Record<string, unknown>) => {
     // Admission survives business rollback; use a separate runtime-only connection,
     // including when the host's business pool has only one connection.
-    const admissionPool = new Pool({ ...pool.options, max: 1 });
+    const admissionPool = new ResilientPool({ ...pool.options, max: 1 });
     try {
       await kernelCall(admissionPool, operation, {
         ...payload,
@@ -249,7 +250,9 @@ export function createPostgresDataContext(input: PostgresDataContextInput): Post
                 ...payload,
                 app_id: appId,
                 customer_id: customerId,
-                actor_id: actorId,
+                ...(operation === "kernel_read_runtime_release_observability"
+                  ? {}
+                  : { actor_id: actorId }),
                 ...(payload.source_kind !== undefined ? { source_kind: sourceKind } : {}),
               };
               if (

@@ -11,6 +11,8 @@
     "./source": "./source.ts",
     "./release-verification": "./release-verification.ts",
     "./postgres": "./postgres.ts",
+    "./pool": "./pool.ts",
+    "./compile-schema": "./compile-schema.ts",
     "./artifact-helpers": "./artifact-helpers.ts",
     "./errors": "./errors.ts",
     "./protected-installer": "./protected-installer.ts",

@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -30,10 +30,33 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 const lockSQL = "select pg_try_advisory_lock(hashtextextended($1, 0)) as acquired";
 const quote = (value: string) => `"${value.replaceAll('"', '""')}"`;
+const validAuthSchema = /^(?:public|auth_[a-z0-9_]{1,57})$/;
+const validIdentifier = /^[a-z][a-z0-9_]{0,62}$/;
 
-type Artifact = {
-  schema: { app_id: string; customer_id: string; version: string; models: unknown[] };
+type AuthorizationPolicyShape = {
+  roles?: Array<{ id: string }>;
+  grants?: Array<{
+    role: string;
+    model: string;
+    operations?: string[];
+    read_fields?: string[];
+  }>;
 };
+type Artifact = {
+  schema: {
+    app_id: string;
+    customer_id: string;
+    version: string;
+    models: unknown[];
+    authorization?: AuthorizationPolicyShape;
+  };
+  extras?: {
+    authorization_policy?: AuthorizationPolicyShape;
+  };
+};
+function artifactPolicy(artifact: Artifact): AuthorizationPolicyShape | undefined {
+  return artifact.extras?.authorization_policy ?? artifact.schema.authorization;
+}
 export type AppliedSchema = {
   id: string;
   artifact: string;
@@ -55,8 +78,79 @@ export type MigrationInput = {
   /** Restricted runtime logins; optional passwords provision missing SQL roles. */
   runtimeRole?: string;
   authRole?: string;
+  /** PostgreSQL schema owning Better Auth tables for this app (default: 'public', or 'auth_<app>'). */
+  authSchema?: string;
+  /** CUE authorization role granted to human members of this app (default: 'member'). */
+  kernelRole?: string;
+  /** Optional explicit path to schema-compiler binary when not bundled next to releaseDirectory. */
+  compilerBinary?: string;
   runtimeLogins?: { role: string; password: string }[];
 };
+
+function normalizeAuthSchema(authSchema?: string): string {
+  const resolved = authSchema ?? "public";
+  if (!validAuthSchema.test(resolved)) {
+    throw new Error(
+      "Invalid authSchema: expected 'public' or an 'auth_<app>' identifier (lowercase alphanumeric/underscore).",
+    );
+  }
+  return resolved;
+}
+
+function normalizeKernelRole(
+  kernelRole: string | undefined,
+  artifact: Artifact,
+  hasRuntimeRole: boolean,
+): string {
+  const resolved = kernelRole ?? "member";
+  if (!validIdentifier.test(resolved)) {
+    throw new Error("Invalid kernelRole identifier.");
+  }
+  const declaredRoles = artifactPolicy(artifact)?.roles;
+  if (
+    (kernelRole !== undefined || hasRuntimeRole) &&
+    Array.isArray(declaredRoles) &&
+    declaredRoles.length > 0 &&
+    !declaredRoles.some((r) => r.id === resolved)
+  ) {
+    throw new Error(
+      `CUE authorization policy does not declare role '${resolved}'. Specify kernelRole (APP_KERNEL_ROLE) matching authorization.roles before migrating.`,
+    );
+  }
+  return resolved;
+}
+
+function resolveMigrationCompiler(
+  builtRelease: string,
+  snapshot: string,
+  buildCompilerBinaryHash?: string,
+  explicitCompilerBinary?: string,
+): { executable: string; prefixArgs: string[]; cwd: string } {
+  const stagedAdjacent = path.join(builtRelease, "../schema-compiler");
+  if (existsSync(stagedAdjacent)) {
+    const compiler = path.join(snapshot, "schema-compiler");
+    cpSync(stagedAdjacent, compiler);
+    if (buildCompilerBinaryHash && hash(readFileSync(compiler)) !== buildCompilerBinaryHash) {
+      throw new Error("The migration compiler differs from the build. Rebuild before migrating.");
+    }
+    return { executable: compiler, prefixArgs: [], cwd: root };
+  }
+  if (buildCompilerBinaryHash) {
+    throw new Error("The migration compiler differs from the build. Rebuild before migrating.");
+  }
+  const candidate =
+    explicitCompilerBinary ??
+    process.env.ARRUSTED_SCHEMA_COMPILER_BIN?.trim() ??
+    path.join(root, "target/debug/schema-compiler");
+  if (candidate && existsSync(candidate)) {
+    return { executable: path.resolve(candidate), prefixArgs: [], cwd: root };
+  }
+  return {
+    executable: "cargo",
+    prefixArgs: ["run", "--quiet", "-p", "schema-compiler", "--"],
+    cwd: root,
+  };
+}
 
 function connectionTarget(databaseUrl: string): { url: string; resource: DatabaseTarget } {
   const url = new URL(databaseUrl);
@@ -194,7 +288,11 @@ async function kernel(client: PoolClient, operation: string, request: unknown): 
   return result.data;
 }
 
-function transition(release: string, applied: AppliedSchema[], compiler: string): unknown {
+function transition(
+  release: string,
+  applied: AppliedSchema[],
+  compiler: { executable: string; prefixArgs: string[]; cwd: string },
+): unknown {
   const directory = mkdtempSync(path.join(tmpdir(), "autograph-plan-"));
   try {
     const predecessors = applied
@@ -206,10 +304,15 @@ function transition(release: string, applied: AppliedSchema[], compiler: string)
       .flat();
     const args = ["--compiled-artifact", path.join(release, "app-artifact.json"), ...predecessors];
     return JSON.parse(
-      execFileSync(compiler, ["--schema-transition-contract", ...args], {
-        encoding: "utf8",
-        maxBuffer: 64 * 1024 * 1024,
-      }),
+      execFileSync(
+        compiler.executable,
+        [...compiler.prefixArgs, "--schema-transition-contract", ...args],
+        {
+          cwd: compiler.cwd,
+          encoding: "utf8",
+          maxBuffer: 64 * 1024 * 1024,
+        },
+      ),
     );
   } catch (error) {
     const message = (error as { stderr?: Buffer }).stderr?.toString().trim();
@@ -221,29 +324,79 @@ function transition(release: string, applied: AppliedSchema[], compiler: string)
 
 const authSQL = () => readFileSync(path.join(root, "packages/auth/schema.sql"), "utf8");
 
-// Auth outlives the app ledger on undo. Its owned table keeps the installed
-// package checksum even when the first app migration is undone.
-async function validateAuth(client: PoolClient, authHash: string) {
-  const table = (
-    await client.query(`select obj_description(to_regclass('public.user'), 'pg_class') as marker,
-    to_regclass('public.user') is not null as exists`)
-  ).rows[0];
-  if (!table.exists) return false;
+// Auth outlives the app ledger on undo. Its owned table (and auth_* namespace when isolated)
+// keeps the installed package checksum even when an app migration is undone.
+async function validateAuth(client: PoolClient, authHash: string, authSchema: string) {
   const expected = `autograph:auth-schema:${authHash}`;
-  if (table.marker !== expected)
+  if (authSchema === "public") {
+    const table = (
+      await client.query(`select obj_description(to_regclass('public.user'), 'pg_class') as marker,
+      to_regclass('public.user') is not null as exists`)
+    ).rows[0];
+    if (!table.exists) return false;
+    if (table.marker !== expected)
+      throw new Error(
+        "The retained Auth schema is unknown or changed. An Auth upgrade plan is required; this migration has not changed the database.",
+      );
+    return true;
+  }
+  const state = (
+    await client.query(
+      `select n.oid is not null as schema_exists,
+              obj_description(n.oid, 'pg_namespace') as schema_marker,
+              to_regclass(format('%I."user"', $1::text)) is not null as table_exists,
+              obj_description(to_regclass(format('%I."user"', $1::text)), 'pg_class') as table_marker
+         from (select 1) dummy
+         left join pg_namespace n on n.nspname = $1`,
+      [authSchema],
+    )
+  ).rows[0];
+  if (!state.schema_exists && !state.table_exists) return false;
+  if (!state.table_exists || state.schema_marker !== expected || state.table_marker !== expected) {
     throw new Error(
       "The retained Auth schema is unknown or changed. An Auth upgrade plan is required; this migration has not changed the database.",
     );
+  }
   return true;
 }
-async function markAuth(client: PoolClient, authHash: string) {
+
+async function ensureAndMarkAuth(
+  client: PoolClient,
+  authSchema: string,
+  auth: string,
+  authHash: string,
+  authExists: boolean,
+) {
+  if (!authExists) {
+    if (authSchema === "public") {
+      await client.query(auth);
+    } else {
+      await client.query(
+        `create schema ${quote(authSchema)}; revoke all on schema ${quote(authSchema)} from public`,
+      );
+      const prev = (await client.query("select current_setting('search_path') as sp")).rows[0].sp;
+      await client.query("select set_config('search_path', $1, true)", [
+        `${quote(authSchema)}, pg_catalog`,
+      ]);
+      await client.query(auth);
+      await client.query("select set_config('search_path', $1, true)", [prev]);
+    }
+  }
   // SHA-256 is generated here, never supplied as SQL by the caller.
-  await client.query(`comment on table public."user" is 'autograph:auth-schema:${authHash}'`);
+  if (authSchema !== "public") {
+    await client.query(
+      `comment on schema ${quote(authSchema)} is 'autograph:auth-schema:${authHash}'`,
+    );
+  }
+  await client.query(
+    `comment on table ${quote(authSchema)}."user" is 'autograph:auth-schema:${authHash}'`,
+  );
 }
 
 export async function migrate(
   input: MigrationInput,
 ): Promise<{ applied: boolean; schemaHash: string }> {
+  const authSchema = normalizeAuthSchema(input.authSchema);
   const builtRelease = input.releaseDirectory ?? path.join(root, "app/.generated/release");
   const snapshot = mkdtempSync(path.join(tmpdir(), "autograph-migrate-"));
   const release = path.join(snapshot, "release");
@@ -253,24 +406,28 @@ export async function migrate(
     const build = JSON.parse(readFileSync(path.join(builtRelease, "../build.json"), "utf8")) as {
       sourceCommit: string;
       sourceDirty: boolean;
-      compilerBinaryHash: string;
+      compilerBinaryHash?: string;
       releaseHash: string;
     };
-    const compiler = path.join(snapshot, "schema-compiler");
-    cpSync(path.join(builtRelease, "../schema-compiler"), compiler);
-    if (hash(readFileSync(compiler)) !== build.compilerBinaryHash)
-      throw new Error("The migration compiler differs from the build. Rebuild before migrating.");
+    const compiler = resolveMigrationCompiler(
+      builtRelease,
+      snapshot,
+      build.compilerBinaryHash,
+      input.compilerBinary,
+    );
     const sourceCommit = input.sourceCommit ?? build.sourceCommit;
     if (!sourceCommit)
       throw new Error("Build provenance is missing. Compile the schema before migrating.");
     const artifactBytes = readFileSync(path.join(release, "app-artifact.json"), "utf8");
     const artifact = JSON.parse(artifactBytes) as Artifact;
+    const kernelRole = normalizeKernelRole(input.kernelRole, artifact, Boolean(input.runtimeRole));
     const releaseHash = hash(readFileSync(path.join(release, "release-manifest.json")));
     if (build.releaseHash !== releaseHash)
       throw new Error(
         "The release and its compiler/provenance are from different builds. Rebuild before migrating.",
       );
     const auth = authSQL();
+    const authHash = hash(auth);
     const membership = readFileSync(
       path.join(root, "packages/auth/single-organization-membership.sql"),
       "utf8",
@@ -288,12 +445,12 @@ export async function migrate(
       const applied = await records(client);
       const previous = applied.at(-1);
       await validateApplied(client, previous);
-      const authExists = await validateAuth(client, hash(auth));
-      if (previous?.release_hash === releaseHash && previous.auth_hash === hash(auth)) {
+      const authExists = await validateAuth(client, authHash, authSchema);
+      if (previous?.release_hash === releaseHash && previous.auth_hash === authHash) {
         await client.query("begin");
         try {
-          await markAuth(client, hash(auth));
-          await bindRuntime(client, artifact, input, auth, membership);
+          await ensureAndMarkAuth(client, authSchema, auth, authHash, authExists);
+          await bindRuntime(client, artifact, input, auth, membership, authSchema, kernelRole);
           await client.query("commit");
         } catch (error) {
           await client.query("rollback");
@@ -307,7 +464,7 @@ export async function migrate(
           previous.schema.customer_id !== artifact.schema.customer_id)
       )
         throw new Error("A deployment cannot change its application or organization identity.");
-      if (previous && previous.auth_hash !== hash(auth))
+      if (previous && previous.auth_hash !== authHash)
         throw new Error(
           "The Auth package schema changed. An Auth upgrade plan is required; this migration has not changed the database.",
         );
@@ -335,9 +492,8 @@ export async function migrate(
           transitionContract: contract,
         });
         await validateApplied(client, { schema: artifact.schema });
-        if (!authExists) await client.query(auth);
-        await markAuth(client, hash(auth));
-        await bindRuntime(client, artifact, input, auth, membership);
+        await ensureAndMarkAuth(client, authSchema, auth, authHash, authExists);
+        await bindRuntime(client, artifact, input, auth, membership, authSchema, kernelRole);
         // Hash the normalized jsonb readback, so the stored record and later verification use identical bytes.
         const normalized = (
           await client.query("select $1::jsonb as schema", [JSON.stringify(artifact.schema)])
@@ -353,7 +509,7 @@ export async function migrate(
             JSON.stringify(normalized),
             schemaHash,
             releaseHash,
-            hash(auth),
+            authHash,
             sourceCommit,
             input.sourceDirty ?? build.sourceDirty ?? false,
             JSON.stringify(restorePoint),
@@ -374,7 +530,7 @@ export async function migrate(
 async function provisionRuntimeLogin(client: PoolClient, role: string, password: string) {
   const existing = await client.query("select rolname from pg_roles where rolname=$1", [role]);
   if (existing.rows.length) return; // Never reset a live password on rerun.
-  if (!/^[a-z][a-z0-9_]{0,62}$/.test(role) || password.length < 32)
+  if (!validIdentifier.test(role) || password.length < 32)
     throw new Error(
       "Use a simple runtime role name and a generated password of at least 32 characters.",
     );
@@ -391,6 +547,8 @@ async function bindRuntime(
   input: MigrationInput,
   auth: string,
   membership: string,
+  authSchema: string,
+  kernelRole: string,
 ): Promise<void> {
   const { resource } = connectionTarget(input.databaseUrl);
   for (const login of input.runtimeLogins ?? []) {
@@ -398,10 +556,50 @@ async function bindRuntime(
       throw new Error("Unexpected runtime login.");
     await provisionRuntimeLogin(client, login.role, login.password);
   }
-  for (const runtimeRole of new Set(
-    [input.runtimeRole, input.authRole].filter((value): value is string => Boolean(value)),
-  )) {
+  const candidateRoles = [
+    ...new Set(
+      [input.runtimeRole, input.authRole].filter((value): value is string => Boolean(value)),
+    ),
+  ];
+  for (const runtimeRole of candidateRoles) {
     await verifyRuntimeRolePrivileges(client, { ...resource, runtimeRole });
+    const triggerConflict = (
+      await client.query<{ member_schema: string }>(
+        `select ns_rel.nspname as member_schema
+           from pg_trigger t
+           join pg_class c on c.oid = t.tgrelid
+           join pg_namespace ns_rel on ns_rel.oid = c.relnamespace
+          where t.tgname = 'autograph_member_kernel'
+            and c.relname = 'member'
+            and not t.tgisinternal
+            and ns_rel.nspname <> $1
+            and (string_to_array(encode(t.tgargs, 'escape'), chr(92) || '000'))[1] = $2
+          limit 1`,
+        [authSchema, runtimeRole],
+      )
+    ).rows[0];
+    if (triggerConflict) {
+      throw new Error(
+        `Runtime login '${runtimeRole}' is already bound to auth schema '${triggerConflict.member_schema}'. Each app must use its own dedicated database login.`,
+      );
+    }
+    const schemaConflict = (
+      await client.query<{ nspname: string }>(
+        `select n.nspname
+           from pg_namespace n
+          where n.nspname <> $1
+            and n.nspname ~ '^auth_[a-z0-9_]{1,57}$'
+            and coalesce(obj_description(n.oid, 'pg_namespace'), '') ~ '^autograph:auth-schema:[0-9a-f]{64}$'
+            and has_schema_privilege($2, n.oid, 'USAGE')
+          limit 1`,
+        [authSchema, runtimeRole],
+      )
+    ).rows[0];
+    if (schemaConflict) {
+      throw new Error(
+        `Runtime login '${runtimeRole}' already has access to auth schema '${schemaConflict.nspname}'. Each app must use its own dedicated database login.`,
+      );
+    }
   }
   if (input.runtimeRole) {
     const privileges = (
@@ -422,19 +620,42 @@ async function bindRuntime(
       customer_id: artifact.schema.customer_id,
     });
     await client.query(membership);
+    await client.query(
+      `create unique index if not exists autograph_member_identity on ${quote(authSchema)}.member ("organizationId", "userId")`,
+    );
     const literal = (value: string) => "'" + value.replaceAll("'", "''") + "'";
     await client.query(`create or replace trigger autograph_member_kernel
-      after insert or update or delete on public.member for each row
-      execute function public.autograph_sync_member(${literal(input.runtimeRole)}, ${literal(artifact.schema.app_id)}, ${literal(artifact.schema.customer_id)})`);
-    await client.query('update public.member set "userId"="userId" where "organizationId"=$1', [
-      artifact.schema.customer_id,
-    ]);
+      after insert or update or delete on ${quote(authSchema)}.member for each row
+      execute function public.autograph_sync_member(${literal(input.runtimeRole)}, ${literal(artifact.schema.app_id)}, ${literal(artifact.schema.customer_id)}, ${literal(kernelRole)})`);
+    await client.query(
+      `update public.kernel_actor_membership k set active = false
+         where k.actor_kind = 'human'
+           and k.active = true
+           and k.fence_generation = 0
+           and k.principal_name = $1::name
+           and k.app_id = $2
+           and k.customer_id = $3
+           and (
+             k.role <> $4
+             or not exists (
+               select 1 from ${quote(authSchema)}.member m
+               where m."userId" = k.actor_id and m."organizationId" = k.customer_id
+             )
+           )`,
+      [input.runtimeRole, artifact.schema.app_id, artifact.schema.customer_id, kernelRole],
+    );
+    await client.query(
+      `update ${quote(authSchema)}.member set "userId"="userId" where "organizationId"=$1`,
+      [artifact.schema.customer_id],
+    );
   }
   if (input.authRole) {
-    // Only Better Auth's owned tables; never grant direct writes to generated model tables.
-    const tables = [...auth.matchAll(/create table "([^"]+)"/gu)].map((match) => quote(match[1]!));
+    // Only Better Auth's owned tables in this app's authSchema; never grant direct writes to generated model tables.
+    const tables = [...auth.matchAll(/create table "([^"]+)"/gu)].map(
+      (match) => `${quote(authSchema)}.${quote(match[1]!)}`,
+    );
     await client.query(
-      `grant usage on schema public to ${quote(input.authRole)}; grant select, insert, update, delete on ${tables.join(",")} to ${quote(input.authRole)}`,
+      `grant usage on schema ${quote(authSchema)} to ${quote(input.authRole)}; grant select, insert, update, delete on ${tables.join(",")} to ${quote(input.authRole)}`,
     );
   }
 }
@@ -492,6 +713,7 @@ export async function rehearse(
   const artifact = JSON.parse(
     readFileSync(path.join(releaseDirectory, "app-artifact.json"), "utf8"),
   ) as Artifact;
+  const kernelRole = normalizeKernelRole(input.kernelRole, artifact, true);
   const definition = JSON.parse(
     readFileSync(path.join(releaseDirectory, "operation-manifest.json"), "utf8"),
   ) as DataDefinition;
@@ -506,8 +728,8 @@ export async function rehearse(
   try {
     await owner.query(
       `insert into kernel_actor_membership (principal_name,app_id,customer_id,actor_id,role,actor_kind,active,fence_generation)
-      values ($1,$2,$3,$4,'member','human',true,0)`,
-      [roles.runtimeRole, artifact.schema.app_id, artifact.schema.customer_id, actorId],
+      values ($1,$2,$3,$4,$5,'human',true,0)`,
+      [roles.runtimeRole, artifact.schema.app_id, artifact.schema.customer_id, actorId, kernelRole],
     );
     const operations = createDataClient(
       definition,
@@ -517,8 +739,40 @@ export async function rehearse(
         authorize: async () => {},
       }),
     );
-    for (const model of Object.values(definition.models)) {
-      await operations[model.name]!.list({ asOf: new Date().toISOString().slice(0, 10), limit: 1 });
+    const asOf = new Date().toISOString().slice(0, 10);
+    const grants = artifactPolicy(artifact)?.grants;
+    if (Array.isArray(grants)) {
+      const readFieldsByModel = new Map<string, Set<string>>();
+      for (const grant of grants) {
+        if (grant.role !== kernelRole || !(grant.operations ?? []).includes("read")) continue;
+        let allowed = readFieldsByModel.get(grant.model);
+        if (!allowed) {
+          allowed = new Set();
+          readFieldsByModel.set(grant.model, allowed);
+        }
+        for (const f of grant.read_fields ?? []) allowed.add(f);
+      }
+      for (const model of Object.values(definition.models)) {
+        const allowed = readFieldsByModel.get(model.id);
+        if (!allowed || allowed.size === 0) continue;
+        const select: string[] = [];
+        if (allowed.has("$id")) select.push("id");
+        if (allowed.has("$externalKey")) select.push("externalKey");
+        if (allowed.has("$version") && definition.capabilities?.versionPreconditions === true) {
+          select.push("$version");
+        }
+        for (const field of model.fields) {
+          if (field.lifecycle !== "retired" && allowed.has(field.id)) {
+            select.push(field.name);
+          }
+        }
+        if (select.length === 0) continue;
+        await operations[model.name]!.list({ asOf, limit: 1, select });
+      }
+    } else {
+      for (const model of Object.values(definition.models)) {
+        await operations[model.name]!.list({ asOf, limit: 1 });
+      }
     }
   } finally {
     await runtime.close();
@@ -542,7 +796,14 @@ if (import.meta.main) {
       process.env.APP_DATABASE_URL,
       process.env.AUTH_DATABASE_URL,
     );
-    const input: MigrationInput = { databaseUrl, ...roles };
+    const authSchema = process.env.AUTH_SCHEMA?.trim() || undefined;
+    const kernelRole = process.env.APP_KERNEL_ROLE?.trim() || undefined;
+    const input: MigrationInput = {
+      databaseUrl,
+      ...roles,
+      ...(authSchema ? { authSchema } : {}),
+      ...(kernelRole ? { kernelRole } : {}),
+    };
     if (command === "undo") {
       const result = await undo(input);
       console.log(

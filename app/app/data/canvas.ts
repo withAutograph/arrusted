@@ -1,7 +1,7 @@
 import "server-only";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { Pool } from "pg";
+import { ResilientPool } from "./pool";
 import { headers } from "next/headers";
 import {
   createCanvasHost,
@@ -21,9 +21,12 @@ import { definition } from "../../.generated/release/data-operations";
 import { appId, getIdentity, requiredEnv } from "./auth";
 
 export { definition };
-let pool: Pool | undefined;
+let pool: ResilientPool | undefined;
 function dataPool() {
-  return (pool ??= new Pool({ connectionString: requiredEnv("APP_DATABASE_URL"), max: 10 }));
+  return (pool ??= new ResilientPool({
+    connectionString: requiredEnv("APP_DATABASE_URL"),
+    max: 10,
+  }));
 }
 function verifyRelease() {
   verifyCheckedRelease(

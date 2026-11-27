@@ -254,7 +254,7 @@ actor through an administrator-installed membership for the exact principal,
 app, customer, and actor. Database scope and grants remain authoritative:
 membership is delegation, not human authentication, and it cannot widen a
 grant. Missing or inactive membership, mismatched or unbound actor/scope, and altered or
-missing policy artifacts fail closed. A revision retains whether its compiled release declared a policy, so removing the policy catalogs cannot turn that revision into legacy access. Pre-policy revisions without this marker retain their historical contract. Legacy policy-absent releases retain their
+missing policy artifacts fail closed. Read refusals keep the code `authorization_denied` and say which failure it was: a missing or revoked binding reports the detail `tenant_scope_not_bound`, and a bound actor whose grants don't cover the requested fields or historical images reports `grant_not_authorized`. A revision retains whether its compiled release declared a policy, so removing the policy catalogs cannot turn that revision into legacy access. Pre-policy revisions without this marker retain their historical contract. Legacy policy-absent releases retain their
 tenant-only contract and must not claim fine-grained authorization.
 
 Reads authorize the complete requested projection before caller filters,
