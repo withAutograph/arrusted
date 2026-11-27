@@ -10,16 +10,16 @@
 
 import { useEffect, useState } from "react";
 
-import type { ActiveSchemaRevision, KernelClient } from "@contracts";
+import type { ActiveSchemaRevision, KernelClient, Schema } from "@contracts";
 
 import { useSchemaVersion } from "./schema-version";
 
-export type UseSchemaResult<TSchema> = {
+export type UseSchemaResult<TSchema = Schema> = {
   schema: TSchema | null;
   error: unknown;
 };
 
-export function useActiveSchema<TSchema>(client: KernelClient): UseSchemaResult<TSchema> {
+export function useActiveSchema<TSchema = Schema>(client: KernelClient): UseSchemaResult<TSchema> {
   const [schema, setSchema] = useState<TSchema | null>(null);
   const [error, setError] = useState<unknown | null>(null);
   const version = useSchemaVersion(client);

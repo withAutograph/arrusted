@@ -47,3 +47,4 @@ debug-*.log
 /app/.local/
 /app/.next/
 /app/next-env.d.ts
+/packages/arrusted/*/assets/

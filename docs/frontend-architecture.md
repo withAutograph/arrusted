@@ -583,7 +583,15 @@ The library owns:
 
 - AG Grid mount (`AgGridReact`, Quartz theme, sidebar / cell-selection /
   getRowId-by-record_id), Enterprise license + module bootstrap via
-  `bootstrapAgGrid({licenseKey})` (called once at React root mount time).
+  `bootstrapAgGrid({licenseKey})` (called once at React root mount time). External
+  `@arrusted/ui` consumers pass an explicit `analytics="basic" | "advanced"` prop
+  to `<EditableRowVersionGrid>` (neither tier is defaulted or silently downgraded):
+  `analytics="basic"` uses `bootstrapBasicGrid()` from `@arrusted/ui` (or
+  `@arrusted/ui/grid-basic`) over MIT `ag-grid-community` only, while
+  `analytics="advanced"` uses `bootstrapAdvancedGrid()` from
+  `@arrusted/ui/grid-advanced` with optional peer `ag-grid-enterprise` (allowing
+  unkeyed local trial development and failing closed in production without
+  `NEXT_PUBLIC_AG_GRID_LICENSE_KEY`).
 - Edit-buffer state and dirty mechanics: `useEditBuffer` over the
   `packages/engines/edit-buffer/` engine; `useApplyChangeSet` for
   idempotency-key reuse + single-flight + error normalization;

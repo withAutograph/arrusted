@@ -1,0 +1,10 @@
+{
+  "extends": "../../../.config/typescript/workspace-paths.json",
+  "compilerOptions": {
+    "rootDir": "../../..",
+    "noEmit": true,
+    "jsx": "react-jsx"
+  },
+  "include": ["src/**/*.ts", "scripts/**/*.ts", "__tests__/**/*.ts"],
+  "exclude": ["dist", "node_modules"]
+}

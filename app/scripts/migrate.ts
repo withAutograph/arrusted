@@ -9,7 +9,10 @@ import {
   installGeneratedAppRuntime,
   createGeneratedAppRuntime,
 } from "../../packages/generated-app-runtime/server";
-import { resolveBuildMetadataPath } from "../../packages/generated-app-runtime/compile-schema";
+import {
+  resolveBuildMetadataPath,
+  resolvePlatformCliBinary,
+} from "../../packages/generated-app-runtime/compile-schema";
 import { createDataClient, type DataDefinition } from "../../packages/generated-app-runtime/data";
 import { verifyCheckedRelease } from "../../packages/generated-app-runtime/release-verification";
 import {
@@ -27,7 +30,27 @@ import {
 import { migrationLock } from "./migration-lock";
 export { migrationLock } from "./migration-lock";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const root = path.resolve(moduleDir, "../..");
+const isMonorepoCheckout = existsSync(path.join(root, "Cargo.toml"));
+
+function resolveMigrateAsset(bundledName: string, repoRelativePath: string): string {
+  const bundled = path.resolve(moduleDir, "../assets", bundledName);
+  if (existsSync(bundled)) return bundled;
+  return path.join(root, repoRelativePath);
+}
+
+function defaultReleaseDirectory(): string {
+  return isMonorepoCheckout
+    ? path.join(root, "app/.generated/release")
+    : path.resolve(process.cwd(), ".generated/release");
+}
+
+function defaultRestorePointsDirectory(): string {
+  return isMonorepoCheckout
+    ? path.join(root, "app/.local/restore-points")
+    : path.resolve(process.cwd(), ".local/restore-points");
+}
 const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 const lockSQL = "select pg_try_advisory_lock(hashtextextended($1, 0)) as acquired";
 const quote = (value: string) => `"${value.replaceAll('"', '""')}"`;
@@ -155,14 +178,21 @@ function resolveMigrationCompiler(
     }
     resolved = { executable: full, prefixArgs: [], cwd: root };
   } else {
+    const platformCompiler = resolvePlatformCliBinary("schema-compiler");
     const debugBin = path.join(root, "target/debug/schema-compiler");
-    resolved = existsSync(debugBin)
-      ? { executable: debugBin, prefixArgs: [], cwd: root }
-      : {
-          executable: "cargo",
-          prefixArgs: ["run", "--quiet", "-p", "schema-compiler", "--"],
-          cwd: root,
-        };
+    if (platformCompiler) {
+      resolved = { executable: platformCompiler, prefixArgs: [], cwd: process.cwd() };
+    } else if (isMonorepoCheckout && existsSync(debugBin)) {
+      resolved = { executable: debugBin, prefixArgs: [], cwd: root };
+    } else if (isMonorepoCheckout) {
+      resolved = {
+        executable: "cargo",
+        prefixArgs: ["run", "--quiet", "-p", "schema-compiler", "--"],
+        cwd: root,
+      };
+    } else {
+      resolved = { executable: "schema-compiler", prefixArgs: [], cwd: process.cwd() };
+    }
   }
   // Portable cross-platform verification: prove the target host's schema-compiler emits the exact
   // SQL manifest checksum recorded in release-manifest.json before planning any transition.
@@ -512,7 +542,8 @@ function transition(
   }
 }
 
-const authSQL = () => readFileSync(path.join(root, "packages/auth/schema.sql"), "utf8");
+const authSQL = () =>
+  readFileSync(resolveMigrateAsset("schema.sql", "packages/auth/schema.sql"), "utf8");
 
 // Auth outlives the app ledger on undo. Its owned table (and auth_* namespace when isolated)
 // keeps the installed package checksum even when an app migration is undone.
@@ -587,7 +618,7 @@ export async function migrate(
   input: MigrationInput,
 ): Promise<{ applied: boolean; schemaHash: string }> {
   const authSchema = normalizeAuthSchema(input.authSchema);
-  const builtRelease = input.releaseDirectory ?? path.join(root, "app/.generated/release");
+  const builtRelease = input.releaseDirectory ?? defaultReleaseDirectory();
   const snapshot = mkdtempSync(path.join(tmpdir(), "autograph-migrate-"));
   const release = path.join(snapshot, "release");
   try {
@@ -628,7 +659,10 @@ export async function migrate(
     const auth = authSQL();
     const authHash = hash(auth);
     const membership = readFileSync(
-      path.join(root, "packages/auth/single-organization-membership.sql"),
+      resolveMigrateAsset(
+        "single-organization-membership.sql",
+        "packages/auth/single-organization-membership.sql",
+      ),
       "utf8",
     );
     for (const [name, sql] of [
@@ -677,8 +711,7 @@ export async function migrate(
     ); revoke all on autograph_applied_schema from public`);
       const id = randomUUID();
       const restores =
-        input.restorePoints ??
-        restorePointsFromEnvironment(path.join(root, "app/.local/restore-points"));
+        input.restorePoints ?? restorePointsFromEnvironment(defaultRestorePointsDirectory());
       const restorePoint = await restores.create({ databaseUrl: url, id });
       await client.query("begin");
       try {
@@ -1176,8 +1209,7 @@ export async function undo(
     await validateApplied(client, current);
     const previous = applied.at(-2);
     const restores =
-      input.restorePoints ??
-      restorePointsFromEnvironment(path.join(root, "app/.local/restore-points"));
+      input.restorePoints ?? restorePointsFromEnvironment(defaultRestorePointsDirectory());
     await restores.restore({
       databaseUrl: url,
       point: current.restore_point,
@@ -1227,7 +1259,7 @@ export async function rehearse(
     authRole: input.authRole ?? roles.authRole,
     runtimeLogins: [...mergedLogins.entries()].map(([role, password]) => ({ role, password })),
   });
-  const releaseDirectory = input.releaseDirectory ?? path.join(root, "app/.generated/release");
+  const releaseDirectory = input.releaseDirectory ?? defaultReleaseDirectory();
   const artifact = JSON.parse(
     readFileSync(path.join(releaseDirectory, "app-artifact.json"), "utf8"),
   ) as Artifact;
