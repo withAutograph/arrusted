@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -33,6 +34,7 @@ const releaseMembers = [
   "data-operations.md",
   "data-server.ts",
 ] as const;
+const releaseMemberSet = new Set<string>(releaseMembers);
 
 type CueOrigin = {
   source: string;
@@ -62,7 +64,7 @@ export type CompileSchemaOptions = {
   predecessors?: readonly string[];
   /** Package version mixed into the portable buildHash so runtime/SQL upgrades produce new hashes. */
   packageVersion?: string;
-  /** Git commit or build provenance recorded in ../build.json. */
+  /** Git commit or build provenance recorded in build metadata. */
   sourceCommit?: string;
   /** Whether the working tree had uncommitted changes when compiled. */
   sourceDirty?: boolean;
@@ -94,6 +96,8 @@ export type CompiledSchemaResult = {
 const sha256Hex = (value: string | Buffer): string =>
   createHash("sha256").update(value).digest("hex");
 const sha256Prefixed = (value: string | Buffer): string => `sha256:${sha256Hex(value)}`;
+const normalizeLfTextHash = (bytes: Buffer): string =>
+  sha256Prefixed(bytes.toString("utf8").replace(/\r\n/gu, "\n"));
 
 function writeJson(filename: string, value: unknown): void {
   writeFileSync(filename, `${JSON.stringify(value, null, 2)}\n`);
@@ -216,6 +220,33 @@ function logicalCueKey(filePath: string): string {
   return path.basename(filePath);
 }
 
+function assertSafeOutputDirectory(outDir: string): void {
+  if (!existsSync(outDir)) return;
+  const stat = statSync(outDir);
+  if (!stat.isDirectory()) {
+    throw new Error(`Compile output path is not a directory: ${outDir}`);
+  }
+  const entries = readdirSync(outDir);
+  if (entries.length === 0) return;
+  const onlyReleaseFiles =
+    entries.includes("release-manifest.json") &&
+    entries.every(
+      (entry) => releaseMemberSet.has(entry) && statSync(path.join(outDir, entry)).isFile(),
+    );
+  if (!onlyReleaseFiles) {
+    throw new Error(
+      `Refusing to overwrite non-empty directory '${outDir}' because it contains files not owned by compileSchema(). Choose an empty directory or an existing generated release directory.`,
+    );
+  }
+}
+
+export function resolveBuildMetadataPath(outDir: string): string {
+  const resolved = path.resolve(outDir);
+  return path.basename(resolved) === "release"
+    ? path.join(path.dirname(resolved), "build.json")
+    : `${resolved}.build.json`;
+}
+
 function buildCueToSqlSourceMap(input: {
   app: string;
   version: string;
@@ -287,6 +318,12 @@ function buildCueToSqlSourceMap(input: {
 /** Pure current-state CUE -> SQL + TypeScript codegen with portable build identity. */
 export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResult {
   const outDir = path.resolve(options.outDir);
+  assertSafeOutputDirectory(outDir);
+  const metadataPath = resolveBuildMetadataPath(outDir);
+  if (existsSync(metadataPath) && statSync(metadataPath).isDirectory()) {
+    throw new Error(`Build metadata path is a directory: ${metadataPath}`);
+  }
+
   const { files: cueFiles, primaryCue } = collectCueInputs(options.schemaPath);
   const appManifestCue = path.resolve(
     options.appManifestCuePath ??
@@ -299,8 +336,8 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
     options.membershipSqlPath ??
       path.join(defaultRepoRoot, "packages/auth/single-organization-membership.sql"),
   );
-  const extraInputs: string[] = [];
   let resolvedSelectionCue: string | undefined;
+  let resolvedCatalogPath: string | undefined;
   if (options.catalogPath !== undefined) {
     const selectionCue = path.resolve(
       options.appSelectionCuePath ??
@@ -308,11 +345,9 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
     );
     if (existsSync(selectionCue)) {
       resolvedSelectionCue = selectionCue;
-      extraInputs.push(selectionCue);
     }
-    extraInputs.push(path.resolve(options.catalogPath));
+    resolvedCatalogPath = path.resolve(options.catalogPath);
   }
-  const compilerInputs = [appManifestCue, ...extraInputs, ...cueFiles];
   const invocation = resolveCompilerInvocation(options.compilerBinary);
   const packageVersion =
     options.packageVersion ??
@@ -327,11 +362,63 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
 
   mkdirSync(path.dirname(outDir), { recursive: true });
   const stagingRoot = mkdtempSync(path.join(path.dirname(outDir), ".compile-"));
-  const backupDir = path.join(stagingRoot, "previous");
+  const backupDir = path.join(stagingRoot, "previous-release");
+  const backupMetadataPath = path.join(stagingRoot, "previous-build.json");
 
   try {
-    // 1. Probe pass to compute a portable, platform- and directory-independent buildHash
-    // from packageVersion + normalized CUE manifest + emitted SQL runtime + auth SQL checksums.
+    // 0. Snapshot every compiler & SQL input once so probe, hashes, and final compile read identical bytes.
+    const inputSnapshotDir = path.join(stagingRoot, "inputs");
+    const cueSnapshotDir = path.join(inputSnapshotDir, "schema");
+    mkdirSync(cueSnapshotDir, { recursive: true });
+
+    const stagedAppManifestCue = path.join(inputSnapshotDir, "app-manifest.cue");
+    const appManifestBytes = readFileSync(appManifestCue);
+    writeFileSync(stagedAppManifestCue, appManifestBytes);
+
+    const stagedExtraInputs: string[] = [];
+    let selectionBytes: Buffer | undefined;
+    if (resolvedSelectionCue !== undefined) {
+      const stagedSelection = path.join(inputSnapshotDir, "app-selection.cue");
+      selectionBytes = readFileSync(resolvedSelectionCue);
+      writeFileSync(stagedSelection, selectionBytes);
+      stagedExtraInputs.push(stagedSelection);
+    }
+    let catalogBytes: Buffer | undefined;
+    if (resolvedCatalogPath !== undefined) {
+      const stagedCatalog = path.join(inputSnapshotDir, "catalog.json");
+      catalogBytes = readFileSync(resolvedCatalogPath);
+      writeFileSync(stagedCatalog, catalogBytes);
+      stagedExtraInputs.push(stagedCatalog);
+    }
+    const stagedCueFiles: Array<{ key: string; stagedPath: string; bytes: Buffer }> = cueFiles.map(
+      (file) => {
+        const key = logicalCueKey(file);
+        const stagedPath = path.join(cueSnapshotDir, key);
+        const bytes = readFileSync(file);
+        writeFileSync(stagedPath, bytes);
+        return { key, stagedPath, bytes };
+      },
+    );
+    const authSchemaBytes = readFileSync(authSchemaSql);
+    const membershipBytes = readFileSync(membershipSql);
+    const primaryCueKey = logicalCueKey(primaryCue);
+    const stagedPrimaryCue =
+      stagedCueFiles.find((entry) => entry.key === primaryCueKey)?.stagedPath ??
+      stagedCueFiles[0]!.stagedPath;
+    const compilerInputs = [
+      stagedAppManifestCue,
+      ...stagedExtraInputs,
+      ...stagedCueFiles.map((entry) => entry.stagedPath),
+    ];
+
+    const predecessors = (options.predecessors ?? []).map((pred, idx) => {
+      const stagedPred = path.join(inputSnapshotDir, `pred-${idx}.json`);
+      cpSync(path.resolve(pred), stagedPred);
+      return stagedPred;
+    });
+
+    // 1. Probe pass to compute a portable, platform-, directory-, and line-ending-independent buildHash
+    // covering packageVersion, normalized CUE manifest, data-plane bindings, emitted SQL runtime, and auth SQL.
     const probeVersion = "build-probe";
     const probeArtifactRaw = runCompiler(invocation, [
       "--app-artifact",
@@ -346,6 +433,12 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
       "--compiled-artifact",
       probeArtifactPath,
     ]);
+    const probeDataPlane = JSON.parse(
+      runCompiler(invocation, ["--data-plane", "--compiled-artifact", probeArtifactPath]),
+    ) as {
+      manifest: Record<string, unknown>;
+      typescript: string;
+    };
     const probeArtifact = JSON.parse(probeArtifactRaw) as {
       schema: Record<string, unknown>;
       extras?: unknown;
@@ -353,34 +446,44 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
     };
     const probeSqlManifest = JSON.parse(probeSqlManifestRaw) as SqlManifest;
     const { version: _ignoredVersion, ...versionlessSchema } = probeArtifact.schema;
+    const { schemaVersion: _ignoredDataPlaneVersion, ...versionlessDataPlaneManifest } =
+      probeDataPlane.manifest;
+    const normalizedProbeTypescript = probeDataPlane.typescript.replaceAll(
+      JSON.stringify(probeVersion),
+      '"__BUILD_PROBE__"',
+    );
 
-    const primaryCueKey = logicalCueKey(primaryCue);
     const sourceEntries: Array<[string, string]> = [
-      [
-        "packages/schema-compiler/cue/app-manifest.cue",
-        sha256Prefixed(readFileSync(appManifestCue)),
-      ],
-      ...(resolvedSelectionCue !== undefined
+      ["packages/schema-compiler/cue/app-manifest.cue", sha256Prefixed(appManifestBytes)],
+      ...(selectionBytes !== undefined
         ? [
-            [
-              "packages/schema-compiler/cue/app-selection.cue",
-              sha256Prefixed(readFileSync(resolvedSelectionCue)),
-            ] as [string, string],
+            ["packages/schema-compiler/cue/app-selection.cue", sha256Prefixed(selectionBytes)] as [
+              string,
+              string,
+            ],
           ]
         : []),
-      ...(options.catalogPath !== undefined
-        ? [["catalog.json", sha256Prefixed(readFileSync(options.catalogPath))] as [string, string]]
+      ...(catalogBytes !== undefined
+        ? [["catalog.json", sha256Prefixed(catalogBytes)] as [string, string]]
         : []),
-      ...cueFiles.map(
-        (file) => [logicalCueKey(file), sha256Prefixed(readFileSync(file))] as [string, string],
+      ...stagedCueFiles.map(
+        (entry) => [entry.key, sha256Prefixed(entry.bytes)] as [string, string],
       ),
-      ["packages/auth/schema.sql", sha256Prefixed(readFileSync(authSchemaSql))],
-      [
-        "packages/auth/single-organization-membership.sql",
-        sha256Prefixed(readFileSync(membershipSql)),
-      ],
+      ["packages/auth/schema.sql", sha256Prefixed(authSchemaBytes)],
+      ["packages/auth/single-organization-membership.sql", sha256Prefixed(membershipBytes)],
     ];
     const sourceFiles = Object.fromEntries(sourceEntries);
+
+    const normalizedTextSources = Object.fromEntries([
+      ["packages/schema-compiler/cue/app-manifest.cue", normalizeLfTextHash(appManifestBytes)],
+      ...(selectionBytes !== undefined
+        ? [["packages/schema-compiler/cue/app-selection.cue", normalizeLfTextHash(selectionBytes)]]
+        : []),
+      ...(catalogBytes !== undefined ? [["catalog.json", normalizeLfTextHash(catalogBytes)]] : []),
+      ...stagedCueFiles.map((entry) => [entry.key, normalizeLfTextHash(entry.bytes)]),
+      ["packages/auth/schema.sql", normalizeLfTextHash(authSchemaBytes)],
+      ["packages/auth/single-organization-membership.sql", normalizeLfTextHash(membershipBytes)],
+    ]);
 
     const buildHash = sha256Hex(
       JSON.stringify({
@@ -390,17 +493,19 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
         schema: versionlessSchema,
         extras: probeArtifact.extras ?? null,
         client: probeArtifact.client ?? null,
+        dataPlaneManifest: versionlessDataPlaneManifest,
+        dataPlaneTypescriptSha256: sha256Hex(normalizedProbeTypescript),
         sqlArtifacts: probeSqlManifest.artifacts.map((entry) => ({
           kind: entry.kind,
           name: entry.name,
           sql: entry.sql,
         })),
-        sources: sourceFiles,
+        sources: normalizedTextSources,
       }),
     );
     const version = options.schemaVersion ?? `build-${buildHash}`;
 
-    // 2. Emit final current-state bundle for `version`
+    // 2. Emit final current-state bundle for `version` from the staged input snapshot
     const stagedRelease = path.join(stagingRoot, "release");
     mkdirSync(stagedRelease, { recursive: true });
 
@@ -425,7 +530,6 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
     writeJson(artifactPath, artifact);
 
     const compiledArgs = ["--compiled-artifact", artifactPath];
-    const predecessors = options.predecessors ?? [];
     const dataPlane = JSON.parse(
       runCompiler(invocation, [
         "--data-plane",
@@ -525,29 +629,33 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
       },
     });
 
-    verifyCheckedRelease(stagedRelease, primaryCue);
+    verifyCheckedRelease(stagedRelease, stagedPrimaryCue);
     const releaseHash = sha256Hex(readFileSync(path.join(stagedRelease, "release-manifest.json")));
 
-    if (existsSync(outDir)) renameSync(outDir, backupDir);
-    try {
-      renameSync(stagedRelease, outDir);
-    } catch (error) {
-      if (existsSync(backupDir)) renameSync(backupDir, outDir);
-      throw error;
-    }
-
-    // Remove any legacy adjacent host binary file left by pre-portable builds so migrate never sees stale artifacts.
-    const adjacentCompiler = path.join(path.dirname(outDir), "schema-compiler");
-    if (statSync(adjacentCompiler, { throwIfNoEntry: false })?.isFile()) {
-      rmSync(adjacentCompiler, { force: true });
-    }
-    writeJson(path.join(path.dirname(outDir), "build.json"), {
-      sourceCommit: options.sourceCommit ?? "untracked",
+    const stagedMetadataPath = path.join(stagingRoot, "staged-build.json");
+    writeJson(stagedMetadataPath, {
+      sourceCommit: options.sourceCommit ?? "",
       sourceDirty: options.sourceDirty ?? false,
       buildHash,
       packageVersion,
       releaseHash,
     });
+
+    const hadRelease = existsSync(outDir);
+    const hadMetadata = existsSync(metadataPath);
+    if (hadRelease) renameSync(outDir, backupDir);
+    if (hadMetadata) renameSync(metadataPath, backupMetadataPath);
+    try {
+      renameSync(stagedRelease, outDir);
+      renameSync(stagedMetadataPath, metadataPath);
+    } catch (error) {
+      if (existsSync(outDir)) rmSync(outDir, { recursive: true, force: true });
+      if (existsSync(metadataPath)) rmSync(metadataPath, { force: true });
+      if (hadRelease && existsSync(backupDir)) renameSync(backupDir, outDir);
+      if (hadMetadata && existsSync(backupMetadataPath))
+        renameSync(backupMetadataPath, metadataPath);
+      throw error;
+    }
 
     return {
       app,

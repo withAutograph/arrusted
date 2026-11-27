@@ -34,7 +34,8 @@ begin
       (principal_name, app_id, customer_id, actor_id, role, actor_kind, active, fence_generation)
     values (tg_argv[0]::name, tg_argv[1], tg_argv[2], actor, role_name, 'human', is_active, 0)
     on conflict (principal_name, app_id, customer_id, actor_id, role) do update
-      set active = excluded.active, actor_kind = excluded.actor_kind, bound_at = now();
+      set active = excluded.active, actor_kind = excluded.actor_kind, bound_at = now()
+      where public.kernel_actor_membership.fence_generation = 0;
     -- Existing kernel guards still refuse changing any fenced membership.
   end loop;
   return null;

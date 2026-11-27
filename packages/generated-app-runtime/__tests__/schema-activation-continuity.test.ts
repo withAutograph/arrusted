@@ -264,7 +264,24 @@ test("sibling additive successor continuity allows an installed prior revision a
   const v1Def = {
     formatVersion: 1,
     schemaVersion: "v3",
-    models: [{ id: "item", name: "item", fields: [oldField], relations: [] }],
+    models: [
+      {
+        id: "item",
+        name: "item",
+        fields: [
+          oldField,
+          {
+            id: "legacy_archived",
+            name: "legacyArchived",
+            type: "text",
+            lifecycle: "retired",
+            required: false,
+            readOnly: false,
+          },
+        ],
+        relations: [],
+      },
+    ],
   } as const satisfies DataDefinition;
 
   let active = {
@@ -343,6 +360,42 @@ test("sibling additive successor continuity allows an installed prior revision a
             if (operation === "kernel_apply_change_set") {
               return { id: 1, schema_revision_id: active.schema_revision_id };
             }
+            if (operation === "kernel_work_session") {
+              if (input.schema_version !== active.schema.version) {
+                if (
+                  input.operation !== "get" &&
+                  input.operation !== "list" &&
+                  input.operation !== "entries"
+                ) {
+                  // Simulate protectedHttpRequest durable mutationQueue poisoning if a work-session mutation ever sends a stale schema_version!
+                  throw new Error("poisoned_http_mutation_queue");
+                }
+                const { KernelFailure } = await import("../../kernel-client/postgres");
+                throw new KernelFailure({
+                  code: "schema_drift",
+                  message: "Schema drift detected",
+                });
+              }
+              if (input.operation === "create") {
+                return { revision: 1, session_id: String(input.session_id) };
+              }
+              if (input.operation === "get") {
+                return {
+                  id: String(input.session_id),
+                  owner_id: "authorized-actor",
+                  title: "Additive Session",
+                  as_of: asOf,
+                  scope: null,
+                  layout: null,
+                  pinned: false,
+                  status: "open",
+                  revision: 7,
+                  rules: {},
+                  threads: {},
+                };
+              }
+              return [];
+            }
             throw new Error(`unexpected ${operation}`);
           },
         }),
@@ -387,6 +440,24 @@ test("sibling additive successor continuity allows an installed prior revision a
       { effectiveStart: asOf, idempotencyKey: "k1" },
     ),
   ).resolves.toEqual({ id: 1, schema_revision_id: "4" });
+  await expect(v1Ops.workSessions.request({ operation: "list" })).resolves.toEqual([]);
+  await expect(
+    v1Ops.workSessions.request({
+      operation: "get",
+      session_id: recordId,
+      overlay: false,
+    }),
+  ).resolves.toMatchObject({ id: recordId, revision: 7 });
+  await expect(
+    v1Ops.workSessions.request({
+      operation: "create",
+      expected_revision: 0,
+      request_id: "req-ws-1",
+      session_id: recordId,
+      title: "Additive Session",
+      as_of: asOf,
+    }),
+  ).resolves.toEqual({ revision: 1, session_id: recordId });
 
   // 2. Uninstalled / fabricated schemaVersion ("stale") is rejected on both list() and create()
   const staleOps = makeClient({ ...v1Def, schemaVersion: "stale" });
@@ -397,7 +468,208 @@ test("sibling additive successor continuity allows an installed prior revision a
     staleOps.item!.create({ label: "Stale write" }, { effectiveStart: asOf, idempotencyKey: "k2" }),
   ).rejects.toThrow("does not match active artifact");
 
-  // 3. Installed prior v3 client fails closed if active schema retired a field or added a required field
+  // 3. Installed prior v3 client fails closed if active schema retired/added enum options or changed many-relation target_model
+  const enumAndManyV1Def = {
+    formatVersion: 1,
+    schemaVersion: "v3",
+    models: [
+      {
+        id: "item",
+        name: "item",
+        fields: [
+          oldField,
+          {
+            id: "status",
+            name: "status",
+            type: "enum",
+            required: false,
+            readOnly: false,
+            option_set: [
+              { id: "open", lifecycle: "active" },
+              { id: "closed", lifecycle: "active" },
+            ],
+          },
+          {
+            id: "tags",
+            name: "tags",
+            type: "relation_list",
+            storage: "many",
+            target_model: "tag",
+            required: false,
+            readOnly: false,
+          },
+        ],
+        relations: [],
+      },
+    ],
+  } as const satisfies DataDefinition;
+  const enumOps = makeClient(enumAndManyV1Def);
+
+  // Retired enum option -> rejected
+  active = {
+    ...active,
+    schema: {
+      ...active.schema,
+      models: [
+        {
+          id: "item",
+          fields: [
+            { id: "label", type: "text", required: true },
+            {
+              id: "status",
+              type: "enum",
+              required: false,
+              option_set: [
+                { id: "open", lifecycle: "active" },
+                { id: "closed", lifecycle: "retired" },
+              ],
+            } as never,
+          ],
+          many_relations: [{ id: "tags", target_model: "tag", lifecycle: "active" }],
+        } as never,
+      ],
+    },
+  };
+  await expect(enumOps.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow(
+    "Schema drift",
+  );
+
+  // Newly added enum option unknown to v3 decoder -> rejected
+  active = {
+    ...active,
+    schema: {
+      ...active.schema,
+      models: [
+        {
+          id: "item",
+          fields: [
+            { id: "label", type: "text", required: true },
+            {
+              id: "status",
+              type: "enum",
+              required: false,
+              option_set: [
+                { id: "open", lifecycle: "active" },
+                { id: "closed", lifecycle: "active" },
+                { id: "won", lifecycle: "active" },
+              ],
+            } as never,
+          ],
+          many_relations: [{ id: "tags", target_model: "tag", lifecycle: "active" }],
+        } as never,
+      ],
+    },
+  };
+  await expect(enumOps.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow(
+    "Schema drift",
+  );
+
+  // Many-relation target_model changed -> rejected
+  active = {
+    ...active,
+    schema: {
+      ...active.schema,
+      models: [
+        {
+          id: "item",
+          fields: [
+            { id: "label", type: "text", required: true },
+            {
+              id: "status",
+              type: "enum",
+              required: false,
+              option_set: [
+                { id: "open", lifecycle: "active" },
+                { id: "closed", lifecycle: "active" },
+              ],
+            } as never,
+          ],
+          many_relations: [{ id: "tags", target_model: "other_model", lifecycle: "active" }],
+        } as never,
+      ],
+    },
+  };
+  await expect(enumOps.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow(
+    "Schema drift",
+  );
+
+  // Custom enum option_set and custom relation target_model_id changes in activeSchema.custom_fields -> rejected
+  const customV1Def = {
+    formatVersion: 1,
+    schemaVersion: "v3",
+    models: [
+      {
+        id: "item",
+        name: "item",
+        fields: [
+          oldField,
+          {
+            id: "tier",
+            name: "customTier",
+            type: "enum",
+            storage: "custom",
+            required: false,
+            readOnly: false,
+            option_set: [{ id: "gold", lifecycle: "active" }],
+          },
+          {
+            id: "owner",
+            name: "customOwner",
+            type: "relation",
+            storage: "custom",
+            target_model: "person",
+            required: false,
+            readOnly: false,
+          },
+        ],
+        relations: [],
+      },
+    ],
+  } as const satisfies DataDefinition;
+  const customOps = makeClient(customV1Def);
+  active = {
+    ...active,
+    schema: {
+      ...active.schema,
+      models: [{ id: "item", fields: [{ id: "label", type: "text", required: true }] }],
+      custom_fields: [
+        {
+          model_id: "item",
+          field_id: "tier",
+          type: "enum",
+          option_set: [
+            { id: "gold", lifecycle: "active" },
+            { id: "platinum", lifecycle: "active" },
+          ],
+        },
+        { model_id: "item", field_id: "owner", type: "relation", target_model_id: "person" },
+      ],
+    } as never,
+  };
+  await expect(customOps.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow(
+    "Schema drift",
+  );
+  active = {
+    ...active,
+    schema: {
+      ...active.schema,
+      models: [{ id: "item", fields: [{ id: "label", type: "text", required: true }] }],
+      custom_fields: [
+        {
+          model_id: "item",
+          field_id: "tier",
+          type: "enum",
+          option_set: [{ id: "gold", lifecycle: "active" }],
+        },
+        { model_id: "item", field_id: "owner", type: "relation", target_model_id: "team" },
+      ],
+    } as never,
+  };
+  await expect(customOps.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow(
+    "Schema drift",
+  );
+
+  // 4. Installed prior v3 client fails closed if active schema retired a field or added a required field
   active = {
     ...active,
     schema: {

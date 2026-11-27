@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
   createDataClient,
-  createWorkSessionClient,
   type DataContext,
   type DataDefinition,
   type WorkSessionRequest,
@@ -674,7 +673,7 @@ export function createCanvasHost(config: CanvasHostConfig) {
     ) => binding.action(payload, { requiredRole: now.role }, ({ context }) => run(context));
 
     const sessionClient = (context: PostgresDataContext) =>
-      createWorkSessionClient(context, definition.schemaVersion);
+      createDataClient(definition, context).workSessions;
 
     const dataClient = (context: PostgresDataContext, modelId: string) => {
       const client = createDataClient(definition, context) as unknown as Record<
@@ -1094,6 +1093,7 @@ export function createCanvasHost(config: CanvasHostConfig) {
       workSessionEventsResponse({
         context,
         schemaVersion: definition.schemaVersion,
+        workSessions: ops.sessionClient(context),
         runtime,
         sessionId,
         signal: request.signal,

@@ -135,7 +135,12 @@ export function createPostgresDataContext(input: PostgresDataContextInput): Post
   const admission = async (operation: string, payload: Record<string, unknown>) => {
     // Admission survives business rollback; use a separate runtime-only connection,
     // including when the host's business pool has only one connection.
-    const admissionPool = new ResilientPool({ ...pool.options, max: 1 });
+    const configuredSearchPath = (pool as { configuredSearchPath?: string }).configuredSearchPath;
+    const admissionPool = new ResilientPool({
+      ...pool.options,
+      ...(configuredSearchPath !== undefined ? { searchPath: configuredSearchPath } : {}),
+      max: 1,
+    });
     try {
       await kernelCall(admissionPool, operation, {
         ...payload,
@@ -317,6 +322,8 @@ export function createPostgresDataContext(input: PostgresDataContextInput): Post
   };
   return context;
 }
+
+export { KernelFailure };
 
 export async function withPostgresDataContext<T>(
   input: PostgresDataContextInput,

@@ -230,6 +230,39 @@ CREATE TEMP TABLE autograph_undo_trigger AS
 CREATE TEMP TABLE autograph_undo_runtime_scope (request jsonb);
 CREATE TEMP TABLE autograph_undo_scope_catalog AS
   SELECT to_regclass('public.kernel_principal_scope') IS NOT NULL AS present;
+CREATE TEMP TABLE autograph_undo_fenced_membership (
+  principal_name name,
+  app_id text,
+  customer_id text,
+  actor_id text,
+  role text,
+  actor_kind text,
+  active boolean,
+  fence_generation bigint,
+  bound_at timestamptz
+);
+CREATE TEMP TABLE autograph_undo_membership_catalog AS
+  SELECT to_regclass('public.kernel_actor_membership') IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'kernel_actor_membership' AND column_name = 'principal_name'
+    )
+    AND EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'kernel_actor_membership' AND column_name = 'fence_generation'
+    ) AS present;
+CREATE TEMP TABLE autograph_undo_actor_access (
+  principal_name name,
+  app_id text,
+  customer_id text,
+  actor_id text,
+  active boolean,
+  actor_kind text,
+  fence_generation bigint,
+  bound_at timestamptz
+);
+CREATE TEMP TABLE autograph_undo_access_catalog AS
+  SELECT to_regclass('public.kernel_actor_access') IS NOT NULL AS present;
 DO $$ DECLARE t text; BEGIN
   IF (SELECT present FROM autograph_undo_scope_catalog) THEN
     INSERT INTO autograph_undo_runtime_scope
@@ -237,6 +270,17 @@ DO $$ DECLARE t text; BEGIN
         'app_id', app_id, 'customer_id', customer_id, 'actor_id', actor_id,
         'active', true, 'actor_binding_required', actor_binding_required)
       FROM public.kernel_principal_scope WHERE capability='runtime' AND active;
+  END IF;
+  IF (SELECT present FROM autograph_undo_membership_catalog) THEN
+    EXECUTE 'INSERT INTO autograph_undo_fenced_membership
+      SELECT principal_name, app_id, customer_id, actor_id, role, actor_kind, active, fence_generation, bound_at
+      FROM public.kernel_actor_membership
+      WHERE fence_generation > 0 OR actor_kind <> ''human''';
+  END IF;
+  IF (SELECT present FROM autograph_undo_access_catalog) THEN
+    EXECUTE 'INSERT INTO autograph_undo_actor_access
+      SELECT principal_name, app_id, customer_id, actor_id, active, actor_kind, fence_generation, bound_at
+      FROM public.kernel_actor_access';
   END IF;
   FOR t IN SELECT unnest(ARRAY[${authNames}]) LOOP
     IF to_regclass(format('public.%I', t)) IS NOT NULL THEN
@@ -246,7 +290,7 @@ DO $$ DECLARE t text; BEGIN
 END $$;`;
 const recoverAuth = `
 SET LOCAL search_path = pg_catalog, public;
-DO $$ DECLARE t text; binding record; result jsonb; has_principal boolean; BEGIN
+DO $$ DECLARE t text; binding record; result jsonb; has_principal boolean; has_fence boolean; BEGIN
   FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'autograph_undo_auth' LOOP
     EXECUTE format('ALTER TABLE autograph_undo_auth.%I SET SCHEMA public', t);
   END LOOP;
@@ -280,6 +324,44 @@ DO $$ DECLARE t text; binding record; result jsonb; has_principal boolean; BEGIN
       SELECT 1 FROM information_schema.columns
       WHERE table_schema = 'public' AND table_name = 'kernel_actor_membership' AND column_name = 'principal_name'
     ) INTO has_principal;
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'kernel_actor_membership' AND column_name = 'fence_generation'
+    ) INTO has_fence;
+    IF has_principal AND has_fence AND (SELECT present FROM autograph_undo_membership_catalog) THEN
+      EXECUTE 'UPDATE public.kernel_actor_membership SET active = false
+        WHERE actor_kind <> ''human'' AND fence_generation = 0';
+      EXECUTE 'INSERT INTO public.kernel_actor_membership
+        (principal_name, app_id, customer_id, actor_id, role, actor_kind, active, fence_generation, bound_at)
+        SELECT principal_name, app_id, customer_id, actor_id, role, actor_kind, active, fence_generation, bound_at
+          FROM autograph_undo_fenced_membership
+        ON CONFLICT (principal_name, app_id, customer_id, actor_id, role) DO UPDATE
+          SET active = EXCLUDED.active,
+              actor_kind = EXCLUDED.actor_kind,
+              fence_generation = EXCLUDED.fence_generation,
+              bound_at = EXCLUDED.bound_at
+          WHERE public.kernel_actor_membership.fence_generation = 0
+             OR public.kernel_actor_membership.fence_generation < EXCLUDED.fence_generation';
+    END IF;
+    IF to_regclass('public.kernel_actor_access') IS NOT NULL
+      AND (SELECT present FROM autograph_undo_access_catalog) THEN
+      EXECUTE 'INSERT INTO public.kernel_actor_access
+        (principal_name, app_id, customer_id, actor_id, active, actor_kind, fence_generation, bound_at)
+        SELECT principal_name, app_id, customer_id, actor_id, active, actor_kind, fence_generation, bound_at
+          FROM autograph_undo_actor_access
+        ON CONFLICT (principal_name, app_id, customer_id, actor_id) DO UPDATE
+          SET active = EXCLUDED.active,
+              actor_kind = EXCLUDED.actor_kind,
+              fence_generation = EXCLUDED.fence_generation,
+              bound_at = EXCLUDED.bound_at
+          WHERE public.kernel_actor_access.fence_generation < EXCLUDED.fence_generation
+             OR (
+               public.kernel_actor_access.fence_generation = EXCLUDED.fence_generation
+               AND public.kernel_actor_access.active
+               AND NOT EXCLUDED.active
+               AND public.kernel_actor_access.actor_kind = EXCLUDED.actor_kind
+             )';
+    END IF;
     IF has_principal AND EXISTS (SELECT 1 FROM autograph_undo_trigger) THEN
       FOR binding IN SELECT * FROM autograph_undo_trigger LOOP
         EXECUTE format(
@@ -299,13 +381,44 @@ DO $$ DECLARE t text; binding record; result jsonb; has_principal boolean; BEGIN
                )',
           binding.member_schema
         ) USING binding.principal_name, binding.app_id, binding.customer_id, binding.role_name;
-        EXECUTE format('UPDATE %I.member SET "userId"="userId"', binding.member_schema);
+        EXECUTE format(
+          'UPDATE %I.member m SET "userId" = m."userId"
+             WHERE NOT EXISTS (
+               SELECT 1 FROM public.kernel_actor_membership k
+                WHERE k.principal_name = $1::name
+                  AND k.app_id = $2
+                  AND k.customer_id = $3
+                  AND k.actor_id = m."userId"
+                  AND k.role = $4
+                  AND k.fence_generation > 0
+             )',
+          binding.member_schema
+        ) USING binding.principal_name, binding.app_id, binding.customer_id, binding.role_name;
       END LOOP;
     ELSIF to_regclass('public.member') IS NOT NULL THEN
-      UPDATE public.kernel_actor_membership k SET active = false
-        WHERE actor_kind = 'human' AND NOT EXISTS (
-          SELECT 1 FROM public.member m WHERE m."userId" = k.actor_id AND m."organizationId" = k.customer_id);
-      UPDATE public.member SET "userId"="userId";
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = 'kernel_actor_membership' AND column_name = 'fence_generation'
+      ) THEN
+        EXECUTE 'UPDATE public.kernel_actor_membership k SET active = false
+          WHERE actor_kind = ''human''
+            AND k.fence_generation = 0
+            AND NOT EXISTS (
+              SELECT 1 FROM public.member m WHERE m."userId" = k.actor_id AND m."organizationId" = k.customer_id
+            )';
+        EXECUTE 'UPDATE public.member m SET "userId" = m."userId"
+          WHERE NOT EXISTS (
+            SELECT 1 FROM public.kernel_actor_membership k
+             WHERE k.actor_id = m."userId"
+               AND k.customer_id = m."organizationId"
+               AND k.fence_generation > 0
+          )';
+      ELSE
+        UPDATE public.kernel_actor_membership k SET active = false
+          WHERE actor_kind = 'human' AND NOT EXISTS (
+            SELECT 1 FROM public.member m WHERE m."userId" = k.actor_id AND m."organizationId" = k.customer_id);
+        UPDATE public.member SET "userId"="userId";
+      END IF;
     END IF;
   END IF;
 END $$;

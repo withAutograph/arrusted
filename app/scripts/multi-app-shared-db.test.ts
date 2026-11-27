@@ -13,6 +13,11 @@ import { migrate, rehearse, runtimeRoles, undo } from "./migrate";
 import { PgDumpRestorePoints } from "./restore-points";
 
 const databaseURL = process.env.KERNEL_TEST_DATABASE_URL;
+if (process.env.CI && !databaseURL) {
+  throw new Error(
+    "KERNEL_TEST_DATABASE_URL is required in CI to exercise multi-app-shared-db.test.ts.",
+  );
+}
 const suite = databaseURL ? test : test.skip;
 
 const scratchDir = mkdtempSync(path.join(tmpdir(), "multi-app-shared-db-"));
@@ -42,9 +47,12 @@ const companyDataDatabaseUrl = makeRuntimeUrl(companyDataRole);
 
 const ownerPool = new Pool({ connectionString: ownerConnectionString });
 const restorePoints = new PgDumpRestorePoints({ directory: path.join(scratchDir, "backups") });
-let created = false;
+let createdPrimaryDb = false;
+let createdRehearsalDb = false;
 
 function sharedCueSchema(extraCompanyFields = "") {
+  const grantLinkedin =
+    Boolean(extraCompanyFields) && !extraCompanyFields.includes('lifecycle: "retired"');
   return `package schema
 
 manifest: #AppManifest & {
@@ -93,8 +101,8 @@ manifest: #AppManifest & {
         role: "crm_user"
         model: "company"
         operations: ["read", "create", "update", "history"]
-        read_fields: ["$id", "$externalKey", "$version", "$effectiveStart", "$effectiveEnd", "$metadata", "name", "domain"${extraCompanyFields ? ', "linkedin_url"' : ""}]
-        write_fields: ["name", "domain"${extraCompanyFields ? ', "linkedin_url"' : ""}]
+        read_fields: ["$id", "$externalKey", "$version", "$effectiveStart", "$effectiveEnd", "$metadata", "name", "domain"${grantLinkedin ? ', "linkedin_url"' : ""}]
+        write_fields: ["name", "domain"${grantLinkedin ? ', "linkedin_url"' : ""}]
         record: {kind: "all"}
       },
       {
@@ -130,26 +138,56 @@ manifest: #AppManifest & {
 beforeAll(async () => {
   if (!databaseURL) return;
   await admin.query(`create database "${database}"`);
+  createdPrimaryDb = true;
   await admin.query(`create database "${rehearsalDatabase}"`);
-  created = true;
+  createdRehearsalDb = true;
+  // Simulate Neon / PG14+ non-superuser cluster observer & provider admin logins:
+  // migrate & --rebind-runtime-login must never false-positive on elevated cluster roles!
+  await admin.query(
+    `create role "${database}_observer" login password '${rolePassword}' nosuperuser nocreatedb nocreaterole`,
+  );
+  await admin.query(`grant pg_read_all_data, pg_write_all_data to "${database}_observer"`);
+  await admin.query(
+    `create role "${database}_provider_admin" login createdb createrole password '${rolePassword}' nosuperuser`,
+  );
 }, 120_000);
 
 afterAll(async () => {
-  await ownerPool.end();
-  if (created) {
-    const roles = (
-      await admin.query("select rolname from pg_roles where starts_with(rolname, $1)", [
-        `${database}_`,
-      ])
-    ).rows;
-    await admin.query(`drop database if exists "${database}" with (force)`);
-    await admin.query(`drop database if exists "${rehearsalDatabase}" with (force)`);
-    for (const { rolname } of roles) {
-      await admin.query(`drop role if exists "${String(rolname).replaceAll('"', '""')}"`);
+  const cleanupErrors: unknown[] = [];
+  await ownerPool.end().catch((err) => cleanupErrors.push(err));
+  if (createdPrimaryDb) {
+    await admin
+      .query(`drop database if exists "${database}" with (force)`)
+      .catch((err) => cleanupErrors.push(err));
+  }
+  if (createdRehearsalDb) {
+    await admin
+      .query(`drop database if exists "${rehearsalDatabase}" with (force)`)
+      .catch((err) => cleanupErrors.push(err));
+  }
+  if (createdPrimaryDb || createdRehearsalDb) {
+    try {
+      const roles = (
+        await admin.query("select rolname from pg_roles where starts_with(rolname, $1)", [
+          `${database}_`,
+        ])
+      ).rows;
+      for (const { rolname } of roles) {
+        await admin
+          .query(`drop role if exists "${String(rolname).replaceAll('"', '""')}"`)
+          .catch((err) => cleanupErrors.push(err));
+      }
+    } catch (err) {
+      cleanupErrors.push(err);
     }
   }
-  await admin.end();
-  rmSync(scratchDir, { recursive: true, force: true });
+  await admin.end().catch((err) => cleanupErrors.push(err));
+  try {
+    rmSync(scratchDir, { recursive: true, force: true });
+  } catch (err) {
+    cleanupErrors.push(err);
+  }
+  if (cleanupErrors.length > 0) throw cleanupErrors[0];
 });
 
 suite(
@@ -176,6 +214,43 @@ suite(
       sourceCommit: "commit-v1",
       sourceDirty: false,
     });
+
+    // Output safety, CRLF line-ending normalization, sibling release metadata isolation, and missing provenance check
+    expect(() =>
+      compileSchema({
+        schemaPath: v1SchemaDir,
+        outDir: v1SchemaDir,
+        packageVersion: "0.1.0-alpha.1",
+      }),
+    ).toThrow(/Refusing to overwrite non-empty directory/);
+    const crlfSchemaDir = path.join(scratchDir, "schema-crlf");
+    mkdirSync(crlfSchemaDir, { recursive: true });
+    writeFileSync(path.join(crlfSchemaDir, "app.cue"), sharedCueSchema().replace(/\n/gu, "\r\n"));
+    const siblingDirRoot = path.join(scratchDir, "shared-parent");
+    const siblingCrmCompiled = compileSchema({
+      schemaPath: crlfSchemaDir,
+      outDir: path.join(siblingDirRoot, "crm"),
+      packageVersion: "0.1.0-alpha.1",
+      sourceCommit: "commit-sibling-crm",
+      sourceDirty: false,
+    });
+    expect(siblingCrmCompiled.buildHash).toBe(crmCompiledV1.buildHash);
+    const siblingNoCommitOut = path.join(siblingDirRoot, "support");
+    compileSchema({
+      schemaPath: v1SchemaDir,
+      outDir: siblingNoCommitOut,
+      packageVersion: "0.1.0-alpha.1",
+    });
+    expect(
+      JSON.parse(readFileSync(`${siblingCrmCompiled.directory}.build.json`, "utf8")).sourceCommit,
+    ).toBe("commit-sibling-crm");
+    await expect(
+      migrate({
+        databaseUrl: ownerConnectionString,
+        releaseDirectory: siblingNoCommitOut,
+        restorePoints,
+      }),
+    ).rejects.toThrow(/Build provenance is missing/);
     // Differently-named schema directories (schema-v1 vs alt-cue-dir) still produce identical portable buildHash & releaseHash
     const altSchemaDir = path.join(scratchDir, "alt-cue-dir");
     mkdirSync(altSchemaDir, { recursive: true });
@@ -634,10 +709,20 @@ suite(
         }),
       );
       await expect(
-        spoofedCrmOps.companyFinancials!.list({ asOf, select: finSelect }),
+        spoofedCrmOps.company!.list({ asOf, select: companySelect }),
       ).rejects.toMatchObject({
         envelope: { code: "authorization_denied" },
       });
+
+      // Seed a fenced inactive membership BEFORE v2's restore point (RP2) so undo() exercises fenced replay!
+      const fencedSignup = await crmAuth.auth.api.signUpEmail({
+        body: { email: "fenced@crm.test", password: "Password1234!", name: "Fenced Member" },
+      });
+      await ownerPool.query(
+        `update public.kernel_actor_membership set active = false, fence_generation = 1
+          where principal_name = $1::name and actor_id = $2`,
+        [crmRole, fencedSignup.user.id],
+      );
 
       // 5. Additive shared-schema evolution (CRM deploys v2 adding CRM-only optional linkedin_url on company while Company Data stays on v1 build!)
       const v2SchemaDir = path.join(scratchDir, "schema-v2");
@@ -685,6 +770,57 @@ suite(
         /Refusing to archive existing schema elements \(company\.linkedin_url\) without --allow-retire/,
       );
 
+      // Explicit `lifecycle: "retired"` on an existing field is ALSO refused without --allow-retire
+      const explicitRetireSchemaDir = path.join(scratchDir, "schema-explicit-retire");
+      mkdirSync(explicitRetireSchemaDir, { recursive: true });
+      writeFileSync(
+        path.join(explicitRetireSchemaDir, "app.cue"),
+        sharedCueSchema(
+          ',\n        {id: "linkedin_url", label: "LinkedIn URL", type: "text", lifecycle: "retired"}',
+        ),
+      );
+      const explicitRetireOut = path.join(scratchDir, "explicit-retire", "release");
+      compileSchema({
+        schemaPath: explicitRetireSchemaDir,
+        outDir: explicitRetireOut,
+        packageVersion: "0.1.0-alpha.1",
+        sourceCommit: "commit-retire",
+        sourceDirty: false,
+      });
+      await expect(
+        migrate({
+          databaseUrl: ownerConnectionString,
+          releaseDirectory: explicitRetireOut,
+          restorePoints,
+          sourceCommit: "commit-retire",
+          sourceDirty: false,
+          runtimeRole: crmRole,
+          authRole: crmRole,
+          authSchema: "auth_crm",
+          kernelRole: "crm_user",
+        }),
+      ).rejects.toThrow(
+        /Refusing to archive existing schema elements \(company\.linkedin_url\) without --allow-retire/,
+      );
+
+      // Exact idempotency-key replay of a v1 write AFTER v2 migration returns the original v1 receipt!
+      const replayedV1Receipt = await cdOps.apply({
+        effectiveStart: asOf,
+        idempotencyKey: "cd-update-acme-and-create-fin",
+        writes: [
+          cdOps.company!.writes.update(acmeId, { domain: "acme.io" }),
+          cdOps.companyFinancials!.writes.create(
+            {
+              company: { type: "record_id", value: acmeId },
+              arrUsd: "12500000",
+              notes: "Audited Q3",
+            },
+            { id: finId },
+          ),
+        ],
+      });
+      expect(replayedV1Receipt.id).toBeTruthy();
+
       // CRM on v2 populates the CRM-only optional field linkedin_url on shared company!
       const v2Def = JSON.parse(
         readFileSync(path.join(crmV2Out, "operation-manifest.json"), "utf8"),
@@ -709,33 +845,58 @@ suite(
           { linkedinUrl: "https://linkedin.com/company/acme" },
           { effectiveStart: asOf, idempotencyKey: "crm-v2-set-linkedin" },
         );
+
+        // Company Data (STILL on v1 definition & runtime!) continues reading (both selected AND unselected full-record list()/get()!)
+        // and writing seamlessly even though linkedin_url is NOT granted to company_data_user!
+        expect(await cdOps.company!.list({ asOf, select: companySelect })).toMatchObject([
+          { id: acmeId, name: "Acme Corp", domain: "acme.io" },
+        ]);
+        const cdFullCompanies = await cdOps.company!.list({ asOf });
+        expect(cdFullCompanies).toHaveLength(1);
+        expect(cdFullCompanies[0]).toMatchObject({
+          id: acmeId,
+          name: "Acme Corp",
+          domain: "acme.io",
+        });
+        expect(cdFullCompanies[0]).not.toHaveProperty("linkedinUrl");
+        expect(
+          await crmOpsV2.company!.list({
+            asOf,
+            select: ["id", "domain", "linkedinUrl"],
+          }),
+        ).toEqual([
+          {
+            id: acmeId,
+            domain: "acme.io",
+            linkedinUrl: "https://linkedin.com/company/acme",
+          },
+        ]);
+        // Branded full ModelRecord from unselected additive retry works directly as an update target with $version precondition,
+        // and preserves the v2-only linkedinUrl value untouched!
+        await cdOps.company!.update(
+          cdFullCompanies[0]!,
+          { domain: "acme.global" },
+          {
+            effectiveStart: asOf,
+            idempotencyKey: "cd-v1-full-record-update-during-v2",
+            ifVersion: String((cdFullCompanies[0] as { $version?: unknown }).$version),
+          },
+        );
+        expect(
+          await crmOpsV2.company!.list({
+            asOf,
+            select: ["id", "domain", "linkedinUrl"],
+          }),
+        ).toEqual([
+          {
+            id: acmeId,
+            domain: "acme.global",
+            linkedinUrl: "https://linkedin.com/company/acme",
+          },
+        ]);
       } finally {
         await crmRuntimeV2.close();
       }
-
-      // Company Data (STILL on v1 definition & runtime!) continues reading (both selected AND unselected full-record list()/get()!)
-      // and writing seamlessly even though linkedin_url is NOT granted to company_data_user!
-      expect(await cdOps.company!.list({ asOf, select: companySelect })).toMatchObject([
-        { id: acmeId, name: "Acme Corp", domain: "acme.io" },
-      ]);
-      const cdFullCompanies = await cdOps.company!.list({ asOf });
-      expect(cdFullCompanies).toHaveLength(1);
-      expect(cdFullCompanies[0]).toMatchObject({
-        id: acmeId,
-        name: "Acme Corp",
-        domain: "acme.io",
-      });
-      expect(cdFullCompanies[0]).not.toHaveProperty("linkedinUrl");
-      // Branded full ModelRecord from unselected additive retry works directly as an update target with $version precondition!
-      await cdOps.company!.update(
-        cdFullCompanies[0]!,
-        { domain: "acme.global" },
-        {
-          effectiveStart: asOf,
-          idempotencyKey: "cd-v1-full-record-update-during-v2",
-          ifVersion: String((cdFullCompanies[0] as { $version?: unknown }).$version),
-        },
-      );
       expect(
         await cdOps.company!.get({ key: { type: "record_id", value: acmeId }, asOf }),
       ).toMatchObject({
@@ -757,9 +918,16 @@ suite(
       const { Client: PgClient } = await import("pg");
       const muxBackendA = new PgClient({ connectionString: crmDatabaseUrl });
       const muxBackendB = new PgClient({ connectionString: crmDatabaseUrl });
-      await muxBackendA.connect();
-      await muxBackendB.connect();
+      let muxConnectedA = false;
+      let muxConnectedB = false;
       try {
+        await muxBackendA.connect();
+        muxConnectedA = true;
+        await muxBackendB.connect();
+        muxConnectedB = true;
+        const baselineSearchPath = (
+          await muxBackendA.query<{ search_path: string }>("show search_path")
+        ).rows[0]?.search_path;
         let muxIdx = 0;
         let muxPinned: InstanceType<typeof PgClient> | undefined;
         const muxRawClient = {
@@ -771,11 +939,15 @@ suite(
             }
             if (
               /^(?:commit|end|rollback)\b/iu.test(trimmed) &&
-              !/^rollback\s+to\b/iu.test(trimmed)
+              !/^rollback(?:\s+(?:work|transaction))?\s+to\b/iu.test(trimmed)
             ) {
               const target = muxPinned ?? muxBackendA;
               muxPinned = undefined;
               const res = await target.query(sql, values);
+              expect(
+                (await target.query<{ search_path: string }>("show search_path")).rows[0]
+                  ?.search_path,
+              ).toBe(baselineSearchPath);
               await target.query("reset search_path");
               return res;
             }
@@ -835,12 +1007,113 @@ suite(
           ).toBe(true);
         }
       } finally {
-        await muxBackendA.end();
-        await muxBackendB.end();
+        const muxErrs: unknown[] = [];
+        if (muxConnectedA) await muxBackendA.end().catch((e) => muxErrs.push(e));
+        if (muxConnectedB) await muxBackendB.end().catch((e) => muxErrs.push(e));
+        if (muxErrs.length > 0) throw muxErrs[0];
       }
 
-      // Bind a third app (auth_ops) AFTER RP2 was captured so undo() also proves post-restore-point app binding survives!
+      // Bind a third app (auth_ops) AFTER RP2 was captured, and rotate its login with --rebind-runtime-login!
+      const opsInitialRole = `${database}_ops_init`;
       const opsRole = `${database}_ops_app`;
+      await migrate({
+        databaseUrl: ownerConnectionString,
+        releaseDirectory: crmV2Out,
+        restorePoints,
+        sourceCommit: "commit-v2",
+        sourceDirty: false,
+        runtimeRole: opsInitialRole,
+        authRole: opsInitialRole,
+        authSchema: "auth_ops",
+        kernelRole: "company_data_user",
+        runtimeLogins: [{ role: opsInitialRole, password: rolePassword }],
+      });
+      // Cross-app kernelRole hijack is STILL refused even with rebindRuntimeLogin: true (both when changing runtimeRole AND when rotating authRole only)!
+      await expect(
+        migrate({
+          databaseUrl: ownerConnectionString,
+          releaseDirectory: crmV2Out,
+          restorePoints,
+          sourceCommit: "commit-v2",
+          sourceDirty: false,
+          runtimeRole: opsRole,
+          authRole: opsRole,
+          authSchema: "auth_ops",
+          kernelRole: "crm_user",
+          rebindRuntimeLogin: true,
+          runtimeLogins: [{ role: opsRole, password: rolePassword }],
+        }),
+      ).rejects.toThrow(/Auth schema 'auth_ops' is already bound to runtime login/);
+      await expect(
+        migrate({
+          databaseUrl: ownerConnectionString,
+          releaseDirectory: crmV2Out,
+          restorePoints,
+          sourceCommit: "commit-v2",
+          sourceDirty: false,
+          authRole: opsRole,
+          authSchema: "auth_ops",
+          kernelRole: "crm_user",
+          rebindRuntimeLogin: true,
+          runtimeLogins: [{ role: opsRole, password: rolePassword }],
+        }),
+      ).rejects.toThrow(/Auth schema 'auth_ops' already grants Auth access to login/);
+      // Group-inherited Auth grant on auth_ops."user" blocks rotation until the group grant is revoked,
+      // while explicit ACLs to elevated cluster observer roles never false-positive!
+      await ownerPool.query(`grant select on auth_ops."user" to "${database}_observer"`);
+      const opsGroupRole = `${database}_ops_grp`;
+      await admin.query(`create role "${opsGroupRole}" nologin`);
+      await ownerPool.query(`grant select on auth_ops."user" to "${opsGroupRole}"`);
+      await admin.query(`grant "${opsGroupRole}" to "${opsInitialRole}"`);
+      await expect(
+        migrate({
+          databaseUrl: ownerConnectionString,
+          releaseDirectory: crmV2Out,
+          restorePoints,
+          sourceCommit: "commit-v2",
+          sourceDirty: false,
+          runtimeRole: opsRole,
+          authRole: opsRole,
+          authSchema: "auth_ops",
+          kernelRole: "company_data_user",
+          rebindRuntimeLogin: true,
+          runtimeLogins: [{ role: opsRole, password: rolePassword }],
+        }),
+      ).rejects.toThrow(
+        /still grants inherited Auth access to login .* via role membership\. Revoke that group grant before rotating logins\./,
+      );
+      await ownerPool.query(`revoke select on auth_ops."user" from "${opsGroupRole}"`);
+
+      // Seed a fenced-revoked member + fenced actor_access on opsInitialRole BEFORE rotating logins:
+      // --rebind-runtime-login must carry fenced state forward to opsRole and revoke runtime capability from opsInitialRole!
+      await ownerPool.query(`
+        insert into auth_ops."user" (id, name, email, "emailVerified")
+          values ('ops-fenced', 'Ops Fenced', 'ops-fenced@ops.test', true);
+        insert into auth_ops.organization (id, name, slug, "createdAt")
+          values ('sunlight', 'Sunlight Ops', 'sunlight', now())
+          on conflict (id) do nothing;
+        insert into auth_ops.member (id, "organizationId", "userId", role, "createdAt")
+          values ('ops-fenced-m', 'sunlight', 'ops-fenced', 'member', now());
+      `);
+      await ownerPool.query(
+        `update public.kernel_actor_membership set active = false, fence_generation = 2
+          where principal_name = $1::name and actor_id = 'ops-fenced'`,
+        [opsInitialRole],
+      );
+      await ownerPool.query(
+        `insert into public.kernel_actor_access
+           (principal_name, app_id, customer_id, actor_id, active, actor_kind, fence_generation)
+         values ($1::name, 'sunlight', 'sunlight', 'ops-fenced', false, 'human', 2)`,
+        [opsInitialRole],
+      );
+      await ownerPool.query(
+        `insert into public.kernel_actor_membership
+           (principal_name, app_id, customer_id, actor_id, role, actor_kind, active, fence_generation)
+         values ($1::name, 'sunlight', 'sunlight', 'ops-sync-worker', 'company_data_user', 'service', true, 0)`,
+        [opsInitialRole],
+      );
+
+      // Same-app credential rotation succeeds with rebindRuntimeLogin: true, revokes the old login's Auth + runtime access, and preserves fenced revocations!
       await migrate({
         databaseUrl: ownerConnectionString,
         releaseDirectory: crmV2Out,
@@ -851,8 +1124,49 @@ suite(
         authRole: opsRole,
         authSchema: "auth_ops",
         kernelRole: "company_data_user",
+        rebindRuntimeLogin: true,
         runtimeLogins: [{ role: opsRole, password: rolePassword }],
       });
+      expect(
+        (
+          await ownerPool.query<{ active: boolean; fence_generation: string }>(
+            "select active, fence_generation::text from public.kernel_actor_membership where principal_name = $1::name and actor_id = 'ops-fenced'",
+            [opsRole],
+          )
+        ).rows,
+      ).toEqual([{ active: false, fence_generation: "2" }]);
+      expect(
+        (
+          await ownerPool.query<{ active: boolean; fence_generation: string }>(
+            "select active, fence_generation::text from public.kernel_actor_access where principal_name = $1::name and actor_id = 'ops-fenced'",
+            [opsRole],
+          )
+        ).rows,
+      ).toEqual([{ active: false, fence_generation: "2" }]);
+      expect(
+        (
+          await ownerPool.query<{ active: boolean; actor_kind: string; fence_generation: string }>(
+            "select active, actor_kind, fence_generation::text from public.kernel_actor_membership where principal_name = $1::name and actor_id = 'ops-sync-worker'",
+            [opsRole],
+          )
+        ).rows,
+      ).toEqual([{ active: true, actor_kind: "service", fence_generation: "0" }]);
+      expect(
+        (
+          await ownerPool.query<{ active: boolean }>(
+            "select active from public.kernel_actor_membership where principal_name = $1::name and actor_id = 'ops-sync-worker'",
+            [opsInitialRole],
+          )
+        ).rows,
+      ).toEqual([{ active: false }]);
+      expect(
+        (
+          await ownerPool.query<{ has_cap: boolean }>(
+            "select pg_has_role($1, kernel_installer_capability_role('runtime'), 'MEMBER') as has_cap",
+            [opsInitialRole],
+          )
+        ).rows[0]?.has_cap,
+      ).toBe(false);
       const opsDatabaseUrl = (() => {
         const u = new URL(ownerConnectionString);
         u.username = opsRole;
@@ -863,12 +1177,6 @@ suite(
         connectionString: opsDatabaseUrl,
         searchPath: "auth_ops",
         max: 1,
-      });
-      const opsRuntimeV1 = createGeneratedAppRuntime({
-        databaseUrl: opsDatabaseUrl,
-        releaseDirectory: cdV1Out,
-        appId: "sunlight",
-        customerId: "sunlight",
       });
       let erinId = "";
       try {
@@ -890,8 +1198,13 @@ suite(
         await opsAuthPool.end();
       }
 
+      // Verify live trigger updates on the pre-RP2 fenced inactive member do not fail, and undo() preserves its fenced inactive state!
+      await ownerPool.query('update auth_crm.member set "userId" = "userId" where "userId" = $1', [
+        fencedSignup.user.id,
+      ]);
+
       // 6. Post-restore-point sign-up (Carol) AND post-restore-point membership revocation (Alice) in auth_crm:
-      // migrate:undo preserves auth_crm, auth_company_data & auth_ops, activates Carol & Erin, and keeps revoked Alice inactive!
+      // migrate:undo preserves auth_crm, auth_company_data & auth_ops, activates Carol & Erin, and keeps revoked Alice & fenced member inactive!
       const carolSignup = await crmAuth.auth.api.signUpEmail({
         body: { email: "carol@crm.test", password: "Password1234!", name: "Carol After Backup" },
         returnHeaders: true,
@@ -899,15 +1212,53 @@ suite(
       const carolId = carolSignup.response.user.id;
       await crmAuthPool.query('delete from "member" where "userId" = $1', [aliceId]);
 
-      let undone: Awaited<ReturnType<typeof undo>>;
-      try {
-        undone = await undo({
-          databaseUrl: ownerConnectionString,
-          releaseDirectory: crmV2Out,
-          restorePoints,
-        });
-        expect(undone.sourceCommit).toBe("commit-v1");
+      const undone = await undo({
+        databaseUrl: ownerConnectionString,
+        releaseDirectory: crmV2Out,
+        restorePoints,
+      });
+      expect(undone.sourceCommit).toBe("commit-v1");
+      expect(
+        (
+          await ownerPool.query<{ active: boolean; fence_generation: string }>(
+            "select active, fence_generation::text from public.kernel_actor_membership where principal_name = $1::name and actor_id = $2",
+            [crmRole, fencedSignup.user.id],
+          )
+        ).rows,
+      ).toEqual([{ active: false, fence_generation: "1" }]);
+      // Post-RP2 fenced revocation ('ops-fenced' at generation 2), fenced actor_access, and service membership on opsRole also survive undo()!
+      expect(
+        (
+          await ownerPool.query<{ active: boolean; fence_generation: string }>(
+            "select active, fence_generation::text from public.kernel_actor_membership where principal_name = $1::name and actor_id = 'ops-fenced'",
+            [opsRole],
+          )
+        ).rows,
+      ).toEqual([{ active: false, fence_generation: "2" }]);
+      expect(
+        (
+          await ownerPool.query<{ active: boolean; fence_generation: string }>(
+            "select active, fence_generation::text from public.kernel_actor_access where principal_name = $1::name and actor_id = 'ops-fenced'",
+            [opsRole],
+          )
+        ).rows,
+      ).toEqual([{ active: false, fence_generation: "2" }]);
+      expect(
+        (
+          await ownerPool.query<{ active: boolean; actor_kind: string; fence_generation: string }>(
+            "select active, actor_kind, fence_generation::text from public.kernel_actor_membership where principal_name = $1::name and actor_id = 'ops-sync-worker'",
+            [opsRole],
+          )
+        ).rows,
+      ).toEqual([{ active: true, actor_kind: "service", fence_generation: "0" }]);
 
+      const opsRuntimeV1 = createGeneratedAppRuntime({
+        databaseUrl: opsDatabaseUrl,
+        releaseDirectory: cdV1Out,
+        appId: "sunlight",
+        customerId: "sunlight",
+      });
+      try {
         // Post-RP2 third app (auth_ops / opsRole) also survives undo() and reads company cleanly!
         const erinOps = createDataClient(
           v1Def,

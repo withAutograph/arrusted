@@ -5,19 +5,28 @@
 Applications compile their current `schema/*.cue` files with
 `compileSchema()` (`@autograph/generated-app-runtime/compile-schema`) or
 `bun app/scripts/compile.ts [--schema <path>] [--out <dir>] [--catalog <file>]`
-to emit the 12 verified release artifacts under `.generated/release`. These are
-git-ignored build outputs, not committed release history. Compilation needs no
-database. The deterministic `build-<buildHash>` schema version hashes the
-package version, target adapter options, normalized CUE manifest/extras/client
-metadata, emitted SQL runtime artifacts, and Better Auth SQL checksums, so two
-apps compiling the same shared CUE schema in different directories or OSes
-produce identical build hashes while any CUE or runtime SQL upgrade creates a
-new migration candidate. `.generated/build.json` records `sourceCommit`,
-`sourceDirty`, `buildHash`, `packageVersion`, and `releaseHash` without copying
-host-specific compiler binaries into `.generated/`. Source archives without
-`.git` must provide `SOURCE_COMMIT`; set `SOURCE_DIRTY=true` if that archive
-includes uncommitted changes (otherwise it defaults to `false`). Git checkouts
-record their actual dirty state.
+to emit the 12 verified release artifacts under `.generated/release` (rebuilds
+only overwrite empty directories or recognized compiler-owned releases). When
+calling `compileSchema({ schemaPath, outDir, catalogPath })` programmatically
+for `#SelectedAppManifest` schemas, pass `catalogPath` explicitly to load both
+`app-selection.cue` and the domain catalog (`app/scripts/compile.ts` supplies the
+repository catalog automatically when present). These are git-ignored build
+outputs, not committed release history. Compilation needs no database. The
+deterministic `build-<buildHash>` schema version snapshots all compiler inputs
+once and hashes the package version, target adapter options, normalized CUE
+manifest/extras/client metadata, probe data-plane manifest and TypeScript
+bindings, emitted SQL runtime artifacts, and LF-normalized text checksums of CUE
+and Better Auth SQL inputs, so two checkouts (including LF vs. CRLF or different
+directories/OSes) produce identical `build-<buildHash>` versions while any CUE,
+generated-binding, or runtime SQL upgrade creates a new migration candidate
+(`release-manifest.json` still records exact local file checksums for local
+staleness checks). `.generated/build.json` (or `<outDir>.build.json` when
+compiling sibling releases into non-`release` directories) records
+`sourceCommit`, `sourceDirty`, `buildHash`, `packageVersion`, and `releaseHash`
+atomically without copying host-specific compiler binaries. Source archives
+without `.git` must provide `SOURCE_COMMIT`; set `SOURCE_DIRTY=true` if that
+archive includes uncommitted changes (otherwise it defaults to `false`). Git
+checkouts record their actual dirty state.
 
 At migration time (`app/scripts/migrate.ts`), `ARRUSTED_SCHEMA_COMPILER_BIN` (or
 `compilerBinary`, falling back to the workspace `schema-compiler`) computes the
@@ -44,18 +53,23 @@ COMMIT`) rather than caching session-level `SET` state, so `AUTH_SCHEMA`
   `authRole`, binds `autograph_member_kernel` on `<authSchema>.member` to sync
   human memberships for `(runtimeRole, app_id, customer_id, kernelRole)`, and
   enforces bidirectional one-to-one exclusivity between each `AUTH_SCHEMA`
-  (`public` or `auth_*`) and its bound `runtimeRole` / `authRole` logins.
+  (`public` or `auth_*`) and its bound `runtimeRole` / `authRole` logins
+  (including group-inherited Auth privileges; pass `--rebind-runtime-login` /
+  `rebindRuntimeLogin: true` to rotate credentials for the same app and
+  `APP_KERNEL_ROLE`).
 - Sibling apps running an installed prior revision (verified through
-  `kernel_read_runtime_release_observability`) continue reading and writing
-  across strictly additive schema transitions; unselected full-record reads on
-  prior builds project only that build's declared fields and metadata so newly
-  added fields private to another app's role do not trigger unauthorized-field
-  refusals.
+  `kernel_read_runtime_release_observability`) continue reading, writing
+  (including exact idempotency-key replays across activation), and opening work
+  sessions across strictly additive schema transitions; unselected full-record
+  reads on prior builds project only that build's declared fields and metadata so
+  newly added fields private to another app's role do not trigger
+  unauthorized-field refusals.
 - Schema transitions are additive by default: `migrate` refuses any candidate
-  that retires (archives) existing models, fields, enum options, custom fields,
-  or change types from the live database unless `--allow-retire`
-  (`allowRetire: true`) is explicitly passed, preventing stale checkouts or
-  older sibling builds from accidentally retiring live schema elements.
+  that removes or explicitly retires (`lifecycle: "retired"`) existing models,
+  fields, many-relations, enum options, custom fields, or change types from the
+  live database unless `--allow-retire` (`allowRetire: true`) is explicitly
+  passed, preventing stale checkouts or older sibling builds from accidentally
+  retiring live schema elements.
 - `migrate:undo` restores `public` from the pre-migration restore point while
   preserving all marked `auth_*` schemas and re-syncing post-backup sign-ups and
   membership revocations into `public.kernel_actor_membership`.

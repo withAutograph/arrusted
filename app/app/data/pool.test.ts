@@ -28,11 +28,11 @@ async function flakyProxy(drops: number) {
   await new Promise<void>((done) => server!.listen(0, "127.0.0.1", done));
   const port = (server!.address() as { port: number }).port;
   return {
-    url: (password = decodeURIComponent(target.password)) => {
+    url: (password?: string) => {
       const next = new URL(target.toString());
       next.hostname = "127.0.0.1";
       next.port = String(port);
-      if (password || target.password) next.password = password;
+      if (password !== undefined) next.password = password;
       return next.toString();
     },
     seen: () => seen,
@@ -46,8 +46,11 @@ pgSuite(
     const pool = new ResilientPool({ connectionString: proxy.url(), max: 1 });
     try {
       const client = await pool.connect();
-      expect((await client.query("select 1 as ok")).rows[0].ok).toBe(1);
-      client.release();
+      try {
+        expect((await client.query("select 1 as ok")).rows[0].ok).toBe(1);
+      } finally {
+        client.release();
+      }
       expect(proxy.seen()).toBe(3);
     } finally {
       await pool.end();
@@ -122,9 +125,13 @@ pgSuite(
       // resetting session search_path whenever a transaction ends.
       const backendA = new Client({ connectionString: databaseUrl });
       const backendB = new Client({ connectionString: databaseUrl });
-      await backendA.connect();
-      await backendB.connect();
+      let connectedA = false;
+      let connectedB = false;
       try {
+        await backendA.connect();
+        connectedA = true;
+        await backendB.connect();
+        connectedB = true;
         let rr = 0;
         let pinned: InstanceType<typeof Client> | undefined;
         let resets = 0;
@@ -236,8 +243,116 @@ pgSuite(
             );
             expect(insideTx.rows[0]?.current_schema).toBe(testSchema);
             await checkedOut.query("commit");
+            // Savepoint rollback (`ROLLBACK WORK TO sp1`) keeps transaction open
+            await checkedOut.query("begin");
+            await checkedOut.query('insert into "session_probe" ("id", "label") values ($1, $2)', [
+              "row-sp-keep",
+              "before-savepoint",
+            ]);
+            await checkedOut.query("savepoint sp1");
+            await checkedOut.query('insert into "session_probe" ("id", "label") values ($1, $2)', [
+              "row-sp-drop",
+              "inside-savepoint",
+            ]);
+            await checkedOut.query("rollback work to sp1");
+            await checkedOut.query("rollback");
+            expect(
+              (
+                await checkedOut.query('select 1 from "session_probe" where "id" = $1', [
+                  "row-sp-keep",
+                ])
+              ).rowCount,
+            ).toBe(0);
+
+            // Chained commit (`COMMIT AND CHAIN`) keeps the chained transaction open with searchPath reapplied
+            await checkedOut.query("begin");
+            await checkedOut.query('insert into "session_probe" ("id", "label") values ($1, $2)', [
+              "row-chain-1",
+              "committed-chain",
+            ]);
+            await checkedOut.query("commit and chain");
+            expect(
+              (
+                await checkedOut.query<{ current_schema: string }>(
+                  "select current_schema() as current_schema",
+                )
+              ).rows[0]?.current_schema,
+            ).toBe(testSchema);
+            await checkedOut.query('insert into "session_probe" ("id", "label") values ($1, $2)', [
+              "row-chain-2",
+              "rolled-back-chain",
+            ]);
+            await checkedOut.query("rollback");
+            expect(
+              (
+                await checkedOut.query('select 1 from "session_probe" where "id" = $1', [
+                  "row-chain-1",
+                ])
+              ).rowCount,
+            ).toBe(1);
+            expect(
+              (
+                await checkedOut.query('select 1 from "session_probe" where "id" = $1', [
+                  "row-chain-2",
+                ])
+              ).rowCount,
+            ).toBe(0);
+
+            // Multi-statement batch containing transaction control is rejected before sending SQL
+            await expect(
+              checkedOut.query("begin; select current_schema(); commit"),
+            ).rejects.toThrow(/Multi-statement batches containing transaction control/);
           } finally {
             checkedOut.release();
+          }
+
+          // Releasing with `false` during an open transaction still forces discard so uncommitted writes cannot leak
+          const dirtyClient = await scopedPool.connect();
+          await dirtyClient.query("begin");
+          await dirtyClient.query('insert into "session_probe" ("id", "label") values ($1, $2)', [
+            "row-dirty-release-false",
+            "must-not-commit",
+          ]);
+          dirtyClient.release(false);
+          expect(
+            (
+              await scopedPool.query('select 1 from "session_probe" where "id" = $1', [
+                "row-dirty-release-false",
+              ])
+            ).rowCount,
+          ).toBe(0);
+
+          // Releasing while queued work is unsettled discards the client and prevents stale state leaking
+          const queuedClient = await scopedPool.connect();
+          const unsettled = queuedClient.query("select pg_sleep(0.05)");
+          queuedClient.release(false);
+          await unsettled;
+          expect(
+            (
+              await scopedPool.query<{ current_schema: string }>(
+                "select current_schema() as current_schema",
+              )
+            ).rows[0]?.current_schema,
+          ).toBe(testSchema);
+
+          // A stale client reference from a prior checkout remains permanently released even when the underlying rawClient is re-checked-out!
+          const firstCheckout = await scopedPool.connect();
+          firstCheckout.release();
+          const secondCheckout = await scopedPool.connect();
+          try {
+            await expect(firstCheckout.query("select 1")).rejects.toThrow(
+              /after client has been released/,
+            );
+            firstCheckout.release(); // Must be a no-op and never release secondCheckout!
+            expect(
+              (
+                await secondCheckout.query<{ current_schema: string }>(
+                  "select current_schema() as current_schema",
+                )
+              ).rows[0]?.current_schema,
+            ).toBe(testSchema);
+          } finally {
+            secondCheckout.release();
           }
 
           // Inspect raw underlying pg.Pool connection: session-level search_path was NEVER mutated to testSchema!
@@ -252,8 +367,10 @@ pgSuite(
           await scopedPool.end();
         }
       } finally {
-        await backendA.end();
-        await backendB.end();
+        const errs: unknown[] = [];
+        if (connectedA) await backendA.end().catch((e) => errs.push(e));
+        if (connectedB) await backendB.end().catch((e) => errs.push(e));
+        if (errs.length > 0) throw errs[0];
       }
     } finally {
       await setupClient.query(`drop schema if exists "${testSchema}" cascade`);
