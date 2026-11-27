@@ -181,13 +181,31 @@ const authTables = [
 const authNames = authTables.map(literal).join(",");
 const preserveAuth = `
 CREATE SCHEMA autograph_undo_auth;
+CREATE OR REPLACE FUNCTION pg_temp.autograph_decode_tgargs(raw bytea)
+RETURNS text[] LANGUAGE plpgsql IMMUTABLE AS $tgargs$
+DECLARE
+  rest bytea := coalesce(raw, ''::bytea);
+  pos integer;
+  decoded text[] := array[]::text[];
+BEGIN
+  LOOP
+    pos := position(decode('00', 'hex') in rest);
+    EXIT WHEN pos = 0;
+    decoded := array_append(
+      decoded,
+      convert_from(substring(rest from 1 for pos - 1), current_setting('server_encoding'))
+    );
+    rest := substring(rest from pos + 1);
+  END LOOP;
+  RETURN decoded;
+END $tgargs$;
 CREATE TEMP TABLE autograph_undo_trigger AS
   SELECT ns_rel.nspname AS member_schema,
-    (string_to_array(encode(t.tgargs, 'escape'), chr(92) || '000'))[1] AS principal_name,
-    (string_to_array(encode(t.tgargs, 'escape'), chr(92) || '000'))[2] AS app_id,
-    (string_to_array(encode(t.tgargs, 'escape'), chr(92) || '000'))[3] AS customer_id,
+    (pg_temp.autograph_decode_tgargs(t.tgargs))[1] AS principal_name,
+    (pg_temp.autograph_decode_tgargs(t.tgargs))[2] AS app_id,
+    (pg_temp.autograph_decode_tgargs(t.tgargs))[3] AS customer_id,
     CASE WHEN t.tgnargs >= 4
-      THEN (string_to_array(encode(t.tgargs, 'escape'), chr(92) || '000'))[4]
+      THEN (pg_temp.autograph_decode_tgargs(t.tgargs))[4]
       ELSE 'member'
     END AS role_name,
     pg_get_triggerdef(t.oid) AS ddl, t.tgenabled AS enabled,

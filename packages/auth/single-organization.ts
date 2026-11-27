@@ -69,9 +69,6 @@ function bindPoolToAuthSchema(pool: Pool, authSchema: string | undefined): Pool 
         queryText,
         values,
       );
-    } catch (error) {
-      releaseErr ??= error instanceof Error ? error : true;
-      throw error;
     } finally {
       client.removeListener("error", onError);
       client.release(releaseErr);

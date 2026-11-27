@@ -213,9 +213,7 @@ function collectCueInputs(schemaPath: string): { files: string[]; primaryCue: st
 }
 
 function logicalCueKey(filePath: string): string {
-  const parent = path.basename(path.dirname(filePath));
-  const base = path.basename(filePath);
-  return parent === "schema" ? `schema/${base}` : base;
+  return path.basename(filePath);
 }
 
 function buildCueToSqlSourceMap(input: {
@@ -387,6 +385,8 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
     const buildHash = sha256Hex(
       JSON.stringify({
         packageVersion,
+        nextApp,
+        runtimePkg,
         schema: versionlessSchema,
         extras: probeArtifact.extras ?? null,
         client: probeArtifact.client ?? null,
@@ -536,6 +536,8 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
       throw error;
     }
 
+    // Remove any legacy adjacent host binary left by pre-portable builds so migrate never sees stale artifacts.
+    rmSync(path.join(path.dirname(outDir), "schema-compiler"), { force: true });
     writeJson(path.join(path.dirname(outDir), "build.json"), {
       sourceCommit: options.sourceCommit ?? "untracked",
       sourceDirty: options.sourceDirty ?? false,

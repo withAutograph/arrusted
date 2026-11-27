@@ -16,9 +16,7 @@ export function compileApp(
     predecessors?: readonly string[];
   } = {},
 ) {
-  const source = path.resolve(
-    options.source ?? (options.source === undefined ? path.dirname(sourceCue) : sourceCue),
-  );
+  const source = path.resolve(options.source ?? path.dirname(sourceCue));
   const output = path.resolve(options.outputDirectory ?? releaseDirectory);
   const hasGit = existsSync(path.join(repositoryRoot, ".git"));
   const explicitSourceCommit = process.env.SOURCE_COMMIT?.trim();

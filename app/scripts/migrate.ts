@@ -123,33 +123,68 @@ function normalizeKernelRole(
 function resolveMigrationCompiler(
   builtRelease: string,
   snapshot: string,
+  expectedSqlManifestChecksum: string | undefined,
   buildCompilerBinaryHash?: string,
   explicitCompilerBinary?: string,
 ): { executable: string; prefixArgs: string[]; cwd: string } {
-  const stagedAdjacent = path.join(builtRelease, "../schema-compiler");
-  if (existsSync(stagedAdjacent)) {
+  // Legacy/synthetic pinned builds explicitly declare compilerBinaryHash in build.json.
+  // Portable compileSchema() builds omit compilerBinaryHash and NEVER trust an unpinned ../schema-compiler file.
+  if (buildCompilerBinaryHash) {
+    const stagedAdjacent = path.join(builtRelease, "../schema-compiler");
+    if (!existsSync(stagedAdjacent)) {
+      throw new Error("The migration compiler differs from the build. Rebuild before migrating.");
+    }
     const compiler = path.join(snapshot, "schema-compiler");
     cpSync(stagedAdjacent, compiler);
-    if (buildCompilerBinaryHash && hash(readFileSync(compiler)) !== buildCompilerBinaryHash) {
+    if (hash(readFileSync(compiler)) !== buildCompilerBinaryHash) {
       throw new Error("The migration compiler differs from the build. Rebuild before migrating.");
     }
     return { executable: compiler, prefixArgs: [], cwd: root };
   }
-  if (buildCompilerBinaryHash) {
-    throw new Error("The migration compiler differs from the build. Rebuild before migrating.");
+  const explicit = explicitCompilerBinary ?? process.env.ARRUSTED_SCHEMA_COMPILER_BIN?.trim();
+  let resolved: { executable: string; prefixArgs: string[]; cwd: string };
+  if (explicit) {
+    const full = path.resolve(explicit);
+    if (!existsSync(full)) {
+      throw new Error(`Configured migration compiler does not exist: ${full}`);
+    }
+    resolved = { executable: full, prefixArgs: [], cwd: root };
+  } else {
+    const debugBin = path.join(root, "target/debug/schema-compiler");
+    resolved = existsSync(debugBin)
+      ? { executable: debugBin, prefixArgs: [], cwd: root }
+      : {
+          executable: "cargo",
+          prefixArgs: ["run", "--quiet", "-p", "schema-compiler", "--"],
+          cwd: root,
+        };
   }
-  const candidate =
-    explicitCompilerBinary ??
-    process.env.ARRUSTED_SCHEMA_COMPILER_BIN?.trim() ??
-    path.join(root, "target/debug/schema-compiler");
-  if (candidate && existsSync(candidate)) {
-    return { executable: path.resolve(candidate), prefixArgs: [], cwd: root };
+  // Portable cross-platform verification: prove the target host's schema-compiler emits the exact
+  // SQL manifest checksum recorded in release-manifest.json before planning any transition.
+  if (expectedSqlManifestChecksum) {
+    let emittedChecksum: string | undefined;
+    try {
+      const sqlManifestOut = execFileSync(
+        resolved.executable,
+        [
+          ...resolved.prefixArgs,
+          "--sql-manifest",
+          "--compiled-artifact",
+          path.join(snapshot, "release", "app-artifact.json"),
+        ],
+        { cwd: resolved.cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+      );
+      emittedChecksum = (JSON.parse(sqlManifestOut) as { checksum?: string }).checksum;
+    } catch (error) {
+      throw new Error("The migration compiler differs from the build. Rebuild before migrating.", {
+        cause: error,
+      });
+    }
+    if (emittedChecksum !== expectedSqlManifestChecksum) {
+      throw new Error("The migration compiler differs from the build. Rebuild before migrating.");
+    }
   }
-  return {
-    executable: "cargo",
-    prefixArgs: ["run", "--quiet", "-p", "schema-compiler", "--"],
-    cwd: root,
-  };
+  return resolved;
 }
 
 function connectionTarget(databaseUrl: string): { url: string; resource: DatabaseTarget } {
@@ -409,9 +444,13 @@ export async function migrate(
       compilerBinaryHash?: string;
       releaseHash: string;
     };
+    const rawReleaseManifest = JSON.parse(
+      readFileSync(path.join(release, "release-manifest.json"), "utf8"),
+    ) as { installer?: { expected_hash?: string } };
     const compiler = resolveMigrationCompiler(
       builtRelease,
       snapshot,
+      rawReleaseManifest.installer?.expected_hash,
       build.compilerBinaryHash,
       input.compilerBinary,
     );
@@ -573,7 +612,11 @@ async function bindRuntime(
             and c.relname = 'member'
             and not t.tgisinternal
             and ns_rel.nspname <> $1
-            and (string_to_array(encode(t.tgargs, 'escape'), chr(92) || '000'))[1] = $2
+            and position(decode('00', 'hex') in t.tgargs) > 1
+            and convert_from(
+                  substring(t.tgargs from 1 for position(decode('00', 'hex') in t.tgargs) - 1),
+                  current_setting('server_encoding')
+                ) = $2
           limit 1`,
         [authSchema, runtimeRole],
       )
@@ -583,21 +626,36 @@ async function bindRuntime(
         `Runtime login '${runtimeRole}' is already bound to auth schema '${triggerConflict.member_schema}'. Each app must use its own dedicated database login.`,
       );
     }
-    const schemaConflict = (
-      await client.query<{ nspname: string }>(
-        `select n.nspname
+    const schemaOrTableConflict = (
+      await client.query<{ conflict_schema: string }>(
+        `select n.nspname as conflict_schema
            from pg_namespace n
           where n.nspname <> $1
             and n.nspname ~ '^auth_[a-z0-9_]{1,57}$'
             and coalesce(obj_description(n.oid, 'pg_namespace'), '') ~ '^autograph:auth-schema:[0-9a-f]{64}$'
             and has_schema_privilege($2, n.oid, 'USAGE')
+         union all
+         select ns.nspname as conflict_schema
+           from pg_class c
+           join pg_namespace ns on ns.oid = c.relnamespace
+          where c.relname = 'user'
+            and c.relkind = 'r'
+            and ns.nspname <> $1
+            and (ns.nspname = 'public' or ns.nspname ~ '^auth_[a-z0-9_]{1,57}$')
+            and coalesce(obj_description(c.oid, 'pg_class'), '') ~ '^autograph:auth-schema:[0-9a-f]{64}$'
+            and (
+              has_table_privilege($2, c.oid, 'SELECT')
+              or has_table_privilege($2, c.oid, 'INSERT')
+              or has_table_privilege($2, c.oid, 'UPDATE')
+              or has_table_privilege($2, c.oid, 'DELETE')
+            )
           limit 1`,
         [authSchema, runtimeRole],
       )
     ).rows[0];
-    if (schemaConflict) {
+    if (schemaOrTableConflict) {
       throw new Error(
-        `Runtime login '${runtimeRole}' already has access to auth schema '${schemaConflict.nspname}'. Each app must use its own dedicated database login.`,
+        `Runtime login '${runtimeRole}' already has access to auth schema '${schemaOrTableConflict.conflict_schema}'. Each app must use its own dedicated database login.`,
       );
     }
   }

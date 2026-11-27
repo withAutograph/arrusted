@@ -176,8 +176,47 @@ suite(
       sourceCommit: "commit-v1",
       sourceDirty: false,
     });
+    // Differently-named schema directories (schema-v1 vs alt-cue-dir) still produce identical portable buildHash & releaseHash
+    const altSchemaDir = path.join(scratchDir, "alt-cue-dir");
+    mkdirSync(altSchemaDir, { recursive: true });
+    writeFileSync(path.join(altSchemaDir, "app.cue"), sharedCueSchema());
+    const altCompiled = compileSchema({
+      schemaPath: altSchemaDir,
+      outDir: path.join(scratchDir, "alt-v1", "release"),
+      packageVersion: "0.1.0-alpha.1",
+      sourceCommit: "commit-v1",
+      sourceDirty: false,
+    });
     expect(crmCompiledV1.buildHash).toBe(cdCompiledV1.buildHash);
+    expect(crmCompiledV1.buildHash).toBe(altCompiled.buildHash);
+    expect(crmCompiledV1.releaseHash).toBe(altCompiled.releaseHash);
     expect(crmCompiledV1.version).toBe(`build-${crmCompiledV1.buildHash}`);
+
+    // Leftover unpinned ../schema-compiler binary beside hashless build.json is ignored by migrate,
+    // while an explicit mismatched compilerBinary is rejected before touching PostgreSQL!
+    const staleAdjacentCompiler = path.join(path.dirname(crmV1Out), "schema-compiler");
+    writeFileSync(staleAdjacentCompiler, "#!/bin/sh\nexit 99\n", { mode: 0o755 });
+    const fakeMismatchCompiler = path.join(scratchDir, "fake-mismatch-compiler.sh");
+    writeFileSync(
+      fakeMismatchCompiler,
+      '#!/bin/sh\necho \'{"checksum":"sha256:0000000000000000000000000000000000000000000000000000000000000000"}\'\n',
+      { mode: 0o755 },
+    );
+    await expect(
+      migrate({
+        databaseUrl: ownerConnectionString,
+        releaseDirectory: crmV1Out,
+        restorePoints,
+        sourceCommit: "commit-v1",
+        sourceDirty: false,
+        runtimeRole: crmRole,
+        authRole: crmRole,
+        authSchema: "auth_crm",
+        kernelRole: "crm_user",
+        compilerBinary: fakeMismatchCompiler,
+        runtimeLogins: [{ role: crmRole, password: rolePassword }],
+      }),
+    ).rejects.toThrow(/migration compiler differs from the build/);
 
     // 0. Omitting kernelRole when CUE policy omits 'member' fails fast, and rehearse() succeeds with partial CUE read_fields
     await expect(
@@ -212,6 +251,46 @@ suite(
       authSchema: "auth_crm",
       kernelRole: "crm_user",
     });
+
+    // Also prove on rehearsal DB that a separate authRole bound to public."user" cannot be reused on an auth_* schema
+    const publicAuthRole = `${database}_pub_auth`;
+    const publicRuntimeRole = `${database}_pub_rt`;
+    await migrate({
+      databaseUrl: rehearsalOwnerUrl.toString(),
+      releaseDirectory: crmV1Out,
+      restorePoints: new PgDumpRestorePoints({
+        directory: path.join(scratchDir, "rehearsal-backups"),
+      }),
+      sourceCommit: "commit-v1",
+      sourceDirty: false,
+      runtimeRole: publicRuntimeRole,
+      authRole: publicAuthRole,
+      authSchema: "public",
+      kernelRole: "crm_user",
+      runtimeLogins: [
+        { role: publicRuntimeRole, password: rolePassword },
+        { role: publicAuthRole, password: rolePassword },
+      ],
+    });
+    await expect(
+      migrate({
+        databaseUrl: rehearsalOwnerUrl.toString(),
+        releaseDirectory: cdV1Out,
+        restorePoints: new PgDumpRestorePoints({
+          directory: path.join(scratchDir, "rehearsal-backups"),
+        }),
+        sourceCommit: "commit-v1",
+        sourceDirty: false,
+        runtimeRole: `${database}_reh_cd`,
+        authRole: publicAuthRole,
+        authSchema: "auth_company_data",
+        kernelRole: "company_data_user",
+        runtimeLogins: [
+          { role: `${database}_reh_cd`, password: rolePassword },
+          { role: publicAuthRole, password: rolePassword },
+        ],
+      }),
+    ).rejects.toThrow(/already has access to auth schema 'public'/);
 
     // 1. Migrate CRM app first (provisions crm_app login + auth_crm schema + crm_user trigger)
     const crmMigrateV1 = await migrate({
@@ -517,12 +596,14 @@ suite(
         { id: finId, arrUsd: "12500000", notes: "Audited Q4" },
       ]);
 
-      // 6. Post-restore-point sign-up in auth_crm + migrate:undo preserves auth_crm & auth_company_data and re-syncs Carol's kernel membership!
+      // 6. Post-restore-point sign-up (Carol) AND post-restore-point membership revocation (Alice) in auth_crm:
+      // migrate:undo preserves auth_crm & auth_company_data, activates Carol, and keeps revoked Alice inactive!
       const carolSignup = await crmAuth.auth.api.signUpEmail({
         body: { email: "carol@crm.test", password: "Password1234!", name: "Carol After Backup" },
         returnHeaders: true,
       });
       const carolId = carolSignup.response.user.id;
+      await crmAuthPool.query('delete from "member" where "userId" = $1', [aliceId]);
 
       const undone = await undo({
         databaseUrl: ownerConnectionString,
@@ -530,6 +611,11 @@ suite(
         restorePoints,
       });
       expect(undone.sourceCommit).toBe("commit-v1");
+
+      // Revoked Alice stays deactivated in kernel_actor_membership even though restorePoint 2 had Alice active!
+      await expect(crmOps.company!.list({ asOf, select: companySelect })).rejects.toMatchObject({
+        envelope: { code: "authorization_denied" },
+      });
 
       // Carol's login in auth_crm AND her kernel_actor_membership in public survive undo!
       const carolCookie = carolSignup.headers.get("set-cookie") ?? "";
