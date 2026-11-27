@@ -5,6 +5,7 @@ import { describe, expect, test } from "vite-plus/test";
 import type { DataDefinition } from "../../../generated-app-runtime/data";
 import { KernelFailure } from "../../../generated-app-runtime/postgres";
 import type { GeneratedAppRuntime } from "../../../generated-app-runtime/server";
+import { nextAppConfig } from "../src/next";
 import { createAppRoutes, gridSchema, toVisibleRecord } from "../src/routes";
 
 const sampleDefinition: DataDefinition = {
@@ -370,6 +371,14 @@ describe("createAppRoutes & gridSchema", () => {
         ],
         session: async () => ({ actorId: "actor-1", customerId: "sunlight" }),
       });
+      const missingIdSchemaRes = await missingIdGrantRoutes.schemaActiveGET(
+        new Request("http://localhost/api/schema/active"),
+      );
+      expect(missingIdSchemaRes.status).toBe(200);
+      const missingIdSchemaBody = (await missingIdSchemaRes.json()) as {
+        schema: { models: Array<{ id: string }> };
+      };
+      expect(missingIdSchemaBody.schema.models).toEqual([]);
       expect(
         (
           await missingIdGrantRoutes.recordsGET(
@@ -380,6 +389,138 @@ describe("createAppRoutes & gridSchema", () => {
     } finally {
       rmSync(emptyRelease, { recursive: true, force: true });
     }
+  });
+
+  test("excludes custom-storage fields, preserves unconditional row visibility, forwards schema_revision_id, keeps create UUIDs stable across upgrades, and sanitizes 500 errors", async () => {
+    const defWithCustom: DataDefinition = {
+      ...sampleDefinition,
+      models: [
+        {
+          ...sampleDefinition.models[0]!,
+          fields: [
+            ...sampleDefinition.models[0]!.fields,
+            {
+              id: "internal_notes",
+              name: "internalNotes",
+              label: "Internal Notes",
+              type: "text",
+              required: false,
+              readOnly: false,
+            },
+            {
+              id: "serial",
+              name: "serial",
+              label: "Serial",
+              type: "text",
+              storage: "custom",
+              required: false,
+              readOnly: false,
+            },
+          ],
+        },
+      ],
+    };
+
+    const mixedGrants = [
+      {
+        role: "crm_user",
+        model: "company",
+        operations: ["read"],
+        record: { kind: "all" },
+        read_fields: ["$id", "$version", "name", "serial"],
+      },
+      {
+        role: "crm_user",
+        model: "company",
+        operations: ["read"],
+        record: { kind: "actor_equals_field", field: "owner_id" },
+        read_fields: ["$id", "internal_notes"],
+      },
+    ] as const;
+
+    const schema = gridSchema(defWithCustom, {
+      role: "crm_user",
+      grants: mixedGrants,
+    });
+    expect(schema.models[0]?.fields.map((f) => f.id)).toEqual(["name"]);
+
+    const applyPayloads: Array<Record<string, unknown>> = [];
+    const makeRuntime = (failDb = false): GeneratedAppRuntime => ({
+      appId: "sunlight",
+      customerId: "sunlight",
+      operations: {} as GeneratedAppRuntime["operations"],
+      verifyRelease: () => {},
+      close: async () => {},
+      dataContext: ({ actorId, sourceKind }) => ({
+        scope: { appId: "sunlight", customerId: "sunlight" },
+        authorize: async () => {},
+        requestTransaction: async (run) => run(),
+        transaction: async (run) =>
+          run({
+            actorId,
+            sourceKind,
+            lockSchemaActivation: async () => {},
+            call: async (op, input) => {
+              if (failDb) throw new Error("FATAL: relation company_record secret details");
+              if (op === "kernel_apply_change_set") {
+                applyPayloads.push(input);
+                return {
+                  change_set_id: 1,
+                  mode: "mainline",
+                  status: "applied",
+                  replayed: false,
+                  applied_version_ids: [],
+                };
+              }
+              return [];
+            },
+          }),
+      }),
+    });
+
+    const routesV1 = createAppRoutes({
+      runtime: makeRuntime(),
+      definition: { ...defWithCustom, schemaVersion: "build-v1" },
+      role: "crm_user",
+      grants: mixedGrants,
+      session: async () => ({ actorId: "actor-1", customerId: "sunlight" }),
+    });
+    const routesV2 = createAppRoutes({
+      runtime: makeRuntime(),
+      definition: { ...defWithCustom, schemaVersion: "build-v2" },
+      role: "crm_user",
+      grants: mixedGrants,
+      session: async () => ({ actorId: "actor-1", customerId: "sunlight" }),
+    });
+
+    const body = JSON.stringify({
+      idempotency_key: "stable-create-47",
+      schema_revision_id: "rev-12",
+      writes: [{ model_id: "company", effective_start: "2026-11-27", values: {} }],
+    });
+    await routesV1.applyPOST(new Request("http://localhost/api/apply", { method: "POST", body }));
+    await routesV2.applyPOST(new Request("http://localhost/api/apply", { method: "POST", body }));
+    expect(applyPayloads[0]?.schema_revision_id).toBe("rev-12");
+    const v1CreateId = (applyPayloads[0]?.writes as Array<{ new_record_id?: string }>)[0]
+      ?.new_record_id;
+    const v2CreateId = (applyPayloads[1]?.writes as Array<{ new_record_id?: string }>)[0]
+      ?.new_record_id;
+    expect(v1CreateId).toBeTruthy();
+    expect(v1CreateId).toBe(v2CreateId);
+
+    const faultRoutes = createAppRoutes({
+      runtime: makeRuntime(true),
+      definition: defWithCustom,
+      role: "crm_user",
+      grants: mixedGrants,
+      session: async () => ({ actorId: "actor-1", customerId: "sunlight" }),
+    });
+    const faultRes = await faultRoutes.applyPOST(
+      new Request("http://localhost/api/apply", { method: "POST", body }),
+    );
+    expect(faultRes.status).toBe(500);
+    const faultJson = (await faultRes.json()) as { code: string; message: string };
+    expect(faultJson).toEqual({ code: "internal_error", message: "Request failed", details: [] });
   });
 
   test("recordsGET paginates >50 rows in 100-row pages within one requestTransaction", async () => {
@@ -452,5 +593,18 @@ describe("createAppRoutes & gridSchema", () => {
     expect(queryCalls[1]?.where).toEqual([
       { field: "$id", op: "gt", value: allRows[99]!.record_id },
     ]);
+  });
+
+  test("nextAppConfig merges caller outputFileTracingIncludes['/*'] with .generated/release", () => {
+    const merged = nextAppConfig({
+      outputFileTracingIncludes: {
+        "/*": ["./custom-assets/**/*"],
+        "/api/export": ["./templates/**/*"],
+      },
+    });
+    expect(merged.outputFileTracingIncludes).toEqual({
+      "/*": ["./.generated/release/**/*", "./custom-assets/**/*"],
+      "/api/export": ["./templates/**/*"],
+    });
   });
 });

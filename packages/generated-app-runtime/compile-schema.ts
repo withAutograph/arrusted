@@ -156,8 +156,15 @@ function resolveCompilerInvocation(
   cwd: string;
   env: NodeJS.ProcessEnv;
 } {
-  const cueBin =
-    explicitCueBinary ?? process.env.ARRUSTED_CUE_BIN?.trim() ?? resolvePlatformCliBinary("cue");
+  const configuredCue = explicitCueBinary?.trim() || process.env.ARRUSTED_CUE_BIN?.trim();
+  if (configuredCue) {
+    const resolvedCue = path.resolve(configuredCue);
+    const cueBase = path.basename(resolvedCue);
+    if (!existsSync(resolvedCue) || (cueBase !== "cue" && cueBase !== "cue.exe")) {
+      throw new Error(`Configured cue binary must exist and be named 'cue': ${resolvedCue}`);
+    }
+  }
+  const cueBin = configuredCue || resolvePlatformCliBinary("cue");
   const baseEnv: NodeJS.ProcessEnv = cueBin
     ? {
         ...process.env,

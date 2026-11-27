@@ -25,7 +25,8 @@ function readOwnVersion(): string {
 }
 
 function detectGitProvenance(cwd: string): { sourceCommit: string; sourceDirty: boolean } {
-  const explicitCommit = process.env.SOURCE_COMMIT?.trim();
+  const explicitCommit =
+    process.env.SOURCE_COMMIT?.trim() || process.env.VERCEL_GIT_COMMIT_SHA?.trim();
   const explicitDirty = process.env.SOURCE_DIRTY === "true";
   if (explicitCommit) {
     return { sourceCommit: explicitCommit, sourceDirty: explicitDirty };
@@ -160,6 +161,9 @@ export async function runCoreCli(argv: string[] = process.argv.slice(2)): Promis
   const kernelRole = process.env.APP_KERNEL_ROLE?.trim() || undefined;
   const appDatabaseUrl = process.env.APP_DATABASE_URL?.trim() || undefined;
   const authDatabaseUrl = process.env.AUTH_DATABASE_URL?.trim() || undefined;
+  if (!appDatabaseUrl) {
+    throw new Error("APP_DATABASE_URL is required.");
+  }
 
   const baseInput: MigrationInput = {
     databaseUrl,

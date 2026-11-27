@@ -292,9 +292,12 @@ export async function removePerson(
       `delete from "member" where "userId" = $1 and "organizationId" = $2`,
       [userId, organizationId],
     );
-    await client.query(`delete from "session" where "userId" = $1`, [userId]);
+    const removed = (deleted.rowCount ?? 0) > 0;
+    if (removed) {
+      await client.query(`delete from "session" where "userId" = $1`, [userId]);
+    }
     await client.query("COMMIT");
-    return { removed: (deleted.rowCount ?? 0) > 0, userId };
+    return { removed, userId };
   } catch (error) {
     await client.query("ROLLBACK").catch(() => {});
     throw error;

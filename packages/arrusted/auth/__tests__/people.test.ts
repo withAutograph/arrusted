@@ -2,7 +2,7 @@ import { describe, expect, test } from "vite-plus/test";
 import type { Pool, PoolClient } from "pg";
 import { addPerson, createAppAuth, removePerson } from "../src/server";
 
-function createFakePool(options?: { existingAccountId?: string }) {
+function createFakePool(options?: { existingAccountId?: string; deleteMemberCount?: number }) {
   const queries: Array<{ sql: string; values?: unknown[] }> = [];
   const client = {
     query: async (sql: string, values?: unknown[]) => {
@@ -17,7 +17,7 @@ function createFakePool(options?: { existingAccountId?: string }) {
         return { rows: [{ id: "user-123" }], rowCount: 1 };
       }
       if (sql.includes('delete from "member"')) {
-        return { rows: [], rowCount: 1 };
+        return { rows: [], rowCount: options?.deleteMemberCount ?? 1 };
       }
       return { rows: [], rowCount: 0 };
     },
@@ -118,5 +118,17 @@ describe("@arrusted/auth server & people helpers", () => {
     expect(removed).toEqual({ removed: true, userId: "user-123" });
     expect(queries.some((q) => q.sql.includes('delete from "member"'))).toBe(true);
     expect(queries.some((q) => q.sql.includes('delete from "session"'))).toBe(true);
+
+    const { pool: nonMemberPool, queries: nonMemberQueries } = createFakePool({
+      deleteMemberCount: 0,
+    });
+    const notRemoved = await removePerson({
+      database: nonMemberPool,
+      authSchema: "auth_crm",
+      organizationId: "other-org",
+      email: "alice@sunlight.test",
+    });
+    expect(notRemoved).toEqual({ removed: false, userId: "user-123" });
+    expect(nonMemberQueries.some((q) => q.sql.includes('delete from "session"'))).toBe(false);
   });
 });

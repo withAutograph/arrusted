@@ -46,6 +46,7 @@ export type SchemaAuthorizationGrant = {
   role: string;
   model: string;
   operations: readonly string[];
+  record?: { kind: string; field?: string };
   read_fields?: readonly string[];
   write_fields?: readonly string[];
 };
@@ -82,7 +83,11 @@ function loadArtifactMetadata(releaseDirectory?: string): ArtifactMetadata | und
 
 function shownModelFields(model: DataModel): DataField[] {
   return model.fields.filter(
-    (field) => SHOWN_FIELD_TYPES.has(field.type) && field.lifecycle !== "retired" && !field.aliasOf,
+    (field) =>
+      SHOWN_FIELD_TYPES.has(field.type) &&
+      field.storage !== "custom" &&
+      field.lifecycle !== "retired" &&
+      !field.aliasOf,
   );
 }
 
@@ -95,8 +100,17 @@ function readableFieldIdsForRole(
     (grant) => grant.role === role && grant.model === modelId && grant.operations.includes("read"),
   );
   if (matching.length === 0) return null;
+  const unconditional = matching.filter((grant) => !grant.record || grant.record.kind === "all");
+  const effective = unconditional.length > 0 ? unconditional : matching;
+  if (
+    unconditional.length === 0 &&
+    new Set(effective.map((grant) => `${grant.record?.kind ?? "all"}:${grant.record?.field ?? ""}`))
+      .size > 1
+  ) {
+    return null;
+  }
   const ids = new Set<string>();
-  for (const grant of matching) {
+  for (const grant of effective) {
     for (const fieldId of grant.read_fields ?? []) ids.add(fieldId);
   }
   return ids;
@@ -128,7 +142,7 @@ export function gridSchema(
   for (const model of definition.models) {
     const readableIds =
       filterByRole && role ? readableFieldIdsForRole(grants, role, model.id) : undefined;
-    if (readableIds === null) continue;
+    if (readableIds === null || (readableIds && !readableIds.has("$id"))) continue;
     const fields = shownModelFields(model)
       .filter((field) => (readableIds ? readableIds.has(field.id) : true))
       .map((field): Field => ({
@@ -203,12 +217,11 @@ export function toVisibleRecord(
 function deterministicCreateUuid(
   appId: string,
   customerId: string,
-  schemaVersion: string,
   idempotencyKey: string,
   writeIndex: number,
 ): string {
   const hex = createHash("sha256")
-    .update(JSON.stringify([appId, customerId, schemaVersion, idempotencyKey, writeIndex]))
+    .update(JSON.stringify([appId, customerId, idempotencyKey, writeIndex]))
     .digest("hex");
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
@@ -239,9 +252,20 @@ function errorResponse(error: unknown): Response {
     const envelope: ErrorEnvelope = { code, message, details: [] };
     return Response.json(envelope, { status });
   }
-  const message = error instanceof Error ? error.message : "Request failed";
-  const envelope: ErrorEnvelope = { code: "bad_request", message, details: [] };
-  return Response.json(envelope, { status: 400 });
+  if (error instanceof SyntaxError) {
+    const envelope: ErrorEnvelope = {
+      code: "bad_request",
+      message: "Invalid JSON request body.",
+      details: [],
+    };
+    return Response.json(envelope, { status: 400 });
+  }
+  const envelope: ErrorEnvelope = {
+    code: "internal_error",
+    message: "Request failed",
+    details: [],
+  };
+  return Response.json(envelope, { status: 500 });
 }
 
 export type AppRoutesConfig = {
@@ -416,6 +440,7 @@ export function createAppRoutes(config: AppRoutesConfig) {
         }
         const body = (await request.json()) as {
           idempotency_key?: unknown;
+          schema_revision_id?: unknown;
           change_type_id?: unknown;
           notes?: unknown;
           writes?: unknown;
@@ -438,6 +463,10 @@ export function createAppRoutes(config: AppRoutesConfig) {
           );
         }
         const idempotencyKey = body.idempotency_key.trim();
+        const schemaRevisionId =
+          typeof body.schema_revision_id === "string" && body.schema_revision_id.trim().length > 0
+            ? body.schema_revision_id.trim()
+            : undefined;
         const writes = (body.writes as RowVersionWrite[]).map((write, index) => {
           if (!write.record_key && !write.new_record_id) {
             return {
@@ -445,7 +474,6 @@ export function createAppRoutes(config: AppRoutesConfig) {
               new_record_id: deterministicCreateUuid(
                 config.runtime.appId,
                 config.runtime.customerId,
-                config.definition.schemaVersion,
                 idempotencyKey,
                 index,
               ),
@@ -472,6 +500,7 @@ export function createAppRoutes(config: AppRoutesConfig) {
             source_kind: "human",
             idempotency_key: idempotencyKey,
             mode: "mainline",
+            ...(schemaRevisionId ? { schema_revision_id: schemaRevisionId } : {}),
             ...(changeTypeId ? { change_type_id: changeTypeId } : {}),
             ...(notes ? { notes } : {}),
             writes,

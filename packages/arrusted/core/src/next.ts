@@ -91,8 +91,13 @@ export function nextAppConfig(
     serverExternalPackages,
     outputFileTracingRoot: tracingRoot,
     outputFileTracingIncludes: {
-      "/*": ["./.generated/release/**/*"],
       ...config.outputFileTracingIncludes,
+      "/*": [
+        ...new Set([
+          "./.generated/release/**/*",
+          ...(config.outputFileTracingIncludes?.["/*"] ?? []),
+        ]),
+      ],
     },
     turbopack: {
       root: tracingRoot,

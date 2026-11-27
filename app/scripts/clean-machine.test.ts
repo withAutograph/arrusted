@@ -902,7 +902,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         cwd: consumerDir,
         env: { NODE_ENV: "production", NEXT_PUBLIC_AG_GRID_LICENSE_KEY: "" },
       }),
-    ).toThrow();
+    ).toThrow(/NEXT_PUBLIC_AG_GRID_LICENSE_KEY/);
 
     runClean(path.join(consumerDir, "node_modules/.bin/next"), ["build"], {
       cwd: consumerDir,

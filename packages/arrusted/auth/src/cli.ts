@@ -46,10 +46,7 @@ export async function runAuthCli(argv: string[] = process.argv.slice(2)): Promis
     else throw new Error(`Unknown option: ${flag}`);
   }
 
-  const databaseUrl =
-    process.env.AUTH_DATABASE_URL?.trim() ||
-    process.env.APP_DATABASE_URL?.trim() ||
-    process.env.MIGRATION_DATABASE_URL?.trim();
+  const databaseUrl = process.env.AUTH_DATABASE_URL?.trim() || process.env.APP_DATABASE_URL?.trim();
   if (!databaseUrl) {
     throw new Error("AUTH_DATABASE_URL or APP_DATABASE_URL is required.");
   }
