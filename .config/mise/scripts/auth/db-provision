@@ -16,7 +16,7 @@ if [ -n "${VERCEL_ENV:-}" ]; then
   fi
   echo "Auth schema history: unenrolled legacy provisioning" >&2
   bun .config/mise/scripts/repository/auth-account-schema-compatibility.ts
-  BETTER_AUTH_APP_NAME=Autograph bun x auth@1.7.3 migrate --config packages/auth/migration.ts --yes
+  BETTER_AUTH_APP_NAME=Autograph bun x auth@1.7.28 migrate --config packages/auth/migration.ts --yes
   bun .config/mise/scripts/repository/auth-account-schema-compatibility.ts
   bun .config/mise/scripts/repository/auth-db-provision-sql.ts
   exit 0
@@ -44,7 +44,7 @@ auth_run sh -c '
   fi
   echo "Auth schema history: unenrolled legacy provisioning" >&2
   bun .config/mise/scripts/repository/auth-account-schema-compatibility.ts
-  BETTER_AUTH_APP_NAME=Autograph bun x auth@1.7.3 migrate --config packages/auth/migration.ts --yes
+  BETTER_AUTH_APP_NAME=Autograph bun x auth@1.7.28 migrate --config packages/auth/migration.ts --yes
   bun .config/mise/scripts/repository/auth-account-schema-compatibility.ts
   bun .config/mise/scripts/repository/auth-db-provision-sql.ts
 '

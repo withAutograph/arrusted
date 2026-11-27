@@ -54,7 +54,7 @@ const authSchemaPlanSchema = z.strictObject({
   version: z.literal(1),
   resource: z.unknown(),
   authOperatorRole: z.string().optional(),
-  toolchain: z.literal("better-auth@1.7.3"),
+  toolchain: z.literal("better-auth@1.7.28"),
   history: z.strictObject({
     version: z.literal(1),
     schema: z.literal("_auth_schema_history"),

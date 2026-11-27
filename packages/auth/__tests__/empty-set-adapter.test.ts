@@ -99,7 +99,7 @@ function list(
 }
 
 describe("Auth adapter empty-set reads", () => {
-  it("reproduces the unsupported empty IN through the real organization route without the repair", async () => {
+  it("no longer sends an empty IN through the real organization route without the repair", async () => {
     const f = fixture(false);
     const scope = await owner(f);
     const response = await list(f, scope, {
@@ -107,7 +107,7 @@ describe("Auth adapter empty-set reads", () => {
       filterOperator: "eq",
       filterValue: "not-yet-a-member",
     });
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(200);
     expect(
       f.calls.some(
         (call) =>
@@ -115,7 +115,7 @@ describe("Auth adapter empty-set reads", () => {
           Array.isArray(call.where[0].value) &&
           call.where[0].value.length === 0,
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("returns an honest empty filtered membership result and preserves nonempty member reads", async () => {
