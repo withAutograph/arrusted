@@ -8,6 +8,151 @@ import { agentGrantIssuer } from "./agent-grant-policy";
 import { canvasFrameOrigins, readCanvasFrameOrigins } from "./canvas-frame";
 import { emptySetAdapter } from "./empty-set-adapter";
 
+type WrappedAuthClientEntry = {
+  proxy: PoolClient;
+  reset: () => void;
+};
+
+function stripLeadingSqlComments(sql: string): string {
+  return sql.replace(/^(?:\s|--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/)+/gu, "");
+}
+
+function wrapAuthClient(
+  rawClient: PoolClient,
+  targetSearchPath: string,
+  cache: WeakMap<PoolClient, WrappedAuthClientEntry>,
+): PoolClient {
+  let existing = cache.get(rawClient);
+  if (!existing) {
+    let inTx = false;
+    let broken = false;
+    let queue: Promise<unknown> = Promise.resolve();
+    const rawQuery = rawClient.query.bind(rawClient) as (...args: unknown[]) => Promise<unknown>;
+
+    const executeScoped = async (forwardArgs: unknown[]): Promise<unknown> => {
+      const first = forwardArgs[0];
+      if (
+        first !== null &&
+        typeof first === "object" &&
+        typeof (first as { submit?: unknown }).submit === "function"
+      ) {
+        throw new Error("Submittable cursor queries are not supported on an authSchema pool.");
+      }
+      const callArgs =
+        forwardArgs.length === 2 && forwardArgs[1] === undefined ? [forwardArgs[0]] : forwardArgs;
+      const sqlText =
+        typeof first === "string"
+          ? first
+          : first !== null &&
+              typeof first === "object" &&
+              typeof (first as { text?: unknown }).text === "string"
+            ? (first as { text: string }).text
+            : "";
+      const stripped = stripLeadingSqlComments(sqlText);
+      const isBegin = /^(?:begin|start\s+transaction)\b/iu.test(stripped);
+      const isCommitOrEnd = /^(?:commit|end)\b/iu.test(stripped);
+      const isFullRollback = /^rollback\b/iu.test(stripped) && !/^rollback\s+to\b/iu.test(stripped);
+
+      if (isBegin) {
+        const res = await rawQuery(...callArgs);
+        inTx = true;
+        try {
+          await rawQuery("select pg_catalog.set_config('search_path', $1, true)", [
+            targetSearchPath,
+          ]);
+        } catch (err) {
+          inTx = false;
+          await rawQuery("rollback").catch(() => {
+            broken = true;
+          });
+          throw err;
+        }
+        return res;
+      }
+
+      if (inTx) {
+        if (isCommitOrEnd || isFullRollback) {
+          inTx = false;
+        }
+        return await rawQuery(...callArgs);
+      }
+
+      if (isCommitOrEnd || isFullRollback) {
+        return await rawQuery(...callArgs);
+      }
+
+      await rawQuery("begin");
+      try {
+        await rawQuery("select pg_catalog.set_config('search_path', $1, true)", [targetSearchPath]);
+        const res = await rawQuery(...callArgs);
+        await rawQuery("commit");
+        return res;
+      } catch (err) {
+        try {
+          await rawQuery("rollback");
+        } catch {
+          broken = true;
+        }
+        throw err;
+      }
+    };
+
+    const query = (...args: unknown[]) => {
+      const last = args[args.length - 1];
+      const callback =
+        typeof last === "function" &&
+        !(args.length === 1 && typeof (last as { submit?: unknown }).submit === "function")
+          ? (last as (err: Error | undefined, result?: unknown) => void)
+          : undefined;
+      const forwardArgs = callback ? args.slice(0, -1) : args;
+      const run = queue.then(
+        () => executeScoped(forwardArgs),
+        () => executeScoped(forwardArgs),
+      );
+      queue = run.then(
+        () => undefined,
+        () => undefined,
+      );
+      if (callback) {
+        run.then(
+          (res) => callback(undefined, res),
+          (err) => callback(err as Error),
+        );
+        return undefined;
+      }
+      return run;
+    };
+
+    const release = (err?: boolean | Error) => {
+      const discard = err ?? (inTx || broken ? true : undefined);
+      inTx = false;
+      broken = false;
+      rawClient.release(discard);
+    };
+
+    const proxy = new Proxy(rawClient, {
+      get(target, prop) {
+        if (prop === "query") return query;
+        if (prop === "release") return release;
+        const value = Reflect.get(target, prop, target);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+
+    existing = {
+      proxy,
+      reset: () => {
+        inTx = false;
+        broken = false;
+      },
+    };
+    cache.set(rawClient, existing);
+  } else {
+    existing.reset();
+  }
+  return existing.proxy;
+}
+
 function bindPoolToAuthSchema(pool: Pool, authSchema: string | undefined): Pool {
   if (authSchema === undefined) return pool;
   const existing = (pool as { configuredSearchPath?: string }).configuredSearchPath;
@@ -19,24 +164,11 @@ function bindPoolToAuthSchema(pool: Pool, authSchema: string | undefined): Pool 
     }
     return pool;
   }
-  const configured = new WeakSet<object>();
+  const wrappedClients = new WeakMap<PoolClient, WrappedAuthClientEntry>();
   const targetSearchPath = `${authSchema}, pg_catalog`;
   const acquire = async (): Promise<PoolClient> => {
     const client = await pool.connect();
-    const onError = () => {};
-    client.on("error", onError);
-    try {
-      if (!configured.has(client)) {
-        await client.query("select set_config('search_path', $1, false)", [targetSearchPath]);
-        configured.add(client);
-      }
-      return client;
-    } catch (error) {
-      client.release(error instanceof Error ? error : true);
-      throw error;
-    } finally {
-      client.removeListener("error", onError);
-    }
+    return wrapAuthClient(client, targetSearchPath, wrappedClients);
   };
   const connect = (
     callback?: (

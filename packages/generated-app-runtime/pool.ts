@@ -9,13 +9,163 @@ const attempts = 4;
 const validSearchPath = /^(?:public|auth_[a-z0-9_]{1,57})$/;
 
 export type ResilientPoolConfig = PoolConfig & {
-  /** Optional PostgreSQL schema prepended before pg_catalog on every checked-out connection. */
+  /**
+   * Optional PostgreSQL schema prepended before pg_catalog inside each transaction
+   * (`set_config('search_path', ..., true)`), compatible with Neon PgBouncer transaction pooling.
+   */
   searchPath?: string;
 };
 
+type WrappedClientEntry = {
+  proxy: PoolClient;
+  reset: () => void;
+};
+
+function stripLeadingSqlComments(sql: string): string {
+  return sql.replace(/^(?:\s|--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/)+/gu, "");
+}
+
+function wrapClientForTransactionSearchPath(
+  rawClient: PoolClient,
+  targetSearchPath: string,
+  cache: WeakMap<PoolClient, WrappedClientEntry>,
+): PoolClient {
+  let existing = cache.get(rawClient);
+  if (!existing) {
+    let inTx = false;
+    let broken = false;
+    let queue: Promise<unknown> = Promise.resolve();
+    const rawQuery = rawClient.query.bind(rawClient) as (...args: unknown[]) => Promise<unknown>;
+
+    const executeScoped = async (forwardArgs: unknown[]): Promise<unknown> => {
+      const first = forwardArgs[0];
+      if (
+        first !== null &&
+        typeof first === "object" &&
+        typeof (first as { submit?: unknown }).submit === "function"
+      ) {
+        throw new Error(
+          "Submittable cursor queries are not supported on a searchPath-scoped pool.",
+        );
+      }
+      const callArgs =
+        forwardArgs.length === 2 && forwardArgs[1] === undefined ? [forwardArgs[0]] : forwardArgs;
+      const sqlText =
+        typeof first === "string"
+          ? first
+          : first !== null &&
+              typeof first === "object" &&
+              typeof (first as { text?: unknown }).text === "string"
+            ? (first as { text: string }).text
+            : "";
+      const stripped = stripLeadingSqlComments(sqlText);
+      const isBegin = /^(?:begin|start\s+transaction)\b/iu.test(stripped);
+      const isCommitOrEnd = /^(?:commit|end)\b/iu.test(stripped);
+      const isFullRollback = /^rollback\b/iu.test(stripped) && !/^rollback\s+to\b/iu.test(stripped);
+
+      if (isBegin) {
+        const res = await rawQuery(...callArgs);
+        inTx = true;
+        try {
+          await rawQuery("select pg_catalog.set_config('search_path', $1, true)", [
+            targetSearchPath,
+          ]);
+        } catch (err) {
+          inTx = false;
+          await rawQuery("rollback").catch(() => {
+            broken = true;
+          });
+          throw err;
+        }
+        return res;
+      }
+
+      if (inTx) {
+        if (isCommitOrEnd || isFullRollback) {
+          inTx = false;
+        }
+        return await rawQuery(...callArgs);
+      }
+
+      if (isCommitOrEnd || isFullRollback) {
+        return await rawQuery(...callArgs);
+      }
+
+      await rawQuery("begin");
+      try {
+        await rawQuery("select pg_catalog.set_config('search_path', $1, true)", [targetSearchPath]);
+        const res = await rawQuery(...callArgs);
+        await rawQuery("commit");
+        return res;
+      } catch (err) {
+        try {
+          await rawQuery("rollback");
+        } catch {
+          broken = true;
+        }
+        throw err;
+      }
+    };
+
+    const query = (...args: unknown[]) => {
+      const last = args[args.length - 1];
+      const callback =
+        typeof last === "function" &&
+        !(args.length === 1 && typeof (last as { submit?: unknown }).submit === "function")
+          ? (last as (err: Error | undefined, result?: unknown) => void)
+          : undefined;
+      const forwardArgs = callback ? args.slice(0, -1) : args;
+      const run = queue.then(
+        () => executeScoped(forwardArgs),
+        () => executeScoped(forwardArgs),
+      );
+      queue = run.then(
+        () => undefined,
+        () => undefined,
+      );
+      if (callback) {
+        run.then(
+          (res) => callback(undefined, res),
+          (err) => callback(err as Error),
+        );
+        return undefined;
+      }
+      return run;
+    };
+
+    const release = (err?: boolean | Error) => {
+      const discard = err ?? (inTx || broken ? true : undefined);
+      inTx = false;
+      broken = false;
+      rawClient.release(discard);
+    };
+
+    const proxy = new Proxy(rawClient, {
+      get(target, prop) {
+        if (prop === "query") return query;
+        if (prop === "release") return release;
+        const value = Reflect.get(target, prop, target);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+
+    existing = {
+      proxy,
+      reset: () => {
+        inTx = false;
+        broken = false;
+      },
+    };
+    cache.set(rawClient, existing);
+  } else {
+    existing.reset();
+  }
+  return existing.proxy;
+}
+
 export class ResilientPool extends Pool {
   readonly configuredSearchPath: string | undefined;
-  private readonly configured = new WeakSet<object>();
+  private readonly wrappedClients = new WeakMap<PoolClient, WrappedClientEntry>();
 
   constructor(config: ResilientPoolConfig) {
     const { searchPath, ...poolConfig } = config;
@@ -50,19 +200,13 @@ export class ResilientPool extends Pool {
         let client: PoolClient | undefined;
         try {
           client = await super.connect();
-          if (this.configuredSearchPath !== undefined && !this.configured.has(client)) {
-            const onError = () => {};
-            client.on("error", onError);
-            try {
-              await client.query("select set_config('search_path', $1, false)", [
+          return this.configuredSearchPath !== undefined
+            ? wrapClientForTransactionSearchPath(
+                client,
                 `${this.configuredSearchPath}, pg_catalog`,
-              ]);
-              this.configured.add(client);
-            } finally {
-              client.removeListener("error", onError);
-            }
-          }
-          return client;
+                this.wrappedClients,
+              )
+            : client;
         } catch (error) {
           if (client !== undefined) {
             client.release(error instanceof Error ? error : true);

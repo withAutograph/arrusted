@@ -536,8 +536,11 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
       throw error;
     }
 
-    // Remove any legacy adjacent host binary left by pre-portable builds so migrate never sees stale artifacts.
-    rmSync(path.join(path.dirname(outDir), "schema-compiler"), { force: true });
+    // Remove any legacy adjacent host binary file left by pre-portable builds so migrate never sees stale artifacts.
+    const adjacentCompiler = path.join(path.dirname(outDir), "schema-compiler");
+    if (statSync(adjacentCompiler, { throwIfNoEntry: false })?.isFile()) {
+      rmSync(adjacentCompiler, { force: true });
+    }
     writeJson(path.join(path.dirname(outDir), "build.json"), {
       sourceCommit: options.sourceCommit ?? "untracked",
       sourceDirty: options.sourceDirty ?? false,

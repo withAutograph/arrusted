@@ -1232,6 +1232,7 @@ export function createDataClient<const D extends DataDefinition>(
         }
       }
       let response: unknown;
+      let usedAdditiveFullProjection = false;
       try {
         response = await db.call("kernel_data_query", queryRequest);
       } catch (error) {
@@ -1244,9 +1245,25 @@ export function createDataClient<const D extends DataDefinition>(
             await db.call("kernel_read_active_schema_revision", {}),
           );
           if (await isVerifiedAdditiveSuccessor(db, active)) {
+            const additiveFullSelect =
+              kind === "list" && queryRequest.select === undefined
+                ? [
+                    ...new Set([
+                      "$id",
+                      "$externalKey",
+                      "$version",
+                      "$effectiveStart",
+                      "$effectiveEnd",
+                      "$metadata",
+                      ...model.fields.map((field) => field.id),
+                    ]),
+                  ]
+                : undefined;
+            usedAdditiveFullProjection = additiveFullSelect !== undefined;
             response = await db.call("kernel_data_query", {
               ...queryRequest,
               schema_version: active.schemaVersion,
+              ...(additiveFullSelect === undefined ? {} : { select: additiveFullSelect }),
             });
           } else {
             throw error;
@@ -1261,7 +1278,12 @@ export function createDataClient<const D extends DataDefinition>(
         return response.map((record) =>
           decodeRecord(
             model,
-            record,
+            usedAdditiveFullProjection &&
+              record !== null &&
+              typeof record === "object" &&
+              !Array.isArray(record)
+              ? { values: {}, custom_fields: [], many_relations: {}, ...record }
+              : record,
             select?.map((field) => field.name),
           ),
         );

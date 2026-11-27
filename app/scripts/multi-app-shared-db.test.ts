@@ -93,7 +93,7 @@ manifest: #AppManifest & {
         role: "crm_user"
         model: "company"
         operations: ["read", "create", "update", "history"]
-        read_fields: ["$id", "$version", "name", "domain"${extraCompanyFields ? ', "linkedin_url"' : ""}]
+        read_fields: ["$id", "$externalKey", "$version", "$effectiveStart", "$effectiveEnd", "$metadata", "name", "domain"${extraCompanyFields ? ', "linkedin_url"' : ""}]
         write_fields: ["name", "domain"${extraCompanyFields ? ', "linkedin_url"' : ""}]
         record: {kind: "all"}
       },
@@ -109,7 +109,7 @@ manifest: #AppManifest & {
         role: "company_data_user"
         model: "company"
         operations: ["read", "create", "update", "history"]
-        read_fields: ["$id", "$version", "name", "domain"]
+        read_fields: ["$id", "$externalKey", "$version", "$effectiveStart", "$effectiveEnd", "$metadata", "name", "domain"]
         write_fields: ["name", "domain"]
         record: {kind: "all"}
       },
@@ -583,10 +583,64 @@ suite(
       });
       expect(crmMigrateV2.applied).toBe(true);
 
-      // Company Data (STILL on v1 definition & runtime!) continues reading and writing seamlessly!
+      // CRM on v2 populates the CRM-only optional field linkedin_url on shared company!
+      const v2Def = JSON.parse(
+        readFileSync(path.join(crmV2Out, "operation-manifest.json"), "utf8"),
+      ) as DataDefinition;
+      const crmRuntimeV2 = createGeneratedAppRuntime({
+        databaseUrl: crmDatabaseUrl,
+        releaseDirectory: crmV2Out,
+        appId: "sunlight",
+        customerId: "sunlight",
+      });
+      try {
+        const crmOpsV2 = createDataClient(
+          v2Def,
+          crmRuntimeV2.dataContext({
+            actorId: aliceId,
+            sourceKind: "human",
+            authorize: async () => {},
+          }),
+        );
+        await crmOpsV2.company!.update(
+          acmeId,
+          { linkedinUrl: "https://linkedin.com/company/acme" },
+          { effectiveStart: asOf, idempotencyKey: "crm-v2-set-linkedin" },
+        );
+      } finally {
+        await crmRuntimeV2.close();
+      }
+
+      // Company Data (STILL on v1 definition & runtime!) continues reading (both selected AND unselected full-record list()/get()!)
+      // and writing seamlessly even though linkedin_url is NOT granted to company_data_user!
       expect(await cdOps.company!.list({ asOf, select: companySelect })).toMatchObject([
         { id: acmeId, name: "Acme Corp", domain: "acme.io" },
       ]);
+      const cdFullCompanies = await cdOps.company!.list({ asOf });
+      expect(cdFullCompanies).toHaveLength(1);
+      expect(cdFullCompanies[0]).toMatchObject({
+        id: acmeId,
+        name: "Acme Corp",
+        domain: "acme.io",
+      });
+      expect(cdFullCompanies[0]).not.toHaveProperty("linkedinUrl");
+      // Branded full ModelRecord from unselected additive retry works directly as an update target with $version precondition!
+      await cdOps.company!.update(
+        cdFullCompanies[0]!,
+        { domain: "acme.global" },
+        {
+          effectiveStart: asOf,
+          idempotencyKey: "cd-v1-full-record-update-during-v2",
+          ifVersion: String((cdFullCompanies[0] as { $version?: unknown }).$version),
+        },
+      );
+      expect(
+        await cdOps.company!.get({ key: { type: "record_id", value: acmeId }, asOf }),
+      ).toMatchObject({
+        id: acmeId,
+        name: "Acme Corp",
+        domain: "acme.global",
+      });
       await cdOps.apply({
         effectiveStart: asOf,
         idempotencyKey: "cd-v1-write-during-v2-schema",
@@ -596,8 +650,146 @@ suite(
         { id: finId, arrUsd: "12500000", notes: "Audited Q4" },
       ]);
 
+      // Simulate Neon PgBouncer transaction pooling (-pooler) on createSingleOrganizationAuth (authSchema: "auth_crm")
+      // sharing two backend connections (crmRole) with kernel_data_query: every transaction resets search_path on commit!
+      const { Client: PgClient } = await import("pg");
+      const muxBackendA = new PgClient({ connectionString: crmDatabaseUrl });
+      const muxBackendB = new PgClient({ connectionString: crmDatabaseUrl });
+      await muxBackendA.connect();
+      await muxBackendB.connect();
+      try {
+        let muxIdx = 0;
+        let muxPinned: InstanceType<typeof PgClient> | undefined;
+        const muxRawClient = {
+          query: async (sql: string, values?: unknown[]) => {
+            const trimmed = sql.trimStart();
+            if (/^(?:begin|start\s+transaction)\b/iu.test(trimmed)) {
+              muxPinned = muxIdx++ % 2 === 0 ? muxBackendA : muxBackendB;
+              return await muxPinned.query(sql, values);
+            }
+            if (
+              /^(?:commit|end|rollback)\b/iu.test(trimmed) &&
+              !/^rollback\s+to\b/iu.test(trimmed)
+            ) {
+              const target = muxPinned ?? muxBackendA;
+              muxPinned = undefined;
+              const res = await target.query(sql, values);
+              await target.query("reset search_path");
+              return res;
+            }
+            const target = muxPinned ?? (muxIdx++ % 2 === 0 ? muxBackendA : muxBackendB);
+            const res = await target.query(sql, values);
+            if (!muxPinned) {
+              await target.query("reset search_path");
+            }
+            return res;
+          },
+          release: () => {},
+          on: () => muxRawClient,
+          once: () => muxRawClient,
+          removeListener: () => muxRawClient,
+        };
+        const fakePlainPool = {
+          connect(cb?: (err?: Error, client?: unknown, done?: () => void) => void) {
+            if (cb) {
+              cb(undefined, muxRawClient, () => {});
+              return;
+            }
+            return Promise.resolve(muxRawClient);
+          },
+          query(sql: string, values?: unknown[]) {
+            return muxRawClient.query(sql, values);
+          },
+        } as unknown as Pool;
+
+        const muxCrmAuth = createSingleOrganizationAuth({
+          database: fakePlainPool,
+          authSchema: "auth_crm",
+          origin: "http://localhost:3101",
+          secret: authSecret,
+          appId: "sunlight",
+          organizationId: "sunlight",
+          name: "Sunlight CRM",
+          allowSignUp: true,
+        });
+        const daveSignup = await muxCrmAuth.auth.api.signUpEmail({
+          body: { email: "dave@crm.test", password: "Password1234!", name: "Dave Pooler" },
+          returnHeaders: true,
+        });
+        const daveCookie = daveSignup.headers.get("set-cookie") ?? "";
+        for (let i = 0; i < 4; i++) {
+          expect(await muxCrmAuth.session(new Headers({ cookie: daveCookie }))).toEqual({
+            actorId: daveSignup.response.user.id,
+            customerId: "sunlight",
+          });
+          // Unqualified public kernel function on the SAME backend connections still resolves public!
+          expect(
+            (
+              await muxBackendA.query<{ ok: boolean }>(
+                "select (kernel_read_runtime_release_observability($1::jsonb)->>'ok')::boolean as ok",
+                [JSON.stringify({ app_id: "sunlight", customer_id: "sunlight" })],
+              )
+            ).rows[0]?.ok,
+          ).toBe(true);
+        }
+      } finally {
+        await muxBackendA.end();
+        await muxBackendB.end();
+      }
+
+      // Bind a third app (auth_ops) AFTER RP2 was captured so undo() also proves post-restore-point app binding survives!
+      const opsRole = `${database}_ops_app`;
+      await migrate({
+        databaseUrl: ownerConnectionString,
+        releaseDirectory: crmV2Out,
+        restorePoints,
+        sourceCommit: "commit-v2",
+        sourceDirty: false,
+        runtimeRole: opsRole,
+        authRole: opsRole,
+        authSchema: "auth_ops",
+        kernelRole: "company_data_user",
+        runtimeLogins: [{ role: opsRole, password: rolePassword }],
+      });
+      const opsDatabaseUrl = (() => {
+        const u = new URL(ownerConnectionString);
+        u.username = opsRole;
+        u.password = rolePassword;
+        return u.toString();
+      })();
+      const opsAuthPool = new ResilientPool({
+        connectionString: opsDatabaseUrl,
+        searchPath: "auth_ops",
+        max: 1,
+      });
+      const opsRuntimeV1 = createGeneratedAppRuntime({
+        databaseUrl: opsDatabaseUrl,
+        releaseDirectory: cdV1Out,
+        appId: "sunlight",
+        customerId: "sunlight",
+      });
+      let erinId = "";
+      try {
+        const opsAuth = createSingleOrganizationAuth({
+          database: opsAuthPool,
+          authSchema: "auth_ops",
+          origin: "http://localhost:3103",
+          secret: authSecret,
+          appId: "sunlight",
+          organizationId: "sunlight",
+          name: "Sunlight Ops",
+          allowSignUp: true,
+        });
+        const erinSignup = await opsAuth.auth.api.signUpEmail({
+          body: { email: "erin@ops.test", password: "Password1234!", name: "Erin Post-RP2 App" },
+        });
+        erinId = erinSignup.user.id;
+      } finally {
+        await opsAuthPool.end();
+      }
+
       // 6. Post-restore-point sign-up (Carol) AND post-restore-point membership revocation (Alice) in auth_crm:
-      // migrate:undo preserves auth_crm & auth_company_data, activates Carol, and keeps revoked Alice inactive!
+      // migrate:undo preserves auth_crm, auth_company_data & auth_ops, activates Carol & Erin, and keeps revoked Alice inactive!
       const carolSignup = await crmAuth.auth.api.signUpEmail({
         body: { email: "carol@crm.test", password: "Password1234!", name: "Carol After Backup" },
         returnHeaders: true,
@@ -605,12 +797,30 @@ suite(
       const carolId = carolSignup.response.user.id;
       await crmAuthPool.query('delete from "member" where "userId" = $1', [aliceId]);
 
-      const undone = await undo({
-        databaseUrl: ownerConnectionString,
-        releaseDirectory: crmV2Out,
-        restorePoints,
-      });
-      expect(undone.sourceCommit).toBe("commit-v1");
+      let undone: Awaited<ReturnType<typeof undo>>;
+      try {
+        undone = await undo({
+          databaseUrl: ownerConnectionString,
+          releaseDirectory: crmV2Out,
+          restorePoints,
+        });
+        expect(undone.sourceCommit).toBe("commit-v1");
+
+        // Post-RP2 third app (auth_ops / opsRole) also survives undo() and reads company cleanly!
+        const erinOps = createDataClient(
+          v1Def,
+          opsRuntimeV1.dataContext({
+            actorId: erinId,
+            sourceKind: "human",
+            authorize: async () => {},
+          }),
+        );
+        expect(await erinOps.company!.list({ asOf })).toMatchObject([
+          { id: acmeId, name: "Acme Corp", domain: "acme.io" },
+        ]);
+      } finally {
+        await opsRuntimeV1.close();
+      }
 
       // Revoked Alice stays deactivated in kernel_actor_membership even though restorePoint 2 had Alice active!
       await expect(crmOps.company!.list({ asOf, select: companySelect })).rejects.toMatchObject({

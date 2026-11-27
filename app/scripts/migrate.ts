@@ -161,28 +161,29 @@ function resolveMigrationCompiler(
   }
   // Portable cross-platform verification: prove the target host's schema-compiler emits the exact
   // SQL manifest checksum recorded in release-manifest.json before planning any transition.
-  if (expectedSqlManifestChecksum) {
-    let emittedChecksum: string | undefined;
-    try {
-      const sqlManifestOut = execFileSync(
-        resolved.executable,
-        [
-          ...resolved.prefixArgs,
-          "--sql-manifest",
-          "--compiled-artifact",
-          path.join(snapshot, "release", "app-artifact.json"),
-        ],
-        { cwd: resolved.cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
-      );
-      emittedChecksum = (JSON.parse(sqlManifestOut) as { checksum?: string }).checksum;
-    } catch (error) {
-      throw new Error("The migration compiler differs from the build. Rebuild before migrating.", {
-        cause: error,
-      });
-    }
-    if (emittedChecksum !== expectedSqlManifestChecksum) {
-      throw new Error("The migration compiler differs from the build. Rebuild before migrating.");
-    }
+  if (!expectedSqlManifestChecksum) {
+    throw new Error("Release manifest is missing installer.expected_hash.");
+  }
+  let emittedChecksum: string | undefined;
+  try {
+    const sqlManifestOut = execFileSync(
+      resolved.executable,
+      [
+        ...resolved.prefixArgs,
+        "--sql-manifest",
+        "--compiled-artifact",
+        path.join(snapshot, "release", "app-artifact.json"),
+      ],
+      { cwd: resolved.cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
+    );
+    emittedChecksum = (JSON.parse(sqlManifestOut) as { checksum?: string }).checksum;
+  } catch (error) {
+    throw new Error("The migration compiler differs from the build. Rebuild before migrating.", {
+      cause: error,
+    });
+  }
+  if (emittedChecksum !== expectedSqlManifestChecksum) {
+    throw new Error("The migration compiler differs from the build. Rebuild before migrating.");
   }
   return resolved;
 }

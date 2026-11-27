@@ -302,6 +302,9 @@ test("sibling additive successor continuity allows an installed prior revision a
     },
   ];
 
+  const queryInputs: Record<string, unknown>[] = [];
+  const versionId = "20000000-0000-4000-8000-000000000002";
+
   const makeClient = (def: DataDefinition) =>
     createDataClient(def, {
       scope,
@@ -314,12 +317,26 @@ test("sibling additive successor continuity allows an installed prior revision a
             if (operation === "kernel_read_active_schema_revision") return structuredClone(active);
             if (operation === "kernel_read_runtime_release_observability") return { releases };
             if (operation === "kernel_data_query") {
+              queryInputs.push(structuredClone(input));
               if (input.schema_version !== active.schema.version) {
                 const { KernelFailure } = await import("../../kernel-client/postgres");
                 throw new KernelFailure({
                   code: "schema_drift",
                   message: "Schema drift detected",
                 });
+              }
+              if (Array.isArray(input.select) && input.select.includes("$effectiveStart")) {
+                return [
+                  {
+                    record_id: recordId,
+                    version_id: versionId,
+                    external_key: null,
+                    effective_start: asOf,
+                    effective_end: null,
+                    metadata: {},
+                    values: { label: { type: "text", value: "Kept" } },
+                  },
+                ];
               }
               return [{ record_id: recordId, values: { label: { type: "text", value: "Kept" } } }];
             }
@@ -331,11 +348,39 @@ test("sibling additive successor continuity allows an installed prior revision a
         }),
     });
 
-  // 1. Installed prior v3 client reads & writes seamlessly when v4 is additive
+  // 1. Installed prior v3 client reads (both selected AND unselected full ModelRecord!) & writes seamlessly when v4 is additive
   const v1Ops = makeClient(v1Def);
   await expect(v1Ops.item!.list({ asOf, select: ["id", "label"] })).resolves.toEqual([
     { id: recordId, label: "Kept" },
   ]);
+  queryInputs.length = 0;
+  const fullRecords = await v1Ops.item!.list({ asOf });
+  expect(queryInputs[1]?.select).toEqual([
+    "$id",
+    "$externalKey",
+    "$version",
+    "$effectiveStart",
+    "$effectiveEnd",
+    "$metadata",
+    "label",
+  ]);
+  expect(fullRecords).toMatchObject([
+    {
+      id: recordId,
+      externalKey: null,
+      effectiveStart: asOf,
+      effectiveEnd: null,
+      label: "Kept",
+    },
+  ]);
+  // Full record returned by unselected additive retry carries provenance branding for update()!
+  await expect(
+    v1Ops.item!.update(
+      fullRecords[0]!,
+      { label: "Updated via branded full record" },
+      { effectiveStart: asOf, idempotencyKey: "k-full-update" },
+    ),
+  ).resolves.toEqual({ id: 1, schema_revision_id: "4" });
   await expect(
     v1Ops.item!.create(
       { label: "Written from v3" },
