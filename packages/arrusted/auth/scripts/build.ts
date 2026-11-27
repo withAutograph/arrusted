@@ -22,7 +22,6 @@ const externals = [
   "better-auth/client/plugins",
   "pg",
   "react",
-  "zod",
 ];
 
 function runChecked(cmd: string, args: string[]) {

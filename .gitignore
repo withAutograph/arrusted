@@ -48,3 +48,4 @@ debug-*.log
 /app/.next/
 /app/next-env.d.ts
 /packages/arrusted/*/assets/
+/packages/arrusted/cli-*/bin/

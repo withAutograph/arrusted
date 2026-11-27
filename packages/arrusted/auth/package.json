@@ -3,6 +3,11 @@
   "version": "0.1.0-alpha.1",
   "private": false,
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/withAutograph/arrusted-development.git",
+    "directory": "packages/arrusted/auth"
+  },
   "bin": {
     "arrusted-auth": "./bin/arrusted-auth.mjs"
   },
@@ -41,9 +46,6 @@
     "check": "tsc -p tsconfig.json --noEmit",
     "test": "vp test --config vite.config.ts --run",
     "build": "bun scripts/build.ts"
-  },
-  "dependencies": {
-    "zod": "catalog:"
   },
   "devDependencies": {
     "@arrusted/core": "workspace:*",

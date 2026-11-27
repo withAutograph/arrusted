@@ -17,6 +17,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
+import {
+  detectHostCliTarget,
+  packArrustedPackage,
+  resolveRepoSchemaCompiler,
+  stageCliPackage,
+  type SupportedCliTarget,
+} from "../../.config/mise/scripts/repository/pack-arrusted-packages";
 
 const databaseURL = process.env.KERNEL_TEST_DATABASE_URL;
 if (process.env.CI && !databaseURL) {
@@ -56,30 +63,24 @@ function whichBinary(name: string): string {
   return execFileSync("which", [name], { encoding: "utf8" }).trim();
 }
 
-function resolveRepoSchemaCompiler(): string {
-  const candidates = [
-    process.env.CARGO_TARGET_DIR
-      ? path.join(process.env.CARGO_TARGET_DIR, "debug/schema-compiler")
-      : undefined,
-    process.env.CARGO_TARGET_DIR
-      ? path.join(process.env.CARGO_TARGET_DIR, "release/schema-compiler")
-      : undefined,
-    path.join(repoRoot, "target/debug/schema-compiler"),
-    path.join(repoRoot, "target/release/schema-compiler"),
-    "/Volumes/CargoTarget/arrusted-shared/debug/schema-compiler",
-  ].filter((item): item is string => Boolean(item));
-  const found = candidates.find((candidate) => existsSync(candidate));
-  if (found) return found;
-
-  execFileSync("cargo", ["build", "-p", "schema-compiler"], {
-    cwd: repoRoot,
-    stdio: "inherit",
-  });
-  const built = candidates.find((candidate) => existsSync(candidate));
-  if (!built) {
-    throw new Error("Unable to locate built schema-compiler binary for clean-machine staging.");
+const hostCliTarget: SupportedCliTarget = (() => {
+  const detected = detectHostCliTarget();
+  if (!detected) {
+    throw new Error(
+      `Unsupported host platform for clean-machine CLI verification: ${process.platform}-${process.arch}`,
+    );
   }
-  return built;
+  return detected;
+})();
+const otherCliTarget: SupportedCliTarget =
+  hostCliTarget === "darwin-arm64" ? "linux-x64" : "darwin-arm64";
+
+function hasSourceExportCondition(value: unknown): boolean {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  for (const [key, entry] of Object.entries(value)) {
+    if (key === "source" || hasSourceExportCondition(entry)) return true;
+  }
+  return false;
 }
 
 function makeCleanEnvironment(extra: Record<string, string> = {}): NodeJS.ProcessEnv {
@@ -89,8 +90,6 @@ function makeCleanEnvironment(extra: Record<string, string> = {}): NodeJS.Proces
     USER: process.env.USER,
     TMPDIR: process.env.TMPDIR ?? tmpdir(),
     PATH: `${isolatedBinDir}:/usr/bin:/bin:/usr/sbin:/sbin`,
-    ARRUSTED_SCHEMA_COMPILER_BIN: path.join(isolatedBinDir, "schema-compiler"),
-    ARRUSTED_CUE_BIN: path.join(isolatedBinDir, "cue"),
     ...extra,
   };
 }
@@ -271,16 +270,7 @@ beforeAll(async () => {
   mkdirSync(consumerDir, { recursive: true });
   mkdirSync(restoreDir, { recursive: true });
 
-  // Stage standalone CLI binaries in isolatedBinDir (simulating @arrusted/cli-<platform>-<arch>
-  // + consumer runtime tools, with zero cargo, rustc, or mise on PATH).
-  const compilerBin = resolveRepoSchemaCompiler();
-  cpSync(compilerBin, path.join(isolatedBinDir, "schema-compiler"));
-  chmodSync(path.join(isolatedBinDir, "schema-compiler"), 0o755);
-
-  const cueBin = whichBinary("cue");
-  cpSync(cueBin, path.join(isolatedBinDir, "cue"));
-  chmodSync(path.join(isolatedBinDir, "cue"), 0o755);
-
+  // Expose only standard consumer runtime/DB tools on isolated PATH (zero cargo, rustc, mise, cue, or schema-compiler).
   for (const tool of ["node", "bun", "psql", "pg_dump", "pg_restore", "git", "tar"]) {
     const target = whichBinary(tool);
     const wrapperPath = path.join(isolatedBinDir, tool);
@@ -288,19 +278,28 @@ beforeAll(async () => {
     chmodSync(wrapperPath, 0o755);
   }
 
-  // Build and pack @arrusted/{core,auth,ui} tarballs
-  for (const pkg of ["core", "auth", "ui"]) {
-    const pkgCwd = path.join(repoRoot, "packages/arrusted", pkg);
-    execFileSync("bun", ["run", "build"], { cwd: pkgCwd, stdio: "inherit" });
-    execFileSync("bun", ["pm", "pack", "--destination", tarballDir], {
-      cwd: pkgCwd,
-      stdio: "inherit",
+  const prebuiltDir = process.env.ARRUSTED_PREBUILT_TARBALL_DIR?.trim();
+  if (prebuiltDir) {
+    for (const entry of readdirSync(prebuiltDir)) {
+      if (entry.endsWith(".tgz")) {
+        cpSync(path.join(prebuiltDir, entry), path.join(tarballDir, entry));
+      }
+    }
+  } else {
+    stageCliPackage({
+      repoRoot,
+      target: hostCliTarget,
+      compilerBinary: resolveRepoSchemaCompiler(repoRoot),
+      cueBinary: whichBinary("cue"),
     });
+    for (const pkg of [`cli-${hostCliTarget}`, "core", "auth", "ui"] as const) {
+      packArrustedPackage({ repoRoot, packageName: pkg, outDir: tarballDir });
+    }
   }
 
   await adminPool.query(`create database "${database}"`);
   createdDatabase = true;
-}, 120_000);
+}, 180_000);
 
 afterAll(async () => {
   try {
@@ -321,18 +320,27 @@ afterAll(async () => {
 suite(
   "clean-machine consumer installs tarballs outside repo and runs compile -> migrate -> people -> apply -> undo -> next build (basic & advanced)",
   async () => {
-    // 1. Verify isolated PATH genuinely has NO cargo, rustc, or mise
-    for (const forbidden of ["cargo", "rustc", "mise"]) {
+    // 1. Verify isolated PATH genuinely has NO cargo, rustc, mise, cue, or schema-compiler
+    for (const forbidden of ["cargo", "rustc", "mise", "cue", "schema-compiler"]) {
       expect(() => runClean("/usr/bin/which", [forbidden], { cwd: consumerDir })).toThrow();
     }
 
-    // 2. Inspect packed tarballs to guarantee zero leaked workspace:* or catalog: specifiers
+    // 2. Inspect packed tarballs to guarantee zero leaked workspace:*, catalog:, or source export conditions
     const tgzFiles = readdirSync(tarballDir).filter((f) => f.endsWith(".tgz"));
-    expect(tgzFiles).toHaveLength(3);
+    expect(tgzFiles.length).toBeGreaterThanOrEqual(4);
     const tarballByPkg: Record<string, string> = {};
+    const hostCliPkgName = `@arrusted/cli-${hostCliTarget}`;
+    const otherCliPkgName = `@arrusted/cli-${otherCliTarget}`;
 
     for (const file of tgzFiles) {
       const fullPath = path.join(tarballDir, file);
+      const archiveEntries = execFileSync("tar", ["-tzf", fullPath], { encoding: "utf8" })
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+      expect(archiveEntries).toContain("package/LICENSE");
+      expect(archiveEntries.some((entry) => entry.includes("/._"))).toBe(false);
+
       const manifestRaw = execFileSync("tar", ["-xOf", fullPath, "package/package.json"], {
         encoding: "utf8",
       });
@@ -340,12 +348,23 @@ suite(
         name: string;
         version: string;
         license: string;
+        repository?: { type?: string; url?: string };
+        exports?: unknown;
+        scripts?: unknown;
+        devDependencies?: unknown;
         dependencies?: Record<string, string>;
         peerDependencies?: Record<string, string>;
         optionalDependencies?: Record<string, string>;
       };
       expect(manifest.version).toBe("0.1.0-alpha.1");
       expect(manifest.license).toBe("MIT");
+      expect(manifest.repository?.type).toBe("git");
+      expect(manifest.repository?.url).toBe(
+        "git+https://github.com/withAutograph/arrusted-development.git",
+      );
+      expect(manifest.scripts).toBeUndefined();
+      expect(manifest.devDependencies).toBeUndefined();
+      expect(hasSourceExportCondition(manifest.exports)).toBe(false);
       tarballByPkg[manifest.name] = fullPath;
 
       for (const section of [
@@ -359,17 +378,27 @@ suite(
         }
       }
 
+      if (manifest.name === "@arrusted/core") {
+        expect(manifest.optionalDependencies).toEqual({
+          "@arrusted/cli-darwin-arm64": "0.1.0-alpha.1",
+          "@arrusted/cli-linux-x64": "0.1.0-alpha.1",
+        });
+      }
+      if (manifest.name.startsWith("@arrusted/cli-")) {
+        expect(archiveEntries).toContain("package/bin/schema-compiler");
+        expect(archiveEntries).toContain("package/bin/cue");
+        expect(archiveEntries).toContain("package/THIRD_PARTY_NOTICES.md");
+      }
       if (manifest.name === "@arrusted/auth") {
         expect(manifest.peerDependencies?.["@arrusted/core"]).toBe(">=0.1.0-alpha.1 <0.2.0");
-        expect(manifest.dependencies).not.toHaveProperty("@better-auth/infra");
-        expect(manifest.dependencies).not.toHaveProperty("@better-auth/oauth-provider");
-        expect(manifest.dependencies).not.toHaveProperty("resend");
+        expect(manifest.dependencies).toBeUndefined();
       }
       if (manifest.name === "@arrusted/ui") {
         expect(manifest.dependencies).not.toHaveProperty("ag-grid-enterprise");
         expect(manifest.peerDependencies?.["ag-grid-enterprise"]).toBeTruthy();
       }
     }
+    expect(tarballByPkg[hostCliPkgName]).toBeTruthy();
 
     // 3. Scaffold a brand-new standalone Next.js 16 + Tailwind v4 app outside the monorepo
     //    WITHOUT ag-grid-enterprise installed (proving the MIT basic tier).
@@ -417,6 +446,7 @@ suite(
           },
           overrides: {
             "@arrusted/core": `file:${tarballByPkg["@arrusted/core"]}`,
+            [hostCliPkgName]: `file:${tarballByPkg[hostCliPkgName]}`,
           },
         },
         null,
@@ -426,6 +456,13 @@ suite(
 
     runClean(path.join(isolatedBinDir, "bun"), ["install"], { cwd: consumerDir });
     expect(existsSync(path.join(consumerDir, "node_modules/ag-grid-enterprise"))).toBe(false);
+    expect(
+      existsSync(path.join(consumerDir, "node_modules", hostCliPkgName, "bin/schema-compiler")),
+    ).toBe(true);
+    expect(existsSync(path.join(consumerDir, "node_modules", hostCliPkgName, "bin/cue"))).toBe(
+      true,
+    );
+    expect(existsSync(path.join(consumerDir, "node_modules", otherCliPkgName))).toBe(false);
 
     // Initialize git commit in consumerDir so provenance + undo commit checks work realistically
     writeFileSync(path.join(consumerDir, ".gitignore"), "node_modules/\n.generated/\n.next/\n");

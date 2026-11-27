@@ -1,0 +1,24 @@
+{
+  "name": "@arrusted/cli-linux-x64",
+  "version": "0.1.0-alpha.1",
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/withAutograph/arrusted-development.git",
+    "directory": "packages/arrusted/cli-linux-x64"
+  },
+  "files": [
+    "bin",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "exports": {
+    "./package.json": "./package.json"
+  }
+}

@@ -1,0 +1,197 @@
+name: Release (@arrusted packages)
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish verified tarballs to public npm (false runs build + clean-machine verification only)
+        required: false
+        type: boolean
+        default: false
+      dist_tag:
+        description: npm dist-tag when publish is true
+        required: false
+        type: choice
+        default: alpha
+        options:
+          - alpha
+          - next
+          - latest
+
+permissions:
+  contents: read
+
+env:
+  MISE_ENV: ci
+  CARGO_TARGET_DIR: ${{ github.workspace }}/.cargo-target
+
+jobs:
+  build-cli:
+    name: Build CLI (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            runner: ubuntu-24.04
+          - target: darwin-arm64
+            runner: macos-14
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install_args: bun node rust cue
+      - name: Build schema-compiler release binary
+        env:
+          CLI_TARGET: ${{ matrix.target }}
+        run: |
+          if [[ "${CLI_TARGET}" == "linux-x64" ]]; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends musl-tools
+            mise exec -- rustup target add x86_64-unknown-linux-musl
+            mise exec -- cargo build --locked --release --target x86_64-unknown-linux-musl -p schema-compiler
+          else
+            mise exec -- cargo build --locked --release -p schema-compiler
+          fi
+      - name: Stage and pack @arrusted/cli-${{ matrix.target }}
+        env:
+          CLI_TARGET: ${{ matrix.target }}
+        run: |
+          cue_bin="$(mise which cue)"
+          if [[ "${CLI_TARGET}" == "linux-x64" ]]; then
+            compiler_bin="${CARGO_TARGET_DIR}/x86_64-unknown-linux-musl/release/schema-compiler"
+          else
+            compiler_bin="${CARGO_TARGET_DIR}/release/schema-compiler"
+          fi
+          mise exec -- bun .config/mise/scripts/repository/pack-arrusted-packages.ts \
+            --out-dir "dist-npm/${CLI_TARGET}" \
+            --packages "cli-${CLI_TARGET}" \
+            --stage-cli "${CLI_TARGET}" \
+            --compiler-bin "${compiler_bin}" \
+            --cue-bin "${cue_bin}"
+      - name: Upload CLI tarball
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: arrusted-cli-${{ matrix.target }}
+          path: dist-npm/${{ matrix.target }}/*.tgz
+          if-no-files-found: error
+          retention-days: 14
+
+  pack-and-verify:
+    name: Pack and verify clean-machine consumer
+    runs-on: ubuntu-24.04
+    needs: [build-cli]
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install_args: bun node cue conda:postgresql
+      - name: Download linux-x64 CLI tarball
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: arrusted-cli-linux-x64
+          path: dist-npm/release
+      - name: Download darwin-arm64 CLI tarball
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: arrusted-cli-darwin-arm64
+          path: dist-npm/release
+      - name: Pack @arrusted/{core,auth,ui} tarballs
+        run: |
+          mise exec -- bun .config/mise/scripts/repository/pack-arrusted-packages.ts \
+            --out-dir dist-npm/release \
+            --packages core,auth,ui
+          count="$(find dist-npm/release -maxdepth 1 -name '*.tgz' | wc -l | tr -d ' ')"
+          if [[ "${count}" -ne 5 ]]; then
+            echo "Expected 5 packed tarballs in dist-npm/release, found ${count}" >&2
+            ls -la dist-npm/release >&2
+            exit 1
+          fi
+          ls -lh dist-npm/release/*.tgz
+      - name: Verify prebuilt tarballs in clean-machine consumer test
+        env:
+          ARRUSTED_PREBUILT_TARBALL_DIR: ${{ github.workspace }}/dist-npm/release
+          KERNEL_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: |
+          mise exec -- vp test --config app/vite.config.ts --run app/scripts/clean-machine.test.ts
+      - name: Upload verified npm release tarballs
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: arrusted-npm-release-tarballs
+          path: dist-npm/release/*.tgz
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish to npm
+    if: inputs.publish == true
+    runs-on: ubuntu-24.04
+    needs: [pack-and-verify]
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
+        with:
+          install_args: node
+          install_dependencies: 'false'
+      - name: Download verified npm release tarballs
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: arrusted-npm-release-tarballs
+          path: dist-npm/release
+      - name: Publish @arrusted/* tarballs in dependency order
+        env:
+          DIST_TAG: ${{ inputs.dist_tag }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          case "${DIST_TAG}" in
+            alpha|next|latest) ;;
+            *) echo "Invalid dist_tag: ${DIST_TAG}" >&2; exit 1 ;;
+          esac
+          npmrc="$(mktemp)"
+          trap 'rm -f "${npmrc}"' EXIT
+          echo "registry=https://registry.npmjs.org/" > "${npmrc}"
+          if [[ -n "${NODE_AUTH_TOKEN:-}" ]]; then
+            echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" >> "${npmrc}"
+          fi
+          export NPM_CONFIG_USERCONFIG="${npmrc}"
+          for slug in cli-darwin-arm64 cli-linux-x64 core auth ui; do
+            matches=(dist-npm/release/*"arrusted-${slug}-"*.tgz)
+            if [[ "${#matches[@]}" -ne 1 || ! -f "${matches[0]}" ]]; then
+              echo "Missing unique tarball for @arrusted/${slug}" >&2
+              ls -la dist-npm/release >&2
+              exit 1
+            fi
+            echo "Publishing ${matches[0]} with --tag ${DIST_TAG}"
+            mise exec -- npm publish "${matches[0]}" --tag "${DIST_TAG}" --access public --provenance
+          done
