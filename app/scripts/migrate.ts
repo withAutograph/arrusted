@@ -84,6 +84,8 @@ export type MigrationInput = {
   kernelRole?: string;
   /** Optional explicit path to schema-compiler binary when not bundled next to releaseDirectory. */
   compilerBinary?: string;
+  /** Explicit opt-in required before archiving/retiring existing models, fields, enum options, custom fields, or change types. */
+  allowRetire?: boolean;
   runtimeLogins?: { role: string; password: string }[];
 };
 
@@ -398,10 +400,18 @@ async function kernel(client: PoolClient, operation: string, request: unknown): 
   return result.data;
 }
 
+type RetiredElementSummary = {
+  kind?: string;
+  model?: string | null;
+  field?: string | null;
+  element?: string;
+};
+
 function transition(
   release: string,
   applied: AppliedSchema[],
   compiler: { executable: string; prefixArgs: string[]; cwd: string },
+  allowRetire = false,
 ): unknown {
   const directory = mkdtempSync(path.join(tmpdir(), "autograph-plan-"));
   try {
@@ -412,21 +422,63 @@ function transition(
         return ["--previous-compiled-artifact", file];
       })
       .flat();
-    const args = ["--compiled-artifact", path.join(release, "app-artifact.json"), ...predecessors];
-    return JSON.parse(
-      execFileSync(
-        compiler.executable,
-        [...compiler.prefixArgs, "--schema-transition-contract", ...args],
-        {
-          cwd: compiler.cwd,
-          encoding: "utf8",
-          maxBuffer: 64 * 1024 * 1024,
-        },
-      ),
-    );
-  } catch (error) {
-    const message = (error as { stderr?: Buffer }).stderr?.toString().trim();
-    throw new Error(message || "Could not compile the migration plan.", { cause: error });
+    const candidateArtifact = path.join(release, "app-artifact.json");
+    let contract: unknown;
+    let retirements: RetiredElementSummary[] = [];
+    try {
+      const args = ["--compiled-artifact", candidateArtifact, ...predecessors];
+      contract = JSON.parse(
+        execFileSync(
+          compiler.executable,
+          [...compiler.prefixArgs, "--schema-transition-contract", ...args],
+          {
+            cwd: compiler.cwd,
+            encoding: "utf8",
+            maxBuffer: 64 * 1024 * 1024,
+          },
+        ),
+      );
+      if (applied.length > 0 && !allowRetire) {
+        const latestFile = path.join(directory, `${applied.length - 1}.json`);
+        const plan = JSON.parse(
+          execFileSync(
+            compiler.executable,
+            [
+              ...compiler.prefixArgs,
+              "--sql-transition-plan",
+              "--compiled-artifact",
+              candidateArtifact,
+              "--previous-compiled-artifact",
+              latestFile,
+            ],
+            {
+              cwd: compiler.cwd,
+              encoding: "utf8",
+              maxBuffer: 64 * 1024 * 1024,
+            },
+          ),
+        ) as { retirements?: RetiredElementSummary[] };
+        retirements = plan.retirements ?? [];
+      }
+    } catch (error) {
+      const message = (error as { stderr?: Buffer }).stderr?.toString().trim();
+      throw new Error(message || "Could not compile the migration plan.", { cause: error });
+    }
+    if (retirements.length > 0) {
+      const summary = retirements
+        .map((item) =>
+          item.model && item.field && item.element && item.element !== item.field
+            ? `${item.model}.${item.field}.${item.element}`
+            : item.model && item.field
+              ? `${item.model}.${item.field}`
+              : (item.model ?? item.element ?? "unknown"),
+        )
+        .join(", ");
+      throw new Error(
+        `Refusing to archive existing schema elements (${summary}) without --allow-retire. Pull the latest schema/*.cue before migrating, or pass --allow-retire if archival is intentional.`,
+      );
+    }
+    return contract;
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
@@ -582,7 +634,7 @@ export async function migrate(
         throw new Error(
           "The Auth package schema changed. An Auth upgrade plan is required; this migration has not changed the database.",
         );
-      const contract = transition(release, applied, compiler);
+      const contract = transition(release, applied, compiler, input.allowRetire === true);
       // The ledger records applications, including a return to identical source.
       // Only the current release is a retry; its hash need not be unique in history.
       await client.query(`create table if not exists autograph_applied_schema (
@@ -922,7 +974,18 @@ export async function rehearse(
       "MIGRATION_DATABASE_URL must not target the production database during rehearsal.",
     );
   const roles = runtimeRoles(input.databaseUrl, input.runtimeDatabaseUrl);
-  await migrate({ ...input, ...roles, authRole: input.authRole ?? roles.authRole });
+  const mergedLogins = new Map<string, string>();
+  for (const login of [...(input.runtimeLogins ?? []), ...(roles.runtimeLogins ?? [])]) {
+    if (!mergedLogins.has(login.role)) {
+      mergedLogins.set(login.role, login.password);
+    }
+  }
+  await migrate({
+    ...input,
+    ...roles,
+    authRole: input.authRole ?? roles.authRole,
+    runtimeLogins: [...mergedLogins.entries()].map(([role, password]) => ({ role, password })),
+  });
   const releaseDirectory = input.releaseDirectory ?? path.join(root, "app/.generated/release");
   const artifact = JSON.parse(
     readFileSync(path.join(releaseDirectory, "app-artifact.json"), "utf8"),
@@ -1000,10 +1063,26 @@ export async function rehearse(
 
 if (import.meta.main) {
   try {
-    const command = process.argv[2] ?? "apply";
+    const rawArgs = process.argv.slice(2);
+    let allowRetire = false;
+    const positional: string[] = [];
+    for (const arg of rawArgs) {
+      if (arg === "--allow-retire") {
+        allowRetire = true;
+      } else if (arg.startsWith("-")) {
+        throw new Error(`Unknown migration option: ${arg}`);
+      } else {
+        positional.push(arg);
+      }
+    }
+    if (positional.length > 1) {
+      throw new Error(`Unexpected migration argument: ${positional[1]}`);
+    }
+    const command = positional[0] ?? "apply";
     const databaseUrl = process.env.MIGRATION_DATABASE_URL;
     if (!databaseUrl) throw new Error("MIGRATION_DATABASE_URL is required.");
     if (command === "undo") {
+      if (allowRetire) throw new Error("--allow-retire is not valid with undo.");
       const result = await undo({ databaseUrl });
       console.log(
         `Database and applied-schema record restored. Revert the schema source to ${result.sourceCommit}.${result.sourceDirty ? " That build included uncommitted schema edits; restore those source files too." : ""}`,
@@ -1023,6 +1102,7 @@ if (import.meta.main) {
         ...roles,
         ...(authSchema ? { authSchema } : {}),
         ...(kernelRole ? { kernelRole } : {}),
+        ...(allowRetire ? { allowRetire: true } : {}),
       };
       if (command === "rehearse") {
         if (!process.env.PRODUCTION_APP_DATABASE_URL)

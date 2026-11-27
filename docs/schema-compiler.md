@@ -51,6 +51,11 @@ COMMIT`) rather than caching session-level `SET` state, so `AUTH_SCHEMA`
   prior builds project only that build's declared fields and metadata so newly
   added fields private to another app's role do not trigger unauthorized-field
   refusals.
+- Schema transitions are additive by default: `migrate` refuses any candidate
+  that retires (archives) existing models, fields, enum options, custom fields,
+  or change types from the live database unless `--allow-retire`
+  (`allowRetire: true`) is explicitly passed, preventing stale checkouts or
+  older sibling builds from accidentally retiring live schema elements.
 - `migrate:undo` restores `public` from the pre-migration restore point while
   preserving all marked `auth_*` schemas and re-syncing post-backup sign-ups and
   membership revocations into `public.kernel_actor_membership`.

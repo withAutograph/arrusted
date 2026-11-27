@@ -232,7 +232,8 @@ suite(
     expect(
       await operations("renamedAgain", (ops) => ops.memo!.list({ asOf: "2026-04-01" })),
     ).toHaveLength(2);
-    await migrate(input("retired"));
+    await expect(migrate(input("retired"))).rejects.toThrow(/--allow-retire/);
+    await migrate({ ...input("retired"), allowRetire: true });
     expect(
       (await pool.query("select count(*)::int as count from note_version where code is not null"))
         .rows[0].count,
@@ -262,7 +263,8 @@ suite("removed tables retain data and refuse re-adds by id or name", async () =>
       writes: [ops.tag!.writes.create({ name: "Keep" })],
     }),
   );
-  await migrate(input("retiredTables"));
+  await expect(migrate(input("retiredTables"))).rejects.toThrow(/--allow-retire/);
+  await migrate({ ...input("retiredTables"), allowRetire: true });
   expect((await pool.query("select name from tag_version")).rows).toEqual([{ name: "Keep" }]);
   for (const name of ["table", "reusedTableName"]) {
     await expect(rehearsal(name)).rejects.toThrow(
@@ -321,7 +323,7 @@ suite(
       path.join(releases.get("roundtrip")!, "app-artifact.json"),
       "utf8",
     );
-    expect((await migrate(input("roundtrip"))).applied).toBe(true);
+    expect((await migrate({ ...input("roundtrip"), allowRetire: true })).applied).toBe(true);
     compile(
       "roundtrip",
       `${title}, {id: "scratch", label: "Scratch", type: "text"}`,
@@ -340,7 +342,8 @@ suite(
     expect(readFileSync(path.join(releases.get("roundtrip")!, "app-artifact.json"), "utf8")).toBe(
       originalArtifact,
     );
-    expect((await migrate(input("roundtrip"))).applied).toBe(true);
+    await expect(migrate(input("roundtrip"))).rejects.toThrow(/--allow-retire/);
+    expect((await migrate({ ...input("roundtrip"), allowRetire: true })).applied).toBe(true);
     expect((await migrate(input("roundtrip"))).applied).toBe(false);
     expect(
       (await pool.query("select scratch from note_version where scratch is not null")).rows,

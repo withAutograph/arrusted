@@ -238,6 +238,7 @@ suite(
     const rehearsalRuntimeUrl = new URL(rehearsalOwnerUrl.toString());
     rehearsalRuntimeUrl.username = `${database}_reh_crm`;
     rehearsalRuntimeUrl.password = rolePassword;
+    const rehearsalSeparateAuthRole = `${database}_reh_crm_auth`;
     await rehearse({
       databaseUrl: rehearsalOwnerUrl.toString(),
       runtimeDatabaseUrl: rehearsalRuntimeUrl.toString(),
@@ -248,6 +249,8 @@ suite(
       }),
       sourceCommit: "commit-v1",
       sourceDirty: false,
+      authRole: rehearsalSeparateAuthRole,
+      runtimeLogins: [{ role: rehearsalSeparateAuthRole, password: rolePassword }],
       authSchema: "auth_crm",
       kernelRole: "crm_user",
     });
@@ -664,6 +667,23 @@ suite(
         kernelRole: "crm_user",
       });
       expect(crmMigrateV2.applied).toBe(true);
+
+      // Running migrate from Company Data's stale v1 checkout after v2 added linkedin_url is refused without --allow-retire
+      await expect(
+        migrate({
+          databaseUrl: ownerConnectionString,
+          releaseDirectory: cdV1Out,
+          restorePoints,
+          sourceCommit: "commit-v1",
+          sourceDirty: false,
+          runtimeRole: companyDataRole,
+          authRole: companyDataRole,
+          authSchema: "auth_company_data",
+          kernelRole: "company_data_user",
+        }),
+      ).rejects.toThrow(
+        /Refusing to archive existing schema elements \(company\.linkedin_url\) without --allow-retire/,
+      );
 
       // CRM on v2 populates the CRM-only optional field linkedin_url on shared company!
       const v2Def = JSON.parse(
