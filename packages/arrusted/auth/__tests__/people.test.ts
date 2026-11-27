@@ -2,13 +2,16 @@ import { describe, expect, test } from "vite-plus/test";
 import type { Pool, PoolClient } from "pg";
 import { addPerson, createAppAuth, removePerson } from "../src/server";
 
-function createFakePool() {
+function createFakePool(options?: { existingAccountId?: string }) {
   const queries: Array<{ sql: string; values?: unknown[] }> = [];
   const client = {
     query: async (sql: string, values?: unknown[]) => {
       queries.push({ sql, values });
       if (sql.includes('insert into "user"')) {
         return { rows: [{ id: "user-123" }], rowCount: 1 };
+      }
+      if (sql.includes('select "id" from "account"') && options?.existingAccountId) {
+        return { rows: [{ id: options.existingAccountId }], rowCount: 1 };
       }
       if (sql.includes('select "id" from "user"')) {
         return { rows: [{ id: "user-123" }], rowCount: 1 };
@@ -75,8 +78,10 @@ describe("@arrusted/auth server & people helpers", () => {
     expect(queries.some((q) => q.sql.includes('insert into "account"'))).toBe(true);
     expect(queries.some((q) => q.sql.includes('insert into "member"'))).toBe(true);
 
-    const { pool: poolNoName, queries: queriesNoName } = createFakePool();
-    await addPerson({
+    const { pool: poolNoName, queries: queriesNoName } = createFakePool({
+      existingAccountId: "acct-existing",
+    });
+    const reAdded = await addPerson({
       database: poolNoName,
       authSchema: "auth_crm",
       organizationId: "sunlight",
@@ -84,6 +89,21 @@ describe("@arrusted/auth server & people helpers", () => {
     });
     const noNameUpsert = queriesNoName.find((q) => q.sql.includes('insert into "user"'));
     expect(noNameUpsert?.values?.[3]).toBe(false);
+    expect(reAdded.generatedPassword).toBeUndefined();
+    expect(queriesNoName.some((q) => q.sql.includes('update "account"'))).toBe(false);
+    expect(queriesNoName.some((q) => q.sql.includes('insert into "account"'))).toBe(false);
+
+    const { pool: poolExplicitReset, queries: queriesExplicitReset } = createFakePool({
+      existingAccountId: "acct-existing",
+    });
+    await addPerson({
+      database: poolExplicitReset,
+      authSchema: "auth_crm",
+      organizationId: "sunlight",
+      email: "alice@sunlight.test",
+      password: "NewPassword123!",
+    });
+    expect(queriesExplicitReset.some((q) => q.sql.includes('update "account"'))).toBe(true);
   });
 
   test("removePerson deletes member and active sessions inside authSchema", async () => {

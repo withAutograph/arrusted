@@ -174,13 +174,9 @@ export async function addPerson(input: AddPersonInput): Promise<AddPersonResult>
   if (!organizationId) {
     throw new Error("organizationId is required.");
   }
-  const generatedPassword =
-    input.password === undefined ? randomBytes(18).toString("base64url") : undefined;
-  const rawPassword = input.password ?? generatedPassword!;
-  if (rawPassword.length < 8) {
+  if (input.password !== undefined && input.password.length < 8) {
     throw new Error("Password must contain at least 8 characters.");
   }
-  const passwordHash = await hashPassword(rawPassword);
   const explicitName = input.name?.trim();
   const displayName = explicitName || email.split("@")[0]!;
   const orgName = input.organizationName?.trim() || organizationId;
@@ -200,16 +196,23 @@ export async function addPerson(input: AddPersonInput): Promise<AddPersonResult>
     );
     const userId = userRes.rows[0]!.id;
 
+    let generatedPassword: string | undefined;
     const existingAccount = await client.query<{ id: string }>(
       `select "id" from "account" where "userId" = $1 and "providerId" = 'credential' limit 1`,
       [userId],
     );
     if (existingAccount.rows.length > 0) {
-      await client.query(
-        `update "account" set "password" = $1, "updatedAt" = now() where "id" = $2`,
-        [passwordHash, existingAccount.rows[0]!.id],
-      );
+      if (input.password !== undefined) {
+        const passwordHash = await hashPassword(input.password);
+        await client.query(
+          `update "account" set "password" = $1, "updatedAt" = now() where "id" = $2`,
+          [passwordHash, existingAccount.rows[0]!.id],
+        );
+      }
     } else {
+      generatedPassword =
+        input.password === undefined ? randomBytes(18).toString("base64url") : undefined;
+      const passwordHash = await hashPassword(input.password ?? generatedPassword!);
       await client.query(
         `insert into "account" ("id", "accountId", "providerId", "userId", "password", "createdAt", "updatedAt")
          values ($1, $2, 'credential', $2, $3, now(), now())`,
