@@ -2,8 +2,18 @@ import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, existsSync, readFileSync } from "node:fs";
 import { migrationLock } from "./migration-lock";
-import { chmod, mkdir, mkdtemp, open, readFile, realpath, rm, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import {
+  chmod,
+  lstat,
+  mkdir,
+  mkdtemp,
+  open,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { basename, dirname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
@@ -463,6 +473,24 @@ export class PgDumpRestorePoints implements RestorePoints {
     );
     await mkdir(this.directory, { recursive: true, mode: 0o700 });
     await chmod(this.directory, 0o700);
+    const parentLocal = dirname(this.directory);
+    if (basename(parentLocal) === ".local") {
+      const gitignorePath = join(parentLocal, ".gitignore");
+      const existingGitignore = await lstat(gitignorePath).catch((err: NodeJS.ErrnoException) => {
+        if (err?.code === "ENOENT") return null;
+        throw err;
+      });
+      if (existingGitignore?.isSymbolicLink()) {
+        throw new Error(`Refusing to write .gitignore through symbolic link: ${gitignorePath}`);
+      }
+      if (!existingGitignore) {
+        await writeFile(gitignorePath, "*\n", { encoding: "utf8", mode: 0o600, flag: "wx" }).catch(
+          (err: NodeJS.ErrnoException) => {
+            if (err?.code !== "EEXIST") throw err;
+          },
+        );
+      }
+    }
     const directory = join(await realpath(this.directory), id);
     await mkdir(directory, { mode: 0o700 }); // Exclusive: an existing restore point is never overwritten.
     const path = join(directory, "public.dump");

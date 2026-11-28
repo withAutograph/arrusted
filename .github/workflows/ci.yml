@@ -154,6 +154,9 @@ jobs:
       - run: mise exec -- bun install --frozen-lockfile
       - run: mise run check:package-manifests
       - run: mise exec -- vp test --run .config/mise/scripts/repository/pack-arrusted-packages.test.ts
+      - run: mise exec -- vp test --config packages/arrusted/core/vite.config.ts --run
+      - run: mise exec -- vp test --config packages/arrusted/auth/vite.config.ts --run
+      - run: mise exec -- vp test --config packages/arrusted/ui/vite.config.ts --run
       - run: mise run test:auth-tenant-migration
       - run: KERNEL_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres mise exec -- vp test --config app/vite.config.ts --run
 

@@ -231,7 +231,17 @@ function runCompiler(
     maxBuffer: 64 * 1024 * 1024,
   });
   if (result.error || result.status !== 0) {
+    if ((result.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT") {
+      throw new Error(
+        `No prebuilt @arrusted/cli-${process.platform}-${process.arch} binary is available for ${process.platform}-${process.arch} (supported in 0.1: darwin-arm64, linux-x64). Set ARRUSTED_SCHEMA_COMPILER_BIN and ARRUSTED_CUE_BIN to local binary paths, or install schema-compiler and cue on PATH.`,
+      );
+    }
     const details = [result.stderr?.trim(), result.stdout?.trim()].filter(Boolean).join("\n");
+    if (/failed to run `cue export`.*No such file or directory/iu.test(details)) {
+      throw new Error(
+        `Could not locate 'cue' for ${process.platform}-${process.arch} (prebuilt packages in 0.1 cover darwin-arm64 and linux-x64). Set ARRUSTED_CUE_BIN to a local cue binary or install cue on PATH.`,
+      );
+    }
     throw new Error(
       `Schema compilation failed during ${phase} (exit ${result.status ?? "unavailable"}).\n` +
         (details || result.error?.message || "The compiler produced no diagnostic output."),
@@ -548,20 +558,13 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
     ];
     const sourceFiles = Object.fromEntries(sourceEntries);
 
-    const normalizedTextSources = Object.fromEntries([
-      ["packages/schema-compiler/cue/app-manifest.cue", normalizeLfTextHash(appManifestBytes)],
-      ...(selectionBytes !== undefined
-        ? [["packages/schema-compiler/cue/app-selection.cue", normalizeLfTextHash(selectionBytes)]]
-        : []),
-      ...(catalogBytes !== undefined ? [["catalog.json", normalizeLfTextHash(catalogBytes)]] : []),
-      ...stagedCueFiles.map((entry) => [entry.key, normalizeLfTextHash(entry.bytes)]),
-      ["packages/auth/schema.sql", normalizeLfTextHash(authSchemaBytes)],
-      ["packages/auth/single-organization-membership.sql", normalizeLfTextHash(membershipBytes)],
-    ]);
+    const sqlSources = {
+      "packages/auth/schema.sql": normalizeLfTextHash(authSchemaBytes),
+      "packages/auth/single-organization-membership.sql": normalizeLfTextHash(membershipBytes),
+    };
 
     const buildHash = sha256Hex(
       JSON.stringify({
-        packageVersion,
         nextApp,
         runtimePkg,
         schema: versionlessSchema,
@@ -574,7 +577,7 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
           name: entry.name,
           sql: entry.sql,
         })),
-        sources: normalizedTextSources,
+        sqlSources,
       }),
     );
     const version = options.schemaVersion ?? `build-${buildHash}`;

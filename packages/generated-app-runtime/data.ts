@@ -846,12 +846,6 @@ export function createDataClient<const D extends DataDefinition>(
           return false;
         }
       }
-      const compiledAllIds = new Set(compiledOptions.map((opt) => opt.id));
-      for (const liveId of activeLiveIds) {
-        if (!compiledAllIds.has(liveId)) {
-          return false;
-        }
-      }
       return true;
     };
     const activeCustomByModel = new Map<string, Map<string, Record<string, unknown>>>();
@@ -961,6 +955,48 @@ export function createDataClient<const D extends DataDefinition>(
       }
     }
     return true;
+  };
+  const extractModelEnumOptionIds = (
+    activeSchema: Record<string, unknown>,
+    modelId: string,
+  ): ReadonlyMap<string, ReadonlySet<string>> => {
+    const byField = new Map<string, Set<string>>();
+    const addOptions = (fieldId: unknown, optionSet: unknown) => {
+      if (typeof fieldId !== "string" || !Array.isArray(optionSet)) return;
+      let ids = byField.get(fieldId);
+      if (!ids) {
+        ids = new Set<string>();
+        byField.set(fieldId, ids);
+      }
+      for (const opt of optionSet) {
+        if (opt && typeof opt === "object" && typeof (opt as { id?: unknown }).id === "string") {
+          ids.add((opt as { id: string }).id);
+        }
+      }
+    };
+    if (Array.isArray(activeSchema.models)) {
+      for (const m of activeSchema.models) {
+        if (!m || typeof m !== "object" || (m as { id?: unknown }).id !== modelId) continue;
+        const fields = (m as { fields?: unknown }).fields;
+        if (Array.isArray(fields)) {
+          for (const f of fields) {
+            if (f && typeof f === "object" && (f as { type?: unknown }).type === "enum") {
+              addOptions((f as { id?: unknown }).id, (f as { option_set?: unknown }).option_set);
+            }
+          }
+        }
+      }
+    }
+    if (Array.isArray(activeSchema.custom_fields)) {
+      for (const cf of activeSchema.custom_fields) {
+        if (!cf || typeof cf !== "object") continue;
+        const rec = cf as Record<string, unknown>;
+        if (rec.model_id === modelId && rec.type === "enum") {
+          addOptions(rec.field_id, rec.option_set);
+        }
+      }
+    }
+    return byField;
   };
   const isVerifiedAdditiveSuccessor = async (
     db: DataSession,
@@ -1294,6 +1330,7 @@ export function createDataClient<const D extends DataDefinition>(
       }
       let response: unknown;
       let usedAdditiveFullProjection = false;
+      let additiveEnumOptionIdsByField: ReadonlyMap<string, ReadonlySet<string>> | undefined;
       try {
         response = await db.call("kernel_data_query", queryRequest);
       } catch (error) {
@@ -1306,6 +1343,7 @@ export function createDataClient<const D extends DataDefinition>(
             await db.call("kernel_read_active_schema_revision", {}),
           );
           if (await isVerifiedAdditiveSuccessor(db, active)) {
+            additiveEnumOptionIdsByField = extractModelEnumOptionIds(active.schema, model.id);
             const additiveFullSelect =
               kind === "list" && queryRequest.select === undefined
                 ? [
@@ -1335,6 +1373,9 @@ export function createDataClient<const D extends DataDefinition>(
           throw error;
         }
       }
+      const decoderOptions = additiveEnumOptionIdsByField
+        ? { activeEnumOptionIdsByField: additiveEnumOptionIdsByField }
+        : undefined;
       if (kind === "list") {
         if (!Array.isArray(response))
           responseFailure("kernel_data_query", "response", "record array");
@@ -1348,6 +1389,7 @@ export function createDataClient<const D extends DataDefinition>(
               ? { values: {}, custom_fields: [], many_relations: {}, ...record }
               : record,
             select?.map((field) => field.name),
+            decoderOptions,
           ),
         );
       }
@@ -1363,6 +1405,7 @@ export function createDataClient<const D extends DataDefinition>(
           money: fieldsByNameByModel.get(model.id)?.get(metric.field ?? "")?.type === "money_rate",
         })),
         response,
+        decoderOptions,
       );
       if (kind === "aggregate") return decoded;
       return typeof input.groupBy === "string"

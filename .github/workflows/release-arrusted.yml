@@ -143,6 +143,11 @@ jobs:
             exit 1
           fi
           ls -lh dist-npm/release/*.tgz
+      - name: Run @arrusted/{core,auth,ui} unit tests
+        run: |
+          mise exec -- vp test --config packages/arrusted/core/vite.config.ts --run
+          mise exec -- vp test --config packages/arrusted/auth/vite.config.ts --run
+          mise exec -- vp test --config packages/arrusted/ui/vite.config.ts --run
       - name: Verify prebuilt tarballs in clean-machine consumer test
         env:
           ARRUSTED_PREBUILT_TARBALL_DIR: ${{ github.workspace }}/dist-npm/release
@@ -203,7 +208,7 @@ jobs:
               ls -la dist-npm/release >&2
               exit 1
             fi
-            pkg_meta="$(tar -xOf "${matches[0]}" package/package.json | mise exec --no-deps -- node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const m=JSON.parse(s);process.stdout.write(`${m.name}\t${m.version}`)})')"
+            pkg_meta="$(tar -xOf "${matches[0]}" package/package.json | mise exec --no-deps -- node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const m=JSON.parse(s);process.stdout.write(m.name+"\t"+m.version)})')"
             pkg_name="${pkg_meta%%$'\t'*}"
             pkg_version="${pkg_meta#*$'\t'}"
             if [[ "${DIST_TAG}" == "latest" && "${pkg_version}" == *-* ]]; then

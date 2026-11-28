@@ -1,6 +1,6 @@
 {
   "name": "@arrusted/auth",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "private": false,
   "license": "MIT",
   "repository": {
@@ -61,7 +61,7 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@arrusted/core": ">=0.1.0-alpha.1 <0.2.0",
+    "@arrusted/core": ">=0.1.0-alpha.2 <0.2.0",
     "better-auth": "^1.7.28",
     "pg": "^8.0.0",
     "react": ">=19.0.0 <20.0.0"

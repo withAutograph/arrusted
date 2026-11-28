@@ -198,16 +198,84 @@ describe("createAppRoutes & gridSchema", () => {
     );
     expect(nullWriteRes.status).toBe(400);
 
-    const applyRes = await routes.applyPOST(
+    const draftModeRes = await routes.applyPOST(
       new Request("http://localhost/api/apply", {
         method: "POST",
         headers: { "x-test-user": "alice", "content-type": "application/json" },
+        body: JSON.stringify({
+          mode: "draft",
+          idempotency_key: "idem-draft",
+          writes: [
+            {
+              model_id: "company",
+              effective_start: "2026-11-27",
+              values: { name: { type: "text", value: "Draft Attempt" } },
+            },
+          ],
+        }),
+      }),
+    );
+    expect(draftModeRes.status).toBe(400);
+    expect(await draftModeRes.json()).toMatchObject({ code: "unsupported_capability" });
+
+    const crossOriginRes = await routes.applyPOST(
+      new Request("http://localhost/api/apply", {
+        method: "POST",
+        headers: {
+          "x-test-user": "alice",
+          "content-type": "application/json",
+          origin: "https://evil.example",
+        },
+        body: JSON.stringify({
+          idempotency_key: "idem-csrf",
+          writes: [
+            {
+              model_id: "company",
+              effective_start: "2026-11-27",
+              values: { name: { type: "text", value: "CSRF Attempt" } },
+            },
+          ],
+        }),
+      }),
+    );
+    expect(crossOriginRes.status).toBe(403);
+
+    const missingOriginCookieRes = await routes.applyPOST(
+      new Request("http://localhost/api/apply", {
+        method: "POST",
+        headers: {
+          "x-test-user": "alice",
+          "content-type": "application/json",
+          cookie: "better-auth.session_token=abc",
+        },
+        body: JSON.stringify({
+          idempotency_key: "idem-cookie-no-origin",
+          writes: [
+            {
+              model_id: "company",
+              effective_start: "2026-11-27",
+              values: { name: { type: "text", value: "Missing Origin" } },
+            },
+          ],
+        }),
+      }),
+    );
+    expect(missingOriginCookieRes.status).toBe(403);
+
+    const applyRes = await routes.applyPOST(
+      new Request("http://localhost/api/apply", {
+        method: "POST",
+        headers: {
+          "x-test-user": "alice",
+          "content-type": "application/json",
+          cookie: "better-auth.session_token=abc",
+          origin: "http://localhost",
+        },
         body: JSON.stringify({
           app_id: "spoofed",
           customer_id: "spoofed",
           actor_id: "spoofed",
           source_kind: "agent",
-          mode: "draft",
           change_type_id: "undeclared_client_default",
           idempotency_key: "idem-1",
           writes: [
@@ -671,6 +739,9 @@ describe("createAppRoutes & gridSchema", () => {
       );
       await expect(runCoreCli(["migrate:undo"])).rejects.not.toThrow(
         "--release is not valid with undo.",
+      );
+      await expect(runCoreCli(["migrate", "--rebind-runtime-login"])).rejects.toThrow(
+        "Unknown migration option: --rebind-runtime-login",
       );
     } finally {
       if (prevDbUrl === undefined) delete process.env.MIGRATION_DATABASE_URL;

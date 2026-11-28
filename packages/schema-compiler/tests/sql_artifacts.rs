@@ -1329,9 +1329,12 @@ fn choice_rename_requires_retaining_old_names_and_aliases() {
     let mut next = previous.clone();
     next.schema.models[0].fields[0].option_set[0].label = "Ready".into();
     assert_eq!(
-        schema_compiler::compile_schema_transition_contract(&[previous.clone()], &next)
-            .unwrap_err()
-            .code,
+        schema_compiler::compile_schema_transition_contract(
+            std::slice::from_ref(&previous),
+            &next,
+        )
+        .unwrap_err()
+        .code,
         "option_alias_required"
     );
     next.schema.models[0].fields[0].option_set[0]

@@ -54,9 +54,7 @@ COMMIT`) rather than caching session-level `SET` state, so `AUTH_SCHEMA`
   human memberships for `(runtimeRole, app_id, customer_id, kernelRole)`, and
   enforces bidirectional one-to-one exclusivity between each `AUTH_SCHEMA`
   (`public` or `auth_*`) and its bound `runtimeRole` / `authRole` logins
-  (including group-inherited Auth privileges; pass `--rebind-runtime-login` /
-  `rebindRuntimeLogin: true` to rotate credentials for the same app and
-  `APP_KERNEL_ROLE`).
+  (including group-inherited Auth privileges).
 - Sibling apps running an installed prior revision (whose lineage is verified
   through `kernel_read_runtime_release_observability`, while runtime safety is
   enforced by `isAdditiveActiveSchema` and PostgreSQL) continue reading and
@@ -65,7 +63,7 @@ COMMIT`) rather than caching session-level `SET` state, so `AUTH_SCHEMA`
   builds project only that build's declared fields and metadata so newly added
   fields private to another app's role do not trigger unauthorized-field
   refusals. Work sessions remain pinned to exact `schemaVersion` matching.
-- In `@arrusted/*` `0.1.0-alpha.1`, schemas declaring `authorization`
+- In `@arrusted/*` `0.1.0-alpha.2`, schemas declaring `authorization`
   (`policy_declared = true`) support role-scoped mainline reads (`list`, `get`,
   `aggregate`, `history` field values) and mainline `apply` writes; `draft`
   staging, `revert`, recent-activity feeds, change-set diff/comparison, and
@@ -84,10 +82,11 @@ COMMIT`) rather than caching session-level `SET` state, so `AUTH_SCHEMA`
   preserving all marked `auth_*` schemas and re-syncing post-backup sign-ups and
   membership revocations into `public.kernel_actor_membership`.
 - Standalone external Next.js consumers install `@arrusted/core`,
-  `@arrusted/auth`, and `@arrusted/ui` (`0.1.0-alpha.1`, MIT): `arrusted compile`
+  `@arrusted/auth`, and `@arrusted/ui` (`0.1.0-alpha.2`, MIT): `arrusted compile`
   rewrites generated `data-operations.ts` imports to `@arrusted/core/*` and stamps
-  `build-<buildHash>` schema versions (incorporating `packageVersion`) using
-  bundled CUE/SQL assets and `@arrusted/cli-<platform>-<arch>` (or
+  `build-<buildHash>` schema versions (computed from normalized CUE/SQL/TypeScript
+  outputs so comment-only edits and sibling patch versions do not force
+  re-migration) using bundled CUE/SQL assets and `@arrusted/cli-<platform>-<arch>` (or
   `ARRUSTED_SCHEMA_COMPILER_BIN` / `ARRUSTED_CUE_BIN`); `arrusted migrate`, `arrusted migrate:undo`, and
   `arrusted migrate:rehearse` drive database provisioning and rollback;
   `@arrusted/core/routes` (`createAppRoutes`) exposes `/api/schema/active`,

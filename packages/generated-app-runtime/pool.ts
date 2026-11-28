@@ -2,9 +2,10 @@ import { Pool, type PoolClient, type PoolConfig } from "pg";
 
 // Neon pauses an idle database. The first connections after a pause, or ones the
 // server closed while idle, can fail before any query runs; retrying those is safe
-// because nothing has been sent yet.
-const transient =
-  /ECONNRESET|ECONNREFUSED|ETIMEDOUT|Connection terminated|secure TLS connection|timeout exceeded when trying to connect/i;
+// because nothing has been sent yet. Local pg-pool checkout queue timeouts
+// ("timeout exceeded when trying to connect") are intentionally excluded so pool
+// saturation fails fast instead of multiplying queue wait time by 4x.
+const transient = /ECONNRESET|ECONNREFUSED|ETIMEDOUT|Connection terminated|secure TLS connection/i;
 const attempts = 4;
 export const validSearchPath = /^(?:public|auth_[a-z0-9_]{1,57})$/;
 

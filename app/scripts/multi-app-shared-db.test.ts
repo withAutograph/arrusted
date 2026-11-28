@@ -232,7 +232,7 @@ suite(
     const siblingCrmCompiled = compileSchema({
       schemaPath: crlfSchemaDir,
       outDir: path.join(siblingDirRoot, "crm"),
-      packageVersion: "0.1.0-alpha.1",
+      packageVersion: "0.1.0-alpha.2",
       sourceCommit: "commit-sibling-crm",
       sourceDirty: false,
     });
@@ -352,7 +352,21 @@ suite(
         "postgres://neondb_owner:ownerpass@ep-sunlight-123-pooler.us-east-2.aws.neon.tech/sunlight?sslmode=verify-full",
         `postgres://crm_app:${rolePassword}@ep-sunlight-123-pooler.us-east-2.aws.neon.tech/sunlight?sslmode=verify-full`,
       ),
-    ).toThrow(/protected_installer_identity_mismatch/);
+    ).toThrow(/MIGRATION_DATABASE_URL must use a direct PostgreSQL host \(without '-pooler'\)/);
+    expect(() =>
+      runtimeRoles(
+        "postgres://neondb_owner:ownerpass@ep-sunlight-123.us-east-2.aws.neon.tech/sunlight?sslmode=require",
+        `postgres://crm_app:${rolePassword}@ep-sunlight-123-pooler.us-east-2.aws.neon.tech/sunlight?sslmode=verify-full`,
+      ),
+    ).toThrow(/uses sslmode=require; remote connections require sslmode=verify-full/);
+    expect(() =>
+      runtimeRoles(
+        "postgres://neondb_owner:ownerpass@ep-sunlight-123.us-east-2.aws.neon.tech/sunlight?sslmode=verify-full",
+        `postgres://crm_app:${rolePassword}@ep-sunlight-123-pooler.us-east-2.aws.neon.tech/sunlight?sslmode=require`,
+      ),
+    ).toThrow(
+      /APP_DATABASE_URL.*uses sslmode=require; remote connections require sslmode=verify-full/,
+    );
     await expect(
       rehearse({
         databaseUrl:
@@ -1016,22 +1030,38 @@ suite(
         if (muxErrs.length > 0) throw muxErrs[0];
       }
 
-      // Bind a third app (auth_ops) AFTER RP2 was captured, and rotate its login with --rebind-runtime-login!
-      const opsInitialRole = `${database}_ops_init`;
+      // Bind a third app (auth_ops) AFTER RP2 was captured, and verify login rotation is refused fail-closed in 0.1!
       const opsRole = `${database}_ops_app`;
+      const opsOtherRole = `${database}_ops_other`;
       await migrate({
         databaseUrl: ownerConnectionString,
         releaseDirectory: crmV2Out,
         restorePoints,
         sourceCommit: "commit-v2",
         sourceDirty: false,
-        runtimeRole: opsInitialRole,
-        authRole: opsInitialRole,
+        runtimeRole: opsRole,
+        authRole: opsRole,
         authSchema: "auth_ops",
         kernelRole: "company_data_user",
-        runtimeLogins: [{ role: opsInitialRole, password: rolePassword }],
+        runtimeLogins: [{ role: opsRole, password: rolePassword }],
       });
-      // Cross-app kernelRole hijack is STILL refused even with rebindRuntimeLogin: true (both when changing runtimeRole AND when rotating authRole only)!
+      // Explicit ACLs to elevated cluster observer roles never false-positive on repeat migrations
+      await ownerPool.query(`grant select on auth_ops."user" to "${database}_observer"`);
+      const idempotentOps = await migrate({
+        databaseUrl: ownerConnectionString,
+        releaseDirectory: crmV2Out,
+        restorePoints,
+        sourceCommit: "commit-v2",
+        sourceDirty: false,
+        runtimeRole: opsRole,
+        authRole: opsRole,
+        authSchema: "auth_ops",
+        kernelRole: "company_data_user",
+        runtimeLogins: [{ role: opsRole, password: rolePassword }],
+      });
+      expect(idempotentOps.applied).toBe(false);
+
+      // Rebinding auth_ops to a different runtimeRole or authRole is refused even for the same app and kernelRole!
       await expect(
         migrate({
           databaseUrl: ownerConnectionString,
@@ -1039,12 +1069,11 @@ suite(
           restorePoints,
           sourceCommit: "commit-v2",
           sourceDirty: false,
-          runtimeRole: opsRole,
-          authRole: opsRole,
+          runtimeRole: opsOtherRole,
+          authRole: opsOtherRole,
           authSchema: "auth_ops",
-          kernelRole: "crm_user",
-          rebindRuntimeLogin: true,
-          runtimeLogins: [{ role: opsRole, password: rolePassword }],
+          kernelRole: "company_data_user",
+          runtimeLogins: [{ role: opsOtherRole, password: rolePassword }],
         }),
       ).rejects.toThrow(/Auth schema 'auth_ops' is already bound to runtime login/);
       await expect(
@@ -1054,41 +1083,50 @@ suite(
           restorePoints,
           sourceCommit: "commit-v2",
           sourceDirty: false,
-          authRole: opsRole,
-          authSchema: "auth_ops",
-          kernelRole: "crm_user",
-          rebindRuntimeLogin: true,
-          runtimeLogins: [{ role: opsRole, password: rolePassword }],
-        }),
-      ).rejects.toThrow(/Auth schema 'auth_ops' already grants Auth access to login/);
-      // Group-inherited Auth grant on auth_ops."user" blocks rotation until the group grant is revoked,
-      // while explicit ACLs to elevated cluster observer roles never false-positive!
-      await ownerPool.query(`grant select on auth_ops."user" to "${database}_observer"`);
-      const opsGroupRole = `${database}_ops_grp`;
-      await admin.query(`create role "${opsGroupRole}" nologin`);
-      await ownerPool.query(`grant select on auth_ops."user" to "${opsGroupRole}"`);
-      await admin.query(`grant "${opsGroupRole}" to "${opsInitialRole}"`);
-      await expect(
-        migrate({
-          databaseUrl: ownerConnectionString,
-          releaseDirectory: crmV2Out,
-          restorePoints,
-          sourceCommit: "commit-v2",
-          sourceDirty: false,
-          runtimeRole: opsRole,
-          authRole: opsRole,
+          authRole: opsOtherRole,
           authSchema: "auth_ops",
           kernelRole: "company_data_user",
-          rebindRuntimeLogin: true,
-          runtimeLogins: [{ role: opsRole, password: rolePassword }],
+          runtimeLogins: [{ role: opsOtherRole, password: rolePassword }],
         }),
-      ).rejects.toThrow(
-        /still grants inherited Auth access to login .* via role membership\. Revoke that group grant before rotating logins\./,
-      );
-      await ownerPool.query(`revoke select on auth_ops."user" from "${opsGroupRole}"`);
+      ).rejects.toThrow(/Auth schema 'auth_ops' already grants Auth access to login/);
 
-      // Seed a fenced-revoked member + fenced actor_access on opsInitialRole BEFORE rotating logins:
-      // --rebind-runtime-login must carry fenced state forward to opsRole and revoke runtime capability from opsInitialRole!
+      // Comment-only CUE edits preserve buildHash & version and are a no-op in migrate()!
+      const v2CommentSchemaDir = path.join(scratchDir, "schema-v2-comment");
+      mkdirSync(v2CommentSchemaDir, { recursive: true });
+      writeFileSync(
+        path.join(v2CommentSchemaDir, "app.cue"),
+        `${readFileSync(path.join(v2SchemaDir, "app.cue"), "utf8")}\n// Non-semantic comment edit\n`,
+      );
+      const crmV2CommentOut = path.join(scratchDir, "crm-v2-comment", "release");
+      const crmV2CommentCompiled = compileSchema({
+        schemaPath: v2CommentSchemaDir,
+        outDir: crmV2CommentOut,
+        packageVersion: "0.1.0-alpha.2",
+        sourceCommit: "commit-v2-comment",
+        sourceDirty: false,
+      });
+      expect(crmV2CommentCompiled.version).toBe(
+        (
+          JSON.parse(readFileSync(path.join(crmV2Out, "app-artifact.json"), "utf8")) as {
+            schema: { version: string };
+          }
+        ).schema.version,
+      );
+      const commentMigrate = await migrate({
+        databaseUrl: ownerConnectionString,
+        releaseDirectory: crmV2CommentOut,
+        restorePoints,
+        sourceCommit: "commit-v2-comment",
+        sourceDirty: false,
+        runtimeRole: opsRole,
+        authRole: opsRole,
+        authSchema: "auth_ops",
+        kernelRole: "company_data_user",
+        runtimeLogins: [{ role: opsRole, password: rolePassword }],
+      });
+      expect(commentMigrate.applied).toBe(false);
+
+      // Seed a fenced-revoked member + fenced actor_access + service actor on opsRole to prove undo() preserves them!
       await ownerPool.query(`
         insert into auth_ops."user" (id, name, email, "emailVerified")
           values ('ops-fenced', 'Ops Fenced', 'ops-fenced@ops.test', true);
@@ -1101,75 +1139,20 @@ suite(
       await ownerPool.query(
         `update public.kernel_actor_membership set active = false, fence_generation = 2
           where principal_name = $1::name and actor_id = 'ops-fenced'`,
-        [opsInitialRole],
+        [opsRole],
       );
       await ownerPool.query(
         `insert into public.kernel_actor_access
            (principal_name, app_id, customer_id, actor_id, active, actor_kind, fence_generation)
          values ($1::name, 'sunlight', 'sunlight', 'ops-fenced', false, 'human', 2)`,
-        [opsInitialRole],
+        [opsRole],
       );
       await ownerPool.query(
         `insert into public.kernel_actor_membership
            (principal_name, app_id, customer_id, actor_id, role, actor_kind, active, fence_generation)
          values ($1::name, 'sunlight', 'sunlight', 'ops-sync-worker', 'company_data_user', 'service', true, 0)`,
-        [opsInitialRole],
+        [opsRole],
       );
-
-      // Same-app credential rotation succeeds with rebindRuntimeLogin: true, revokes the old login's Auth + runtime access, and preserves fenced revocations!
-      await migrate({
-        databaseUrl: ownerConnectionString,
-        releaseDirectory: crmV2Out,
-        restorePoints,
-        sourceCommit: "commit-v2",
-        sourceDirty: false,
-        runtimeRole: opsRole,
-        authRole: opsRole,
-        authSchema: "auth_ops",
-        kernelRole: "company_data_user",
-        rebindRuntimeLogin: true,
-        runtimeLogins: [{ role: opsRole, password: rolePassword }],
-      });
-      expect(
-        (
-          await ownerPool.query<{ active: boolean; fence_generation: string }>(
-            "select active, fence_generation::text from public.kernel_actor_membership where principal_name = $1::name and actor_id = 'ops-fenced'",
-            [opsRole],
-          )
-        ).rows,
-      ).toEqual([{ active: false, fence_generation: "2" }]);
-      expect(
-        (
-          await ownerPool.query<{ active: boolean; fence_generation: string }>(
-            "select active, fence_generation::text from public.kernel_actor_access where principal_name = $1::name and actor_id = 'ops-fenced'",
-            [opsRole],
-          )
-        ).rows,
-      ).toEqual([{ active: false, fence_generation: "2" }]);
-      expect(
-        (
-          await ownerPool.query<{ active: boolean; actor_kind: string; fence_generation: string }>(
-            "select active, actor_kind, fence_generation::text from public.kernel_actor_membership where principal_name = $1::name and actor_id = 'ops-sync-worker'",
-            [opsRole],
-          )
-        ).rows,
-      ).toEqual([{ active: true, actor_kind: "service", fence_generation: "0" }]);
-      expect(
-        (
-          await ownerPool.query<{ active: boolean }>(
-            "select active from public.kernel_actor_membership where principal_name = $1::name and actor_id = 'ops-sync-worker'",
-            [opsInitialRole],
-          )
-        ).rows,
-      ).toEqual([{ active: false }]);
-      expect(
-        (
-          await ownerPool.query<{ has_cap: boolean }>(
-            "select pg_has_role($1, kernel_installer_capability_role('runtime'), 'MEMBER') as has_cap",
-            [opsInitialRole],
-          )
-        ).rows[0]?.has_cap,
-      ).toBe(false);
       const opsDatabaseUrl = (() => {
         const u = new URL(ownerConnectionString);
         u.username = opsRole;

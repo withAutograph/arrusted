@@ -4,47 +4,39 @@ import {
   existsSync,
   lstatSync,
   mkdirSync,
+  realpathSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
 import { ResilientPool } from "@arrusted/core/pool";
 import { addPerson, removePerson } from "./server";
 
-const DARWIN_SYSTEM_ROOT_SYMLINKS = new Set(["/var", "/tmp", "/etc"]);
+const validAuthSchema = /^(?:public|auth_[a-z0-9_]{1,57})$/u;
 
 function assertNotSymbolicLink(targetPath: string, label: string): void {
-  if (process.platform === "darwin" && DARWIN_SYSTEM_ROOT_SYMLINKS.has(targetPath)) {
-    return;
-  }
-  if (!existsSync(targetPath)) {
-    const dangling = lstatSync(targetPath, { throwIfNoEntry: false });
-    if (dangling?.isSymbolicLink()) {
-      throw new Error(
-        `Refusing to write credentials through symbolic link (${label}): ${targetPath}`,
-      );
-    }
-    return;
-  }
-  const stat = lstatSync(targetPath);
-  if (stat.isSymbolicLink()) {
+  const entry = lstatSync(targetPath, { throwIfNoEntry: false });
+  if (entry?.isSymbolicLink()) {
     throw new Error(
       `Refusing to write credentials through symbolic link (${label}): ${targetPath}`,
     );
   }
 }
 
-function assertNoSymlinkAncestors(dirPath: string): void {
-  const resolved = path.resolve(dirPath);
-  const parsed = path.parse(resolved);
-  const remainder = resolved.slice(parsed.root.length);
-  let cursor = parsed.root;
-  for (const segment of remainder.split(path.sep)) {
-    if (!segment) continue;
-    cursor = path.join(cursor, segment);
-    assertNotSymbolicLink(cursor, "credentials path ancestor");
+function ensureLocalGitignore(localDir: string): void {
+  const gitignorePath = path.join(localDir, ".gitignore");
+  assertNotSymbolicLink(gitignorePath, ".local/.gitignore");
+  if (existsSync(gitignorePath)) return;
+  try {
+    writeFileSync(gitignorePath, "*\n", { encoding: "utf8", mode: 0o600, flag: "wx" });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code !== "EEXIST") {
+      throw error;
+    }
   }
+  assertNotSymbolicLink(gitignorePath, ".local/.gitignore");
 }
 
 export function encodeEmailForCredentialFilename(email: string): string {
@@ -69,35 +61,46 @@ export function encodeEmailForCredentialFilename(email: string): string {
 export function writeGeneratedPasswordFile(
   email: string,
   secret: string,
-  explicitPath?: string,
+  authSchema: string = "public",
   cwd: string = process.cwd(),
 ): string {
-  const safeStem = encodeEmailForCredentialFilename(email);
-  const targetPath = explicitPath
-    ? path.resolve(cwd, explicitPath)
-    : path.resolve(cwd, ".local/credentials", `${safeStem}.txt`);
-  const parentDir = path.dirname(targetPath);
-
-  assertNoSymlinkAncestors(parentDir);
-  if (!explicitPath) {
-    const localRoot = path.resolve(cwd, ".local");
-    mkdirSync(localRoot, { recursive: true, mode: 0o700 });
+  const resolvedSchema = authSchema.trim() || "public";
+  if (!validAuthSchema.test(resolvedSchema)) {
+    throw new Error(
+      "Auth schema must be 'public' or an 'auth_<app>' identifier (lowercase alphanumeric/underscore).",
+    );
   }
-  mkdirSync(parentDir, { recursive: true, mode: 0o700 });
-  assertNoSymlinkAncestors(parentDir);
+  const baseDir = path.resolve(cwd);
+  // Allow the project directory itself (or its parent mount) to reside under a user/OS symlink,
+  // while strictly rejecting symbolic links anywhere beneath cwd (.local, .gitignore, credentials, file).
+  const canonicalBaseDir = realpathSync(baseDir);
+  if (!statSync(canonicalBaseDir).isDirectory()) {
+    throw new Error(`Working directory must be an existing directory: ${baseDir}`);
+  }
 
-  const parentStat = lstatSync(parentDir);
-  if (parentStat.isSymbolicLink() || !parentStat.isDirectory()) {
+  const localRoot = path.join(baseDir, ".local");
+  assertNotSymbolicLink(localRoot, ".local directory");
+  mkdirSync(localRoot, { recursive: true, mode: 0o700 });
+  assertNotSymbolicLink(localRoot, ".local directory");
+  if (!lstatSync(localRoot).isDirectory()) {
+    throw new Error(`Credentials .local path must be a real directory: ${localRoot}`);
+  }
+  chmodSync(localRoot, 0o700);
+  ensureLocalGitignore(localRoot);
+
+  const parentDir = path.join(localRoot, "credentials");
+  assertNotSymbolicLink(parentDir, "credentials directory");
+  mkdirSync(parentDir, { recursive: true, mode: 0o700 });
+  assertNotSymbolicLink(parentDir, "credentials directory");
+  if (!lstatSync(parentDir).isDirectory()) {
     throw new Error(`Credentials parent path must be a real directory: ${parentDir}`);
   }
-  if (!explicitPath) {
-    chmodSync(parentDir, 0o700);
-  }
+  chmodSync(parentDir, 0o700);
 
+  const safeStem = encodeEmailForCredentialFilename(email);
+  const targetPath = path.join(parentDir, `${resolvedSchema}--${safeStem}.txt`);
+  assertNotSymbolicLink(targetPath, "credential file");
   const existingTarget = lstatSync(targetPath, { throwIfNoEntry: false });
-  if (existingTarget?.isSymbolicLink()) {
-    throw new Error(`Refusing to overwrite symbolic link with credentials: ${targetPath}`);
-  }
   if (existingTarget?.isDirectory()) {
     throw new Error(`Password file path is a directory: ${targetPath}`);
   }
@@ -106,6 +109,7 @@ export function writeGeneratedPasswordFile(
   try {
     writeFileSync(tmpPath, `${secret}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
     chmodSync(tmpPath, 0o600);
+    assertNotSymbolicLink(targetPath, "credential file");
     renameSync(tmpPath, targetPath);
   } catch (error) {
     rmSync(tmpPath, { force: true });
@@ -127,7 +131,7 @@ export async function runAuthCli(argv: string[] = process.argv.slice(2)): Promis
   ) {
     const usage = [
       "Usage:",
-      "  arrusted-auth people add <email> [--name <name>] [--password <password> | --password-file <path>] [--org <orgId>] [--schema <auth_schema>]",
+      "  arrusted-auth people add <email> [--name <name>] [--org <orgId>] [--schema <auth_schema>]",
       "  arrusted-auth people remove <email> [--org <orgId>] [--schema <auth_schema>]",
     ].join("\n");
     if (group === "--help" || group === "-h" || !group) {
@@ -138,8 +142,6 @@ export async function runAuthCli(argv: string[] = process.argv.slice(2)): Promis
   }
 
   let name: string | undefined;
-  let password: string | undefined;
-  let passwordFile: string | undefined;
   let organizationId =
     process.env.AUTH_ORGANIZATION_ID?.trim() ||
     process.env.CUSTOMER_ID?.trim() ||
@@ -148,27 +150,24 @@ export async function runAuthCli(argv: string[] = process.argv.slice(2)): Promis
 
   for (let i = 0; i < rest.length; i += 1) {
     const flag = rest[i]!;
+    if (flag === "--password" || flag === "--password-file") {
+      throw new Error(
+        `Unknown option: ${flag} ('people add' always writes a generated temporary password to .local/credentials/<auth_schema>--<email>.txt).`,
+      );
+    }
     const value = rest[i + 1];
     if (!value || value.startsWith("--")) {
       throw new Error(`Missing value for option ${flag}`);
     }
     i += 1;
     if (flag === "--name") name = value;
-    else if (flag === "--password") password = value;
-    else if (flag === "--password-file") passwordFile = value;
     else if (flag === "--org") organizationId = value;
     else if (flag === "--schema") authSchema = value;
     else throw new Error(`Unknown option: ${flag}`);
   }
 
-  if (
-    action === "remove" &&
-    (name !== undefined || password !== undefined || passwordFile !== undefined)
-  ) {
-    throw new Error("--name, --password, and --password-file are only valid with 'people add'.");
-  }
-  if (password !== undefined && passwordFile !== undefined) {
-    throw new Error("--password and --password-file cannot be combined.");
+  if (action === "remove" && name !== undefined) {
+    throw new Error("--name is only valid with 'people add'.");
   }
 
   const databaseUrl = process.env.AUTH_DATABASE_URL?.trim() || process.env.APP_DATABASE_URL?.trim();
@@ -185,15 +184,19 @@ export async function runAuthCli(argv: string[] = process.argv.slice(2)): Promis
   try {
     if (action === "add") {
       let writtenPath: string | undefined;
+      const resolvedSchema = authSchema ?? "public";
       const added = await addPerson({
         database: pool,
         ...(authSchema ? { authSchema } : {}),
         organizationId,
         email: emailArg,
         ...(name ? { name } : {}),
-        ...(password ? { password } : {}),
         onGeneratedPassword: (generatedPassword, resolvedEmail) => {
-          writtenPath = writeGeneratedPasswordFile(resolvedEmail, generatedPassword, passwordFile);
+          writtenPath = writeGeneratedPasswordFile(
+            resolvedEmail,
+            generatedPassword,
+            resolvedSchema,
+          );
         },
       });
       if (writtenPath) {
