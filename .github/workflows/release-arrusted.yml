@@ -9,14 +9,12 @@ on:
         type: boolean
         default: false
       dist_tag:
-        description: npm dist-tag when publish is true
+        description: npm dist-tag when publish is true (alpha only for 0.1.x prereleases)
         required: false
         type: choice
         default: alpha
         options:
           - alpha
-          - next
-          - latest
 
 permissions:
   contents: read
@@ -120,6 +118,15 @@ jobs:
         with:
           name: arrusted-cli-darwin-arm64
           path: dist-npm/release
+      - name: Guard publish ref
+        if: inputs.publish == true
+        env:
+          CURRENT_REF: ${{ github.ref }}
+        run: |
+          if [[ "${CURRENT_REF}" != "refs/heads/main" ]]; then
+            echo "Refusing publish=true from '${CURRENT_REF}'; npm publishing is permitted only from refs/heads/main." >&2
+            exit 1
+          fi
       - name: Pack @arrusted/{core,auth,ui} tarballs
         run: |
           mise exec -- bun .config/mise/scripts/repository/pack-arrusted-packages.ts \
@@ -148,7 +155,7 @@ jobs:
 
   publish:
     name: Publish to npm
-    if: inputs.publish == true
+    if: inputs.publish == true && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     needs: [pack-and-verify]
     permissions:
@@ -175,8 +182,8 @@ jobs:
         run: |
           set -euo pipefail
           case "${DIST_TAG}" in
-            alpha|next|latest) ;;
-            *) echo "Invalid dist_tag: ${DIST_TAG}" >&2; exit 1 ;;
+            alpha) ;;
+            *) echo "Invalid dist_tag for 0.1.x prerelease workflow: ${DIST_TAG}" >&2; exit 1 ;;
           esac
           npmrc="$(mktemp)"
           trap 'rm -f "${npmrc}"' EXIT
@@ -192,6 +199,11 @@ jobs:
               ls -la dist-npm/release >&2
               exit 1
             fi
-            echo "Publishing ${matches[0]} with --tag ${DIST_TAG}"
+            pkg_version="$(tar -xOf "${matches[0]}" package/package.json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s).version))')"
+            if [[ "${DIST_TAG}" == "latest" && "${pkg_version}" == *-* ]]; then
+              echo "Refusing to publish prerelease version ${pkg_version} under latest tag" >&2
+              exit 1
+            fi
+            echo "Publishing ${matches[0]} (${pkg_version}) with --tag ${DIST_TAG}"
             mise exec -- npm publish "${matches[0]}" --tag "${DIST_TAG}" --access public --provenance
           done

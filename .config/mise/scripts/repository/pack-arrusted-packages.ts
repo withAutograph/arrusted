@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   chmodSync,
   closeSync,
@@ -119,8 +119,13 @@ export function stripWorkspaceManifestForPublish(
   if (manifest.private !== false) {
     throw new Error(`Refusing to pack private or unmarked manifest '${String(manifest.name)}'.`);
   }
-  if (manifest.license !== "MIT") {
-    throw new Error(`Manifest '${String(manifest.name)}' must declare MIT license.`);
+  const expectedLicense = String(manifest.name).startsWith("@arrusted/cli-")
+    ? "MIT AND Apache-2.0"
+    : "MIT";
+  if (manifest.license !== expectedLicense) {
+    throw new Error(
+      `Manifest '${String(manifest.name)}' must declare '${expectedLicense}' license (got '${String(manifest.license)}').`,
+    );
   }
   if (typeof manifest.version !== "string" || manifest.version.trim().length === 0) {
     throw new Error(`Manifest '${String(manifest.name)}' is missing a version.`);
@@ -215,6 +220,12 @@ export function stageCliPackage(options: {
 
   if (detectHostCliTarget() === options.target) {
     execFileSync(stagedCue, ["version"], { stdio: "pipe" });
+    const compilerProbe = spawnSync(stagedCompiler, [], { encoding: "utf8" });
+    if (compilerProbe.error || !compilerProbe.stderr?.includes("Usage: schema-compiler")) {
+      throw new Error(
+        `Staged schema-compiler failed native smoke check: ${compilerProbe.error?.message ?? compilerProbe.stderr ?? "no output"}`,
+      );
+    }
   }
   return pkgDir;
 }

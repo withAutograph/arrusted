@@ -357,7 +357,9 @@ suite(
         optionalDependencies?: Record<string, string>;
       };
       expect(manifest.version).toBe("0.1.0-alpha.1");
-      expect(manifest.license).toBe("MIT");
+      expect(manifest.license).toBe(
+        manifest.name.startsWith("@arrusted/cli-") ? "MIT AND Apache-2.0" : "MIT",
+      );
       expect(manifest.repository?.type).toBe("git");
       expect(manifest.repository?.url).toBe(
         "git+https://github.com/withAutograph/arrusted-development.git",

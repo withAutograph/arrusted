@@ -152,6 +152,19 @@ describe("pack-arrusted-packages", () => {
 
     expect(() =>
       stripWorkspaceManifestForPublish({
+        name: "@arrusted/cli-linux-x64",
+        version: "0.1.0-alpha.1",
+        private: false,
+        license: "MIT",
+        repository: {
+          type: "git",
+          url: "git+https://github.com/withAutograph/arrusted-development.git",
+        },
+      }),
+    ).toThrow(/MIT AND Apache-2\.0/);
+
+    expect(() =>
+      stripWorkspaceManifestForPublish({
         name: "@arrusted/core",
         version: "0.1.0-alpha.1",
         private: false,
@@ -163,11 +176,16 @@ describe("pack-arrusted-packages", () => {
   test("stageCliPackage dereferences symlinked binaries into standalone files", () => {
     const fakeRepo = mkdtempSync(path.join(tmpdir(), "arrusted-stage-symlink-"));
     try {
-      mkdirSync(path.join(fakeRepo, "packages/arrusted/cli-linux-x64"), { recursive: true });
+      const nonHostTarget = detectHostCliTarget() === "linux-x64" ? "darwin-arm64" : "linux-x64";
+      const headerBytes =
+        nonHostTarget === "darwin-arm64" ? makeMachoArm64Header() : makeElfX64Header();
+      mkdirSync(path.join(fakeRepo, `packages/arrusted/cli-${nonHostTarget}`), {
+        recursive: true,
+      });
       const realCompiler = path.join(fakeRepo, "real-schema-compiler");
       const realCue = path.join(fakeRepo, "real-cue");
-      writeFileSync(realCompiler, makeElfX64Header());
-      writeFileSync(realCue, makeElfX64Header());
+      writeFileSync(realCompiler, headerBytes);
+      writeFileSync(realCue, headerBytes);
 
       const symlinkCompiler = path.join(fakeRepo, "link-schema-compiler");
       const symlinkCue = path.join(fakeRepo, "link-cue");
@@ -176,7 +194,7 @@ describe("pack-arrusted-packages", () => {
 
       const stagedDir = stageCliPackage({
         repoRoot: fakeRepo,
-        target: "linux-x64",
+        target: nonHostTarget,
         compilerBinary: symlinkCompiler,
         cueBinary: symlinkCue,
       });

@@ -2,7 +2,7 @@
   "name": "@arrusted/cli-darwin-arm64",
   "version": "0.1.0-alpha.1",
   "private": false,
-  "license": "MIT",
+  "license": "MIT AND Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/withAutograph/arrusted-development.git",
