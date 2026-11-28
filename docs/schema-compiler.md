@@ -57,13 +57,21 @@ COMMIT`) rather than caching session-level `SET` state, so `AUTH_SCHEMA`
   (including group-inherited Auth privileges; pass `--rebind-runtime-login` /
   `rebindRuntimeLogin: true` to rotate credentials for the same app and
   `APP_KERNEL_ROLE`).
-- Sibling apps running an installed prior revision (verified through
-  `kernel_read_runtime_release_observability`) continue reading, writing
-  (including exact idempotency-key replays across activation), and opening work
-  sessions across strictly additive schema transitions; unselected full-record
-  reads on prior builds project only that build's declared fields and metadata so
-  newly added fields private to another app's role do not trigger
-  unauthorized-field refusals.
+- Sibling apps running an installed prior revision (whose lineage is verified
+  through `kernel_read_runtime_release_observability`, while runtime safety is
+  enforced by `isAdditiveActiveSchema` and PostgreSQL) continue reading and
+  writing (including exact idempotency-key replays across activation) across
+  strictly additive schema transitions; unselected full-record reads on prior
+  builds project only that build's declared fields and metadata so newly added
+  fields private to another app's role do not trigger unauthorized-field
+  refusals. Work sessions remain pinned to exact `schemaVersion` matching.
+- In `@arrusted/*` `0.1.0-alpha.1`, schemas declaring `authorization`
+  (`policy_declared = true`) support role-scoped mainline reads (`list`, `get`,
+  `aggregate`, `history` field values) and mainline `apply` writes; `draft`
+  staging, `revert`, recent-activity feeds, change-set diff/comparison, and
+  actor/notes disclosure in `history` are deferred to `0.2`. For
+  `@arrusted/ui`, `EditableRowVersionGrid` with `analytics="advanced"` requires
+  `NEXT_PUBLIC_AG_GRID_LICENSE_KEY` in production builds (`NODE_ENV=production`).
 - Schema transitions are additive by default: `migrate` refuses any candidate
   that removes or explicitly retires (`lifecycle: "retired"`) existing models,
   fields, many-relations, enum options, custom fields, or change types from the

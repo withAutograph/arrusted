@@ -10,7 +10,7 @@ import {
   sourceFiles,
 } from "./source-analysis";
 
-const PRODUCT_IDENTITY = /arrusted|autograph|aon/i;
+const PRODUCT_IDENTITY = /arrusted|autograph/i;
 const RASTER_ASSETS = new Set([".gif", ".ico", ".jpeg", ".jpg", ".png", ".webp"]);
 const PACKAGE_SPECIFIER = /@(?:arrusted|autograph)\/[a-z0-9._/-]+/gi;
 const CSS_VARIABLE_REFERENCE = /var\(\s*(--[a-z0-9-]+)(?=\s*[,)]|$)/g;

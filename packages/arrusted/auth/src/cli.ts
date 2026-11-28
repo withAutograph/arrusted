@@ -1,5 +1,89 @@
+import { randomUUID } from "node:crypto";
+import {
+  chmodSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import path from "node:path";
 import { ResilientPool } from "@arrusted/core/pool";
 import { addPerson, removePerson } from "./server";
+
+function assertNotSymbolicLink(targetPath: string, label: string): void {
+  if (!existsSync(targetPath)) {
+    const dangling = lstatSync(targetPath, { throwIfNoEntry: false });
+    if (dangling?.isSymbolicLink()) {
+      throw new Error(
+        `Refusing to write credentials through symbolic link (${label}): ${targetPath}`,
+      );
+    }
+    return;
+  }
+  const stat = lstatSync(targetPath);
+  if (stat.isSymbolicLink()) {
+    throw new Error(
+      `Refusing to write credentials through symbolic link (${label}): ${targetPath}`,
+    );
+  }
+}
+
+export function writeGeneratedPasswordFile(
+  email: string,
+  secret: string,
+  explicitPath?: string,
+  cwd: string = process.cwd(),
+): string {
+  const safeStem =
+    email
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9._@-]+/gu, "_") || "user";
+  const targetPath = explicitPath
+    ? path.resolve(cwd, explicitPath)
+    : path.resolve(cwd, ".local/credentials", `${safeStem}.txt`);
+  const parentDir = path.dirname(targetPath);
+
+  const relToCwd = path.relative(path.resolve(cwd), parentDir);
+  if (relToCwd && !relToCwd.startsWith("..") && !path.isAbsolute(relToCwd)) {
+    let cursor = path.resolve(cwd);
+    for (const segment of relToCwd.split(path.sep)) {
+      if (!segment || segment === ".") continue;
+      cursor = path.join(cursor, segment);
+      assertNotSymbolicLink(cursor, "credentials path segment");
+    }
+  }
+  assertNotSymbolicLink(parentDir, "credentials directory");
+  mkdirSync(parentDir, { recursive: true, mode: 0o700 });
+  const parentStat = lstatSync(parentDir);
+  if (parentStat.isSymbolicLink() || !parentStat.isDirectory()) {
+    throw new Error(`Credentials parent path must be a real directory: ${parentDir}`);
+  }
+  if (!explicitPath) {
+    chmodSync(parentDir, 0o700);
+  }
+
+  const existingTarget = lstatSync(targetPath, { throwIfNoEntry: false });
+  if (existingTarget?.isSymbolicLink()) {
+    throw new Error(`Refusing to overwrite symbolic link with credentials: ${targetPath}`);
+  }
+  if (existingTarget?.isDirectory()) {
+    throw new Error(`Password file path is a directory: ${targetPath}`);
+  }
+
+  const tmpPath = path.join(parentDir, `.cred-${randomUUID()}.tmp`);
+  try {
+    writeFileSync(tmpPath, `${secret}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
+    chmodSync(tmpPath, 0o600);
+    renameSync(tmpPath, targetPath);
+  } catch (error) {
+    rmSync(tmpPath, { force: true });
+    throw error;
+  }
+  return targetPath;
+}
 
 export async function runAuthCli(argv: string[] = process.argv.slice(2)): Promise<void> {
   const [group, action, emailArg, ...rest] = argv;
@@ -14,7 +98,7 @@ export async function runAuthCli(argv: string[] = process.argv.slice(2)): Promis
   ) {
     const usage = [
       "Usage:",
-      "  arrusted-auth people add <email> [--name <name>] [--password <password>] [--org <orgId>] [--schema <auth_schema>]",
+      "  arrusted-auth people add <email> [--name <name>] [--password <password> | --password-file <path>] [--org <orgId>] [--schema <auth_schema>]",
       "  arrusted-auth people remove <email> [--org <orgId>] [--schema <auth_schema>]",
     ].join("\n");
     if (group === "--help" || group === "-h" || !group) {
@@ -26,6 +110,7 @@ export async function runAuthCli(argv: string[] = process.argv.slice(2)): Promis
 
   let name: string | undefined;
   let password: string | undefined;
+  let passwordFile: string | undefined;
   let organizationId =
     process.env.AUTH_ORGANIZATION_ID?.trim() ||
     process.env.CUSTOMER_ID?.trim() ||
@@ -41,9 +126,20 @@ export async function runAuthCli(argv: string[] = process.argv.slice(2)): Promis
     i += 1;
     if (flag === "--name") name = value;
     else if (flag === "--password") password = value;
+    else if (flag === "--password-file") passwordFile = value;
     else if (flag === "--org") organizationId = value;
     else if (flag === "--schema") authSchema = value;
     else throw new Error(`Unknown option: ${flag}`);
+  }
+
+  if (
+    action === "remove" &&
+    (name !== undefined || password !== undefined || passwordFile !== undefined)
+  ) {
+    throw new Error("--name, --password, and --password-file are only valid with 'people add'.");
+  }
+  if (password !== undefined && passwordFile !== undefined) {
+    throw new Error("--password and --password-file cannot be combined.");
   }
 
   const databaseUrl = process.env.AUTH_DATABASE_URL?.trim() || process.env.APP_DATABASE_URL?.trim();
@@ -68,8 +164,13 @@ export async function runAuthCli(argv: string[] = process.argv.slice(2)): Promis
         ...(password ? { password } : {}),
       });
       if (added.generatedPassword) {
+        const writtenPath = writeGeneratedPasswordFile(
+          added.email,
+          added.generatedPassword,
+          passwordFile,
+        );
         console.log(
-          `Added ${added.email} (${added.userId}) to ${added.organizationId}. Temporary password: ${added.generatedPassword}`,
+          `Added ${added.email} (${added.userId}) to ${added.organizationId}. Temporary password written to ${writtenPath}`,
         );
       } else {
         console.log(`Added ${added.email} (${added.userId}) to ${added.organizationId}.`);

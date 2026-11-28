@@ -1,5 +1,9 @@
+import { mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { describe, expect, test } from "vite-plus/test";
 import type { Pool, PoolClient } from "pg";
+import { runAuthCli, writeGeneratedPasswordFile } from "../src/cli";
 import { addPerson, createAppAuth, removePerson } from "../src/server";
 
 function createFakePool(options?: { existingAccountId?: string; deleteMemberCount?: number }) {
@@ -142,5 +146,56 @@ describe("@arrusted/auth server & people helpers", () => {
     });
     expect(notRemoved).toEqual({ removed: false, userId: "user-123" });
     expect(nonMemberQueries.some((q) => q.sql.includes('delete from "session"'))).toBe(false);
+  });
+
+  test("writeGeneratedPasswordFile writes 0600 credential files, refuses symlinks, and CLI rejects conflicting flags", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "arrusted-auth-cred-"));
+    try {
+      const defaultPath = writeGeneratedPasswordFile(
+        "Alice@Sunlight.test",
+        "SecretPass123!",
+        undefined,
+        dir,
+      );
+      expect(defaultPath).toBe(path.join(dir, ".local/credentials/alice@sunlight.test.txt"));
+      expect(readFileSync(defaultPath, "utf8")).toBe("SecretPass123!\n");
+      expect(statSync(defaultPath).mode & 0o777).toBe(0o600);
+      expect(statSync(path.dirname(defaultPath)).mode & 0o777).toBe(0o700);
+
+      const customPath = writeGeneratedPasswordFile(
+        "bob@sunlight.test",
+        "CustomSecret456!",
+        "secrets/bob.pwd",
+        dir,
+      );
+      expect(customPath).toBe(path.join(dir, "secrets/bob.pwd"));
+      expect(readFileSync(customPath, "utf8")).toBe("CustomSecret456!\n");
+      expect(statSync(customPath).mode & 0o777).toBe(0o600);
+
+      const victimFile = path.join(dir, "victim.txt");
+      writeFileSync(victimFile, "preserve-me");
+      const linkTarget = path.join(dir, "secrets/link.pwd");
+      symlinkSync(victimFile, linkTarget);
+      expect(() =>
+        writeGeneratedPasswordFile("eve@sunlight.test", "ShouldNotWrite", "secrets/link.pwd", dir),
+      ).toThrow(/symbolic link/);
+      expect(readFileSync(victimFile, "utf8")).toBe("preserve-me");
+
+      await expect(
+        runAuthCli([
+          "people",
+          "add",
+          "alice@sunlight.test",
+          "--password",
+          "Password1234!",
+          "--password-file",
+          "out.txt",
+          "--org",
+          "sunlight",
+        ]),
+      ).rejects.toThrow(/--password and --password-file cannot be combined/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

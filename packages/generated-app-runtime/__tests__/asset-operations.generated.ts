@@ -93,6 +93,7 @@ export const definition = {
   },
   models: [
     {
+      aliases: [],
       display_field_id: null,
       extensions: {
         record_metadata: {
@@ -1200,6 +1201,7 @@ export const definition = {
       relations: [],
     },
     {
+      aliases: [],
       display_field_id: null,
       extensions: {
         record_metadata: null,
@@ -1669,6 +1671,7 @@ export const definition = {
       ],
     },
     {
+      aliases: [],
       display_field_id: "name",
       extensions: {
         record_metadata: null,
