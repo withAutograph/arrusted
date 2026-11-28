@@ -234,6 +234,46 @@ describe("@arrusted/auth server & people helpers", () => {
         ),
       ).toThrow(/symbolic link/);
 
+      // Pre-existing .local/.gitignore without credentials/ coverage (or negating credentials/) appends credentials/ idempotently
+      const customGitignoreProject = path.join(outer, "custom-gitignore-project");
+      mkdirSync(path.join(customGitignoreProject, ".local"), { recursive: true });
+      writeFileSync(
+        path.join(customGitignoreProject, ".local/.gitignore"),
+        "# custom rules\nrestore-points/\n*\n!credentials/\n",
+      );
+      writeGeneratedPasswordFile(
+        "alice@sunlight.test",
+        "CustomIgnorePass1!",
+        "auth_crm",
+        customGitignoreProject,
+      );
+      expect(readFileSync(path.join(customGitignoreProject, ".local/.gitignore"), "utf8")).toBe(
+        "# custom rules\nrestore-points/\n*\n!credentials/\ncredentials/\n",
+      );
+      writeGeneratedPasswordFile(
+        "bob@sunlight.test",
+        "CustomIgnorePass2!",
+        "auth_crm",
+        customGitignoreProject,
+      );
+      expect(readFileSync(path.join(customGitignoreProject, ".local/.gitignore"), "utf8")).toBe(
+        "# custom rules\nrestore-points/\n*\n!credentials/\ncredentials/\n",
+      );
+
+      // Symlinked .local/.gitignore is refused without modifying victim
+      const symlinkGitignoreProject = path.join(outer, "bad-gitignore-project");
+      mkdirSync(path.join(symlinkGitignoreProject, ".local"), { recursive: true });
+      symlinkSync(victimFile, path.join(symlinkGitignoreProject, ".local/.gitignore"));
+      expect(() =>
+        writeGeneratedPasswordFile(
+          "mallory@sunlight.test",
+          "ShouldNotTouchGitignoreTarget",
+          "auth_crm",
+          symlinkGitignoreProject,
+        ),
+      ).toThrow(/symbolic link/);
+      expect(readFileSync(victimFile, "utf8")).toBe("preserve-me");
+
       // Distinct valid emails (+ vs _) map to distinct files without overwriting one another
       const plusPath = writeGeneratedPasswordFile(
         "a+b@sunlight.test",

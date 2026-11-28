@@ -30,7 +30,7 @@ Native `schema-compiler` and `cue` binaries are resolved automatically from `@ar
 | `APP_KERNEL_ROLE`             | Policy-enabled schemas                          | CUE `authorization.roles` identifier granted to human members of this app (for example `crm_user`).                                                                                       |
 | `PRODUCTION_APP_DATABASE_URL` | `migrate:rehearse` only                         | Production database URL used as a safety guard so rehearsal never runs against production.                                                                                                |
 
-Local `pg_dump` restore points are written to `./.local/restore-points` with `./.local/.gitignore` (`*`) created automatically so backups are excluded from git.
+Local `pg_dump` restore points default to `./.local/restore-points`, automatically creating `./.local/.gitignore` (`*`) or appending `restore-points/` so backups under `.local/` are excluded from git (custom restore-point directories outside `.local/` must be git-ignored by the caller).
 
 ## `0.1.0-alpha.2` Scope Notes
 

@@ -12,15 +12,17 @@ for `#SelectedAppManifest` schemas, pass `catalogPath` explicitly to load both
 `app-selection.cue` and the domain catalog (`app/scripts/compile.ts` supplies the
 repository catalog automatically when present). These are git-ignored build
 outputs, not committed release history. Compilation needs no database. The
-deterministic `build-<buildHash>` schema version snapshots all compiler inputs
-once and hashes the package version, target adapter options, normalized CUE
+deterministic `build-<buildHash>` schema version (`build-` is reserved for
+compiler-computed portable versions) snapshots all compiler inputs once and
+hashes target adapter options (`nextApp`, `runtimePkg`), normalized CUE
 manifest/extras/client metadata, probe data-plane manifest and TypeScript
-bindings, emitted SQL runtime artifacts, and LF-normalized text checksums of CUE
-and Better Auth SQL inputs, so two checkouts (including LF vs. CRLF or different
-directories/OSes) produce identical `build-<buildHash>` versions while any CUE,
-generated-binding, or runtime SQL upgrade creates a new migration candidate
-(`release-manifest.json` still records exact local file checksums for local
-staleness checks). `.generated/build.json` (or `<outDir>.build.json` when
+bindings, emitted SQL runtime artifacts, and LF-normalized Better Auth SQL
+inputs — deliberately excluding raw CUE text and `packageVersion` so two
+checkouts, comment-only CUE edits, and sibling package patch bumps produce
+identical `build-<buildHash>` versions while any semantic CUE,
+generated-binding, or runtime/Auth SQL change creates a new migration candidate
+(`release-manifest.json` still records `packageVersion` and exact local file
+checksums for provenance and local staleness checks). `.generated/build.json` (or `<outDir>.build.json` when
 compiling sibling releases into non-`release` directories) records
 `sourceCommit`, `sourceDirty`, `buildHash`, `packageVersion`, and `releaseHash`
 atomically without copying host-specific compiler binaries. Source archives
@@ -91,7 +93,11 @@ COMMIT`) rather than caching session-level `SET` state, so `AUTH_SCHEMA`
   `arrusted migrate:rehearse` drive database provisioning and rollback;
   `@arrusted/core/routes` (`createAppRoutes`) exposes `/api/schema/active`,
   `/api/records`, and `/api/apply` over policy-enforced `createDataClient` and
-  human mainline change-sets; `@arrusted/core/next` (`nextAppConfig`) configures
+  human mainline change-sets (`/api/apply` requires a matching `Origin` header
+  against the request origin, `BETTER_AUTH_URL`, or `AUTH_ORIGIN` when cookies
+  or `Origin` are sent — returning `403` `forbidden` otherwise — and accepts
+  only `mode: "mainline"`, rejecting other modes with `400`
+  `unsupported_capability`); `@arrusted/core/next` (`nextAppConfig`) configures
   Next.js 16 tracing and external packages; and `@arrusted/auth` (`createAppAuth`
   with `allowSignUp: false` by default, plus `arrusted-auth people add|remove`)
   provisions isolated per-app Better Auth memberships without OAuth/infra/email

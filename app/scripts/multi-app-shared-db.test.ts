@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, test } from "vite-plus/test";
 import { randomUUID } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { Pool } from "pg";
@@ -217,7 +217,14 @@ suite(
       sourceDirty: false,
     });
 
-    // Output safety, CRLF line-ending normalization, sibling release metadata isolation, and missing provenance check
+    // Output safety, reserved build- prefix, CRLF line-ending normalization, sibling release metadata isolation, and missing provenance check
+    expect(() =>
+      compileSchema({
+        schemaPath: v1SchemaDir,
+        outDir: path.join(scratchDir, "bad-prefix-out"),
+        schemaVersion: "build-manual",
+      }),
+    ).toThrow(/reserved 'build-' prefix/);
     expect(() =>
       compileSchema({
         schemaPath: v1SchemaDir,
@@ -225,6 +232,28 @@ suite(
         packageVersion: "0.1.0-alpha.1",
       }),
     ).toThrow(/Refusing to overwrite non-empty directory/);
+
+    // PgDumpRestorePoints refuses symlinked .local parent and appends restore-points/ when .local/.gitignore lacks coverage
+    const symlinkedLocalRoot = path.join(scratchDir, "symlink-local-proj");
+    const outsideTarget = path.join(scratchDir, "outside-restore-target");
+    mkdirSync(symlinkedLocalRoot, { recursive: true });
+    mkdirSync(outsideTarget, { recursive: true });
+    symlinkSync(outsideTarget, path.join(symlinkedLocalRoot, ".local"));
+    await expect(
+      new PgDumpRestorePoints({
+        directory: path.join(symlinkedLocalRoot, ".local/restore-points"),
+      }).create({ databaseUrl: ownerConnectionString, id: "rp-symlink-refused" }),
+    ).rejects.toThrow(/symbolic link/);
+
+    const customIgnoreProj = path.join(scratchDir, "custom-ignore-proj");
+    mkdirSync(path.join(customIgnoreProj, ".local"), { recursive: true });
+    writeFileSync(path.join(customIgnoreProj, ".local/.gitignore"), "# existing\ncredentials/\n");
+    await new PgDumpRestorePoints({
+      directory: path.join(customIgnoreProj, ".local/restore-points"),
+    }).create({ databaseUrl: ownerConnectionString, id: "rp-gitignore-append" });
+    expect(readFileSync(path.join(customIgnoreProj, ".local/.gitignore"), "utf8")).toBe(
+      "# existing\ncredentials/\nrestore-points/\n",
+    );
     const crlfSchemaDir = path.join(scratchDir, "schema-crlf");
     mkdirSync(crlfSchemaDir, { recursive: true });
     writeFileSync(path.join(crlfSchemaDir, "app.cue"), sharedCueSchema().replace(/\n/gu, "\r\n"));

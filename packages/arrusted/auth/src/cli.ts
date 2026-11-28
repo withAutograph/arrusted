@@ -1,9 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
-  existsSync,
   lstatSync,
   mkdirSync,
+  readFileSync,
   realpathSync,
   renameSync,
   rmSync,
@@ -25,18 +25,83 @@ function assertNotSymbolicLink(targetPath: string, label: string): void {
   }
 }
 
-function ensureLocalGitignore(localDir: string): void {
-  const gitignorePath = path.join(localDir, ".gitignore");
-  assertNotSymbolicLink(gitignorePath, ".local/.gitignore");
-  if (existsSync(gitignorePath)) return;
-  try {
-    writeFileSync(gitignorePath, "*\n", { encoding: "utf8", mode: 0o600, flag: "wx" });
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException)?.code !== "EEXIST") {
-      throw error;
+function gitignoreCoversSubdir(content: string, subdir: string): boolean {
+  let covered = false;
+  for (const rawLine of content.split(/\r?\n/u)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    if (line.startsWith("!")) {
+      const neg = line.slice(1).replace(/^\/+/u, "").replace(/\/+$/u, "");
+      if (
+        neg === subdir ||
+        neg.startsWith(`${subdir}/`) ||
+        neg.includes("*") ||
+        neg.includes("?") ||
+        neg.includes("[")
+      ) {
+        covered = false;
+      }
+      continue;
+    }
+    const pat = line.replace(/^\/+/u, "");
+    if (
+      pat === "*" ||
+      pat === "**" ||
+      pat === "*/" ||
+      pat === subdir ||
+      pat === `${subdir}/` ||
+      pat === `${subdir}/**`
+    ) {
+      covered = true;
     }
   }
-  assertNotSymbolicLink(gitignorePath, ".local/.gitignore");
+  return covered;
+}
+
+function ensureLocalGitignore(localDir: string): void {
+  const gitignorePath = path.join(localDir, ".gitignore");
+  const existing = lstatSync(gitignorePath, { throwIfNoEntry: false });
+  if (!existing) {
+    try {
+      writeFileSync(gitignorePath, "*\n", { encoding: "utf8", mode: 0o600, flag: "wx" });
+      assertNotSymbolicLink(gitignorePath, ".local/.gitignore");
+      return;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code !== "EEXIST") {
+        throw error;
+      }
+    }
+  }
+  const stat = lstatSync(gitignorePath);
+  if (stat.isSymbolicLink()) {
+    throw new Error(
+      `Refusing to write credentials through symbolic link (.local/.gitignore): ${gitignorePath}`,
+    );
+  }
+  if (!stat.isFile()) {
+    throw new Error(`Credentials .local/.gitignore must be a regular file: ${gitignorePath}`);
+  }
+  const content = readFileSync(gitignorePath, "utf8");
+  if (gitignoreCoversSubdir(content, "credentials")) {
+    return;
+  }
+  const prefix = content.length === 0 || content.endsWith("\n") ? content : `${content}\n`;
+  const tmpPath = path.join(localDir, `.gitignore-${randomUUID()}.tmp`);
+  try {
+    writeFileSync(tmpPath, `${prefix}credentials/\n`, {
+      encoding: "utf8",
+      mode: stat.mode & 0o777 || 0o600,
+      flag: "wx",
+    });
+    const rechecked = lstatSync(gitignorePath);
+    if (rechecked.isSymbolicLink() || !rechecked.isFile()) {
+      throw new Error(`Refusing to overwrite non-regular .local/.gitignore: ${gitignorePath}`);
+    }
+    renameSync(tmpPath, gitignorePath);
+  } catch (error) {
+    rmSync(tmpPath, { force: true });
+    throw error;
+  }
 }
 
 export function encodeEmailForCredentialFilename(email: string): string {

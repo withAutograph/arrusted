@@ -81,11 +81,11 @@ export type CompileSchemaOptions = {
   outDir: string;
   /** Optional domain-libs catalog.json path when using #SelectedAppManifest. */
   catalogPath?: string;
-  /** Optional explicit schema_version override; defaults to deterministic `build-${buildHash}`. */
+  /** Optional explicit schema_version override (must not start with `build-`); defaults to deterministic `build-${buildHash}`. */
   schemaVersion?: string;
   /** Optional predecessor app-artifact.json files for additive transition planning. */
   predecessors?: readonly string[];
-  /** Package version mixed into the portable buildHash so runtime/SQL upgrades produce new hashes. */
+  /** Optional package version recorded in release-manifest.json and build metadata (excluded from portable buildHash). */
   packageVersion?: string;
   /** Git commit or build provenance recorded in build metadata. */
   sourceCommit?: string;
@@ -386,6 +386,15 @@ export function rewriteRuntimeImports(typescript: string, runtimePkg: string): s
 
 /** Pure current-state CUE -> SQL + TypeScript codegen with portable build identity. */
 export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResult {
+  const explicitSchemaVersion = options.schemaVersion?.trim();
+  if (explicitSchemaVersion !== undefined) {
+    if (explicitSchemaVersion.length === 0) {
+      throw new Error("Explicit schemaVersion must not be empty.");
+    }
+    if (explicitSchemaVersion.startsWith("build-")) {
+      throw new Error("Explicit schemaVersion must not use the reserved 'build-' prefix.");
+    }
+  }
   const outDir = path.resolve(options.outDir);
   assertSafeOutputDirectory(outDir);
   const metadataPath = resolveBuildMetadataPath(outDir);
@@ -502,7 +511,8 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
     });
 
     // 1. Probe pass to compute a portable, platform-, directory-, and line-ending-independent buildHash
-    // covering packageVersion, normalized CUE manifest, data-plane bindings, emitted SQL runtime, and auth SQL.
+    // covering adapter options, normalized CUE manifest, data-plane bindings, emitted SQL runtime, and auth SQL
+    // (excluding raw CUE text and packageVersion so comment-only edits and patch bumps keep the same version).
     const probeVersion = "build-probe";
     const probeArtifactRaw = runCompiler(invocation, [
       "--app-artifact",
@@ -580,7 +590,7 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
         sqlSources,
       }),
     );
-    const version = options.schemaVersion ?? `build-${buildHash}`;
+    const version = explicitSchemaVersion ?? `build-${buildHash}`;
 
     // 2. Emit final current-state bundle for `version` from the staged input snapshot
     const stagedRelease = path.join(stagingRoot, "release");

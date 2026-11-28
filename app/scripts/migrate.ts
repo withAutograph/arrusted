@@ -687,6 +687,7 @@ export async function migrate(
     const build = JSON.parse(readFileSync(buildMetadataPath, "utf8")) as {
       sourceCommit: string;
       sourceDirty: boolean;
+      buildHash?: string;
       compilerBinaryHash?: string;
       releaseHash: string;
     };
@@ -736,7 +737,9 @@ export async function migrate(
       const authExists = await validateAuth(client, authHash, authSchema);
       const samePortableBuild =
         previous !== undefined &&
-        artifact.schema.version.startsWith("build-") &&
+        typeof build.buildHash === "string" &&
+        /^[0-9a-f]{64}$/u.test(build.buildHash) &&
+        artifact.schema.version === `build-${build.buildHash}` &&
         previous.schema.version === artifact.schema.version &&
         previous.artifact === artifactBytes;
       if (
