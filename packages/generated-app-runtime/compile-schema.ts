@@ -81,11 +81,11 @@ export type CompileSchemaOptions = {
   outDir: string;
   /** Optional domain-libs catalog.json path when using #SelectedAppManifest. */
   catalogPath?: string;
-  /** Optional explicit schema_version override; defaults to deterministic `build-${buildHash}`. */
+  /** Optional explicit schema_version override (must not start with `build-`); defaults to deterministic `build-${buildHash}`. */
   schemaVersion?: string;
   /** Optional predecessor app-artifact.json files for additive transition planning. */
   predecessors?: readonly string[];
-  /** Package version mixed into the portable buildHash so runtime/SQL upgrades produce new hashes. */
+  /** Optional package version recorded in release-manifest.json and build metadata (excluded from portable buildHash). */
   packageVersion?: string;
   /** Git commit or build provenance recorded in build metadata. */
   sourceCommit?: string;
@@ -231,7 +231,17 @@ function runCompiler(
     maxBuffer: 64 * 1024 * 1024,
   });
   if (result.error || result.status !== 0) {
+    if ((result.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT") {
+      throw new Error(
+        `No prebuilt @arrusted/cli-${process.platform}-${process.arch} binary is available for ${process.platform}-${process.arch} (supported in 0.1: darwin-arm64, linux-x64). Set ARRUSTED_SCHEMA_COMPILER_BIN and ARRUSTED_CUE_BIN to local binary paths, or install schema-compiler and cue on PATH.`,
+      );
+    }
     const details = [result.stderr?.trim(), result.stdout?.trim()].filter(Boolean).join("\n");
+    if (/failed to run `cue export`.*No such file or directory/iu.test(details)) {
+      throw new Error(
+        `Could not locate 'cue' for ${process.platform}-${process.arch} (prebuilt packages in 0.1 cover darwin-arm64 and linux-x64). Set ARRUSTED_CUE_BIN to a local cue binary or install cue on PATH.`,
+      );
+    }
     throw new Error(
       `Schema compilation failed during ${phase} (exit ${result.status ?? "unavailable"}).\n` +
         (details || result.error?.message || "The compiler produced no diagnostic output."),
@@ -376,6 +386,15 @@ export function rewriteRuntimeImports(typescript: string, runtimePkg: string): s
 
 /** Pure current-state CUE -> SQL + TypeScript codegen with portable build identity. */
 export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResult {
+  const explicitSchemaVersion = options.schemaVersion?.trim();
+  if (explicitSchemaVersion !== undefined) {
+    if (explicitSchemaVersion.length === 0) {
+      throw new Error("Explicit schemaVersion must not be empty.");
+    }
+    if (explicitSchemaVersion.startsWith("build-")) {
+      throw new Error("Explicit schemaVersion must not use the reserved 'build-' prefix.");
+    }
+  }
   const outDir = path.resolve(options.outDir);
   assertSafeOutputDirectory(outDir);
   const metadataPath = resolveBuildMetadataPath(outDir);
@@ -492,7 +511,8 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
     });
 
     // 1. Probe pass to compute a portable, platform-, directory-, and line-ending-independent buildHash
-    // covering packageVersion, normalized CUE manifest, data-plane bindings, emitted SQL runtime, and auth SQL.
+    // covering adapter options, normalized CUE manifest, data-plane bindings, emitted SQL runtime, and auth SQL
+    // (excluding raw CUE text and packageVersion so comment-only edits and patch bumps keep the same version).
     const probeVersion = "build-probe";
     const probeArtifactRaw = runCompiler(invocation, [
       "--app-artifact",
@@ -548,20 +568,13 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
     ];
     const sourceFiles = Object.fromEntries(sourceEntries);
 
-    const normalizedTextSources = Object.fromEntries([
-      ["packages/schema-compiler/cue/app-manifest.cue", normalizeLfTextHash(appManifestBytes)],
-      ...(selectionBytes !== undefined
-        ? [["packages/schema-compiler/cue/app-selection.cue", normalizeLfTextHash(selectionBytes)]]
-        : []),
-      ...(catalogBytes !== undefined ? [["catalog.json", normalizeLfTextHash(catalogBytes)]] : []),
-      ...stagedCueFiles.map((entry) => [entry.key, normalizeLfTextHash(entry.bytes)]),
-      ["packages/auth/schema.sql", normalizeLfTextHash(authSchemaBytes)],
-      ["packages/auth/single-organization-membership.sql", normalizeLfTextHash(membershipBytes)],
-    ]);
+    const sqlSources = {
+      "packages/auth/schema.sql": normalizeLfTextHash(authSchemaBytes),
+      "packages/auth/single-organization-membership.sql": normalizeLfTextHash(membershipBytes),
+    };
 
     const buildHash = sha256Hex(
       JSON.stringify({
-        packageVersion,
         nextApp,
         runtimePkg,
         schema: versionlessSchema,
@@ -574,10 +587,10 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
           name: entry.name,
           sql: entry.sql,
         })),
-        sources: normalizedTextSources,
+        sqlSources,
       }),
     );
-    const version = options.schemaVersion ?? `build-${buildHash}`;
+    const version = explicitSchemaVersion ?? `build-${buildHash}`;
 
     // 2. Emit final current-state bundle for `version` from the staged input snapshot
     const stagedRelease = path.join(stagingRoot, "release");

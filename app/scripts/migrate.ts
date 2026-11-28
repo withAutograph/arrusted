@@ -110,8 +110,6 @@ export type MigrationInput = {
   compilerBinary?: string;
   /** Explicit opt-in required before archiving/retiring existing models, fields, enum options, custom fields, or change types. */
   allowRetire?: boolean;
-  /** Explicit opt-in required before rotating runtime/auth logins bound to an existing AUTH_SCHEMA for the same app and kernelRole. */
-  rebindRuntimeLogin?: boolean;
   runtimeLogins?: { role: string; password: string }[];
 };
 
@@ -213,6 +211,12 @@ function resolveMigrationCompiler(
     );
     emittedChecksum = (JSON.parse(sqlManifestOut) as { checksum?: string }).checksum;
   } catch (error) {
+    if ((error as NodeJS.ErrnoException | undefined)?.code === "ENOENT") {
+      throw new Error(
+        `No prebuilt @arrusted/cli-${process.platform}-${process.arch} binary is available for ${process.platform}-${process.arch} (supported in 0.1: darwin-arm64, linux-x64). Set ARRUSTED_SCHEMA_COMPILER_BIN to a local schema-compiler binary or install schema-compiler on PATH.`,
+        { cause: error },
+      );
+    }
     throw new Error("The migration compiler differs from the build. Rebuild before migrating.", {
       cause: error,
     });
@@ -227,26 +231,107 @@ function normalizeEndpointHost(hostname: string): string {
   return hostname.toLowerCase().replace(/-pooler(?=\.)/u, "");
 }
 
-function connectionTarget(databaseUrl: string): { url: string; resource: DatabaseTarget } {
-  const url = new URL(databaseUrl);
+function validatePostgresUrlCommon(
+  url: URL,
+  label: string,
+  options: { allowPooler: boolean },
+): { local: boolean; database: string; role: string; password: string } {
+  if (!["postgres:", "postgresql:"].includes(url.protocol)) {
+    throw new Error(`${label} must use the postgres:// or postgresql:// protocol.`);
+  }
+  if (!url.hostname) {
+    throw new Error(`${label} is missing a PostgreSQL hostname.`);
+  }
+  if (!options.allowPooler && url.hostname.includes("-pooler.")) {
+    throw new Error(
+      `${label} must use a direct PostgreSQL host (without '-pooler'), not '${url.hostname}'. Use the '-pooler' URL for APP_DATABASE_URL and AUTH_DATABASE_URL instead.`,
+    );
+  }
+  if (url.hash) {
+    throw new Error(`${label} must not contain a URL fragment ('#...').`);
+  }
+  let database: string;
+  let role: string;
+  let password: string;
+  try {
+    database = decodeURIComponent(url.pathname.slice(1));
+    role = decodeURIComponent(url.username);
+    password = decodeURIComponent(url.password);
+  } catch {
+    throw new Error(
+      `${label} contains malformed percent-encoding in credentials or database name.`,
+    );
+  }
+  if (!database || !role) {
+    throw new Error(`${label} must include both a PostgreSQL login username and database name.`);
+  }
   const local = ["localhost", "127.0.0.1"].includes(url.hostname);
   if (local) url.hostname = "127.0.0.1";
-  if (!url.searchParams.has("sslmode"))
+  if (!url.searchParams.has("sslmode")) {
     url.searchParams.set("sslmode", local ? "disable" : "verify-full");
+  }
+  const unsupportedKey = [...url.searchParams.keys()].find(
+    (key) => !["sslmode", "channel_binding"].includes(key),
+  );
+  if (unsupportedKey) {
+    throw new Error(
+      `${label} contains unsupported query parameter '${unsupportedKey}'; only 'sslmode' and 'channel_binding=require' are supported.`,
+    );
+  }
+  if (url.searchParams.getAll("sslmode").length !== 1) {
+    throw new Error(`${label} must not specify multiple 'sslmode' parameters.`);
+  }
+  if (url.searchParams.getAll("channel_binding").length > 1) {
+    throw new Error(`${label} must not specify multiple 'channel_binding' parameters.`);
+  }
+  if (
+    url.searchParams.has("channel_binding") &&
+    url.searchParams.get("channel_binding") !== "require"
+  ) {
+    throw new Error(`${label} 'channel_binding' must be 'require' when specified.`);
+  }
+  const sslmode = url.searchParams.get("sslmode");
+  if (local) {
+    if (sslmode !== "disable") {
+      throw new Error(
+        `${label} targets localhost and must use sslmode=disable (received sslmode=${sslmode}).`,
+      );
+    }
+  } else if (sslmode !== "verify-full") {
+    throw new Error(
+      `${label} for '${url.hostname}' uses sslmode=${sslmode}; remote connections require sslmode=verify-full (for example on Neon, replace '?sslmode=require' with '?sslmode=verify-full').`,
+    );
+  }
+  return { local, database, role, password };
+}
+
+function connectionTarget(databaseUrl: string): { url: string; resource: DatabaseTarget } {
+  let url: URL;
+  try {
+    url = new URL(databaseUrl);
+  } catch {
+    throw new Error("MIGRATION_DATABASE_URL is not a valid PostgreSQL URL.");
+  }
+  const { local, database, role } = validatePostgresUrlCommon(url, "MIGRATION_DATABASE_URL", {
+    allowPooler: false,
+  });
   const resource: DatabaseTarget = {
     environment: local ? "local" : "production",
     hostname: url.hostname,
     port: Number(url.port || 5432),
-    database: decodeURIComponent(url.pathname.slice(1)),
+    database,
     schema: "public",
-    migratorRole: decodeURIComponent(url.username),
+    migratorRole: role,
     runtimeRole: "unused_runtime",
   };
   assertProtectedConnection(url.toString(), resource, "migrator");
   return { url: url.toString(), resource };
 }
 
-function parseRuntimeConnection(databaseUrl: string): {
+function parseRuntimeConnection(
+  databaseUrl: string,
+  label: string = "APP_DATABASE_URL",
+): {
   url: string;
   hostname: string;
   endpointHost: string;
@@ -260,43 +345,11 @@ function parseRuntimeConnection(databaseUrl: string): {
   try {
     url = new URL(databaseUrl);
   } catch {
-    throw new Error("protected_installer_identity_mismatch");
+    throw new Error(`${label} is not a valid PostgreSQL URL.`);
   }
-  const local = ["localhost", "127.0.0.1"].includes(url.hostname);
-  if (local) url.hostname = "127.0.0.1";
-  if (!url.searchParams.has("sslmode"))
-    url.searchParams.set("sslmode", local ? "disable" : "verify-full");
-  let database: string;
-  let role: string;
-  let password: string;
-  try {
-    database = decodeURIComponent(url.pathname.slice(1));
-    role = decodeURIComponent(url.username);
-    password = decodeURIComponent(url.password);
-  } catch {
-    throw new Error("protected_installer_identity_mismatch");
-  }
-  if (
-    !["postgres:", "postgresql:"].includes(url.protocol) ||
-    !url.hostname ||
-    !database ||
-    !role ||
-    url.hash ||
-    [...url.searchParams.keys()].some((key) => !["sslmode", "channel_binding"].includes(key)) ||
-    url.searchParams.getAll("sslmode").length !== 1 ||
-    url.searchParams.getAll("channel_binding").length > 1 ||
-    (url.searchParams.has("channel_binding") &&
-      url.searchParams.get("channel_binding") !== "require")
-  ) {
-    throw new Error("protected_installer_identity_mismatch");
-  }
-  if (local) {
-    if (url.hostname !== "127.0.0.1" || url.searchParams.get("sslmode") !== "disable") {
-      throw new Error("protected_installer_identity_mismatch");
-    }
-  } else if (url.searchParams.get("sslmode") !== "verify-full") {
-    throw new Error("protected_installer_identity_mismatch");
-  }
+  const { local, database, role, password } = validatePostgresUrlCommon(url, label, {
+    allowPooler: true,
+  });
   return {
     url: url.toString(),
     hostname: url.hostname,
@@ -315,7 +368,7 @@ export function validateMatchingRuntimeDatabaseUrl(
   runtimeDatabaseUrl: string,
 ): string {
   const { resource } = connectionTarget(databaseUrl);
-  const parsed = parseRuntimeConnection(runtimeDatabaseUrl);
+  const parsed = parseRuntimeConnection(runtimeDatabaseUrl, "APP_DATABASE_URL");
   if (
     parsed.local !== (resource.environment === "local") ||
     parsed.endpointHost !== normalizeEndpointHost(resource.hostname) ||
@@ -337,22 +390,24 @@ export function runtimeRoles(
 ): Pick<MigrationInput, "runtimeRole" | "authRole" | "runtimeLogins"> {
   const { resource } = connectionTarget(databaseUrl);
   const migratorEndpointHost = normalizeEndpointHost(resource.hostname);
-  const parseMatchingRole = (value: string) => {
-    const parsed = parseRuntimeConnection(value);
+  const parseMatchingRole = (value: string, label: string) => {
+    const parsed = parseRuntimeConnection(value, label);
     if (
       parsed.local !== (resource.environment === "local") ||
       parsed.endpointHost !== migratorEndpointHost ||
       parsed.port !== resource.port ||
       parsed.database !== resource.database
     ) {
-      throw new Error("protected_installer_identity_mismatch");
+      throw new Error(
+        `${label} must target the same PostgreSQL database and endpoint as MIGRATION_DATABASE_URL.`,
+      );
     }
     if (parsed.role === resource.migratorRole)
       throw new Error("The application must use a separate unprivileged database login.");
     return parsed;
   };
-  const appParsed = appUrl ? parseMatchingRole(appUrl) : undefined;
-  const authParsed = authUrl ? parseMatchingRole(authUrl) : appParsed;
+  const appParsed = appUrl ? parseMatchingRole(appUrl, "APP_DATABASE_URL") : undefined;
+  const authParsed = authUrl ? parseMatchingRole(authUrl, "AUTH_DATABASE_URL") : appParsed;
   const seenLogins = new Map<string, string>();
   for (const candidate of [appParsed, authParsed]) {
     if (!candidate) continue;
@@ -632,6 +687,7 @@ export async function migrate(
     const build = JSON.parse(readFileSync(buildMetadataPath, "utf8")) as {
       sourceCommit: string;
       sourceDirty: boolean;
+      buildHash?: string;
       compilerBinaryHash?: string;
       releaseHash: string;
     };
@@ -679,7 +735,18 @@ export async function migrate(
       const previous = applied.at(-1);
       await validateApplied(client, previous);
       const authExists = await validateAuth(client, authHash, authSchema);
-      if (previous?.release_hash === releaseHash && previous.auth_hash === authHash) {
+      const samePortableBuild =
+        previous !== undefined &&
+        typeof build.buildHash === "string" &&
+        /^[0-9a-f]{64}$/u.test(build.buildHash) &&
+        artifact.schema.version === `build-${build.buildHash}` &&
+        previous.schema.version === artifact.schema.version &&
+        previous.artifact === artifactBytes;
+      if (
+        previous &&
+        previous.auth_hash === authHash &&
+        (previous.release_hash === releaseHash || samePortableBuild)
+      ) {
         await client.query("begin");
         try {
           await ensureAndMarkAuth(client, authSchema, auth, authHash, authExists);
@@ -906,47 +973,13 @@ async function bindRuntime(
           })
           .filter((entry) => entry.argCount >= 3)
       : [];
-  const sameAppSchemaBinding =
-    schemaTriggerEntries.length > 0 &&
-    schemaTriggerEntries.every(
-      (entry) =>
-        entry.existing_app_id === artifact.schema.app_id &&
-        entry.existing_customer_id === artifact.schema.customer_id &&
-        entry.existing_role_name === kernelRole,
-    );
-  let rotatedFromPrincipal: string | undefined;
-  let inheritedActorBindingRequired = false;
-  let inheritedScopeActorId: string | null = null;
   if (input.runtimeRole) {
     const existingTriggerOwner = schemaTriggerEntries.find(
       (entry) => entry.existing_principal !== input.runtimeRole,
     );
     if (existingTriggerOwner) {
-      if (!input.rebindRuntimeLogin || !sameAppSchemaBinding) {
-        throw new Error(
-          `Auth schema '${authSchema}' is already bound to runtime login '${existingTriggerOwner.existing_principal}'. Each app must use its own dedicated AUTH_SCHEMA${sameAppSchemaBinding ? " (or pass --rebind-runtime-login to rotate this app's login)" : ""}.`,
-        );
-      }
-      rotatedFromPrincipal = existingTriggerOwner.existing_principal;
-      const priorScope = (
-        await client.query<{ actor_binding_required: boolean; actor_id: string | null }>(
-          `select actor_binding_required, actor_id
-             from public.kernel_principal_scope
-            where principal_name = $1::name
-              and capability = 'runtime'
-              and app_id = $2
-              and customer_id = $3`,
-          [rotatedFromPrincipal, artifact.schema.app_id, artifact.schema.customer_id],
-        )
-      ).rows[0];
-      if (priorScope) {
-        inheritedActorBindingRequired = priorScope.actor_binding_required === true;
-        inheritedScopeActorId = priorScope.actor_id ?? null;
-      }
-      await client.query(
-        `update public.kernel_principal_scope set active = false
-          where principal_name = $1::name and capability = 'runtime' and app_id = $2 and customer_id = $3`,
-        [rotatedFromPrincipal, artifact.schema.app_id, artifact.schema.customer_id],
+      throw new Error(
+        `Auth schema '${authSchema}' is already bound to runtime login '${existingTriggerOwner.existing_principal}'. Each app must use its own dedicated AUTH_SCHEMA.`,
       );
     }
   }
@@ -961,30 +994,9 @@ async function bindRuntime(
       authTableNames,
     );
     if (existingSchemaAuthOwners.length > 0) {
-      if (!input.rebindRuntimeLogin || !sameAppSchemaBinding) {
-        throw new Error(
-          `Auth schema '${authSchema}' already grants Auth access to login '${existingSchemaAuthOwners[0]!}'. Each app must use its own dedicated AUTH_SCHEMA${sameAppSchemaBinding ? " (or pass --rebind-runtime-login to rotate this app's login)" : ""}.`,
-        );
-      }
-      const tables = authTableNames.map((name) => `${quote(authSchema)}.${quote(name)}`);
-      for (const staleRole of existingSchemaAuthOwners) {
-        await client.query(
-          `revoke select, insert, update, delete on ${tables.join(",")} from ${quote(staleRole)}`,
-        );
-        if (authSchema !== "public") {
-          await client.query(
-            `revoke usage on schema ${quote(authSchema)} from ${quote(staleRole)}`,
-          );
-        }
-      }
-      const stillAuthorized = (
-        await findAuthorizedAuthLogins(client, authSchema, input.authRole, authTableNames)
-      )[0];
-      if (stillAuthorized) {
-        throw new Error(
-          `Auth schema '${authSchema}' still grants inherited Auth access to login '${stillAuthorized}' via role membership. Revoke that group grant before rotating logins.`,
-        );
-      }
+      throw new Error(
+        `Auth schema '${authSchema}' already grants Auth access to login '${existingSchemaAuthOwners[0]!}'. Each app must use its own dedicated AUTH_SCHEMA.`,
+      );
     }
   }
   for (const login of input.runtimeLogins ?? []) {
@@ -1075,85 +1087,13 @@ async function bindRuntime(
       throw new Error("APP_DATABASE_URL must use an existing unprivileged runtime login.");
     const role = (await client.query("select kernel_installer_capability_role('runtime') as role"))
       .rows[0].role;
-    if (rotatedFromPrincipal && rotatedFromPrincipal !== input.runtimeRole) {
-      const remainingActiveScopes = (
-        await client.query(
-          `select 1 from public.kernel_principal_scope
-            where principal_name = $1::name and capability = 'runtime' and active
-            limit 1`,
-          [rotatedFromPrincipal],
-        )
-      ).rowCount;
-      if (!remainingActiveScopes) {
-        await client.query(`revoke ${quote(role)} from ${quote(rotatedFromPrincipal)}`);
-      }
-    }
     await client.query(`grant ${quote(role)} to ${quote(input.runtimeRole)}`);
     await kernel(client, "kernel_bind_principal_scope", {
       principal_name: input.runtimeRole,
       capability: "runtime",
       app_id: artifact.schema.app_id,
       customer_id: artifact.schema.customer_id,
-      ...(inheritedScopeActorId === null ? {} : { actor_id: inheritedScopeActorId }),
-      ...(inheritedActorBindingRequired ? { actor_binding_required: true } : {}),
     });
-    if (rotatedFromPrincipal && rotatedFromPrincipal !== input.runtimeRole) {
-      await client.query(
-        `insert into public.kernel_actor_membership
-           (principal_name, app_id, customer_id, actor_id, role, actor_kind, active, fence_generation, bound_at)
-         select $2::name, app_id, customer_id, actor_id, role, actor_kind, active, fence_generation, bound_at
-           from public.kernel_actor_membership
-          where principal_name = $1::name
-            and app_id = $3
-            and customer_id = $4
-            and (fence_generation > 0 or actor_kind <> 'human')
-         on conflict (principal_name, app_id, customer_id, actor_id, role) do update
-           set active = excluded.active,
-               actor_kind = excluded.actor_kind,
-               fence_generation = excluded.fence_generation,
-               bound_at = excluded.bound_at
-           where public.kernel_actor_membership.fence_generation = 0
-              or public.kernel_actor_membership.fence_generation < excluded.fence_generation`,
-        [
-          rotatedFromPrincipal,
-          input.runtimeRole,
-          artifact.schema.app_id,
-          artifact.schema.customer_id,
-        ],
-      );
-      await client.query(
-        `insert into public.kernel_actor_access
-           (principal_name, app_id, customer_id, actor_id, active, actor_kind, fence_generation, bound_at)
-         select $2::name, app_id, customer_id, actor_id, active, actor_kind, fence_generation, bound_at
-           from public.kernel_actor_access
-          where principal_name = $1::name
-            and app_id = $3
-            and customer_id = $4
-         on conflict (principal_name, app_id, customer_id, actor_id) do update
-           set active = excluded.active,
-               actor_kind = excluded.actor_kind,
-               fence_generation = excluded.fence_generation,
-               bound_at = excluded.bound_at
-           where public.kernel_actor_access.fence_generation < excluded.fence_generation
-              or (
-                public.kernel_actor_access.fence_generation = excluded.fence_generation
-                and public.kernel_actor_access.active
-                and not excluded.active
-                and public.kernel_actor_access.actor_kind = excluded.actor_kind
-              )`,
-        [
-          rotatedFromPrincipal,
-          input.runtimeRole,
-          artifact.schema.app_id,
-          artifact.schema.customer_id,
-        ],
-      );
-      await client.query(
-        `update public.kernel_actor_membership set active = false
-          where principal_name = $1::name and app_id = $2 and customer_id = $3 and fence_generation = 0`,
-        [rotatedFromPrincipal, artifact.schema.app_id, artifact.schema.customer_id],
-      );
-    }
     await client.query(membership);
     await client.query(
       `create unique index if not exists autograph_member_identity on ${quote(authSchema)}.member ("organizationId", "userId")`,
@@ -1341,13 +1281,10 @@ if (import.meta.main) {
   try {
     const rawArgs = process.argv.slice(2);
     let allowRetire = false;
-    let rebindRuntimeLogin = false;
     const positional: string[] = [];
     for (const arg of rawArgs) {
       if (arg === "--allow-retire") {
         allowRetire = true;
-      } else if (arg === "--rebind-runtime-login") {
-        rebindRuntimeLogin = true;
       } else if (arg.startsWith("-")) {
         throw new Error(`Unknown migration option: ${arg}`);
       } else {
@@ -1362,7 +1299,6 @@ if (import.meta.main) {
     if (!databaseUrl) throw new Error("MIGRATION_DATABASE_URL is required.");
     if (command === "undo") {
       if (allowRetire) throw new Error("--allow-retire is not valid with undo.");
-      if (rebindRuntimeLogin) throw new Error("--rebind-runtime-login is not valid with undo.");
       const result = await undo({ databaseUrl });
       console.log(
         `Database and applied-schema record restored. Revert the schema source to ${result.sourceCommit}.${result.sourceDirty ? " That build included uncommitted schema edits; restore those source files too." : ""}`,
@@ -1383,7 +1319,6 @@ if (import.meta.main) {
         ...(authSchema ? { authSchema } : {}),
         ...(kernelRole ? { kernelRole } : {}),
         ...(allowRetire ? { allowRetire: true } : {}),
-        ...(rebindRuntimeLogin ? { rebindRuntimeLogin: true } : {}),
       };
       if (command === "rehearse") {
         if (!process.env.PRODUCTION_APP_DATABASE_URL)

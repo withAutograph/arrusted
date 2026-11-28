@@ -689,6 +689,25 @@ Trigger to revisit: changing the edit-buffer store away from a native
 `Map`. The fix path is either to keep `Map` semantics or to update all
 three resolution rules to take an explicit insertion-order tiebreaker.
 
+### Watch: new-record ID allocation across `EditableRowVersionGrid` and `/api/apply`
+
+Generic new-row staging in `EditableRowVersionGrid` (`stageNewRecord`) keys
+unsaved rows by `tmp:<uuid>` and omits both `record_key` and `new_record_id`
+unless `options.newRecordId` is supplied (`docs/contracts.md`), while
+idempotent replay of policy-enabled creates (`replay_request_subject_missing` in
+`packages/schema-compiler/src/sql_runtime/apply.rs`) requires `new_record_id`.
+`@arrusted/core` `applyPOST` bridges both by deriving a deterministic
+`new_record_id` from `(appId, customerId, idempotency_key, writeIndex)` when a
+create omits both subject fields.
+
+Trigger to mint `newRecordId` client-side in `stageNewRecord` (keeping the
+route fallback): browser UI needs a new row's permanent UUID before `Save`
+completes — staging linked parent/child records in one save, preserving row
+selection or detail-route URLs across `Save` + refetch, or queueing edits while
+an initial create is in flight. Trigger to also reject missing `new_record_id`
+in `/api/apply`: external sync writers must bring durable source UUIDs by
+contract, or anonymous creates are retired across the kernel.
+
 ### Watch: `domain_words_from_app_schemas` substring-match defect
 
 The deleted vocabulary scanner derived forbidden domain words from app schema

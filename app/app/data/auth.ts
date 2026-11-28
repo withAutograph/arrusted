@@ -25,7 +25,7 @@ export function getIdentity() {
     appId,
     organizationId,
     name: "Starter",
-    allowSignUp: process.env.APP_ALLOW_SIGN_UP !== "false",
+    allowSignUp: process.env.APP_ALLOW_SIGN_UP === "true",
   }));
 }
 export function frameOrigins() {

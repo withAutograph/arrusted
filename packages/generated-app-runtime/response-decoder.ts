@@ -303,13 +303,15 @@ export function createResponseDecoder({
     value: unknown,
     operation: string,
     path: string,
+    activeEnumOptionIds?: ReadonlySet<string>,
   ): FieldValue => {
     const decoded = responseFieldValue(operation, path, value);
     if (decoded.type !== responseFieldType(field))
       responseFailure(operation, `${path}.type`, `${field.type} field value`);
     if (
       field.type === "enum" &&
-      (!field.option_set || !field.option_set.some((option) => option.id === decoded.value))
+      (!field.option_set || !field.option_set.some((option) => option.id === decoded.value)) &&
+      !activeEnumOptionIds?.has(String(decoded.value))
     )
       responseFailure(operation, `${path}.value`, "declared enum option");
     if (
@@ -366,7 +368,12 @@ export function createResponseDecoder({
       fields,
     };
   };
-  const decodeRecord = (model: DataModel, value: unknown, select?: readonly string[]) => {
+  const decodeRecord = (
+    model: DataModel,
+    value: unknown,
+    select?: readonly string[],
+    options?: { activeEnumOptionIdsByField?: ReadonlyMap<string, ReadonlySet<string>> },
+  ) => {
     const operation = "kernel_data_query";
     const record = responseObject(operation, "response", value);
     responseKeys(operation, "response", record, [
@@ -438,7 +445,13 @@ export function createResponseDecoder({
         const field = fieldsByModel.get(model.id)?.get(fieldId);
         const fieldPath = field ? `response.values.${field.name}` : "response.values.value";
         decodedValues[fieldId] = field
-          ? decodeFieldValue(field, fieldValue, operation, fieldPath)
+          ? decodeFieldValue(
+              field,
+              fieldValue,
+              operation,
+              fieldPath,
+              options?.activeEnumOptionIdsByField?.get(field.id),
+            )
           : responseFieldValue(operation, fieldPath, fieldValue);
       }
     const customById = new Map<string, FieldValue>();
@@ -454,6 +467,7 @@ export function createResponseDecoder({
               { type: entry.type, value: entry.value },
               operation,
               `response.custom_fields[${index}]`,
+              options?.activeEnumOptionIdsByField?.get(field.id),
             )
           : entry,
       );
@@ -497,7 +511,11 @@ export function createResponseDecoder({
     if (full && recordId) onFullRecord?.(decoded, model.id, recordId);
     return decoded;
   };
-  const decodeGroupValue = (field: DataField, value: unknown): unknown => {
+  const decodeGroupValue = (
+    field: DataField,
+    value: unknown,
+    activeEnumOptionIds?: ReadonlySet<string>,
+  ): unknown => {
     const operation = "kernel_data_query";
     const path = "response.value";
     if (value === null) {
@@ -517,7 +535,10 @@ export function createResponseDecoder({
         return responseDecimal(operation, path, value);
       case "enum": {
         const option = responseString(operation, path, value);
-        if (!field.option_set?.some((candidate) => candidate.id === option))
+        if (
+          !field.option_set?.some((candidate) => candidate.id === option) &&
+          !activeEnumOptionIds?.has(option)
+        )
           responseFailure(operation, path, "declared enum option");
         return option;
       }
@@ -538,6 +559,7 @@ export function createResponseDecoder({
     groups: readonly { field: DataField; bins?: { edges: readonly string[] } }[],
     metrics: readonly { fn: string; field?: string; money?: boolean }[],
     value: unknown,
+    options?: { activeEnumOptionIdsByField?: ReadonlyMap<string, ReadonlySet<string>> },
   ) => {
     const operation = "kernel_data_query";
     const root = responseObject(operation, "response", value);
@@ -615,9 +637,17 @@ export function createResponseDecoder({
         }
         if (spec.field.type === "relation")
           return item === null
-            ? decodeGroupValue(spec.field, item)
+            ? decodeGroupValue(
+                spec.field,
+                item,
+                options?.activeEnumOptionIdsByField?.get(spec.field.id),
+              )
             : { type: "record_id" as const, value: responseUuid(operation, path, item) };
-        return decodeGroupValue(spec.field, item);
+        return decodeGroupValue(
+          spec.field,
+          item,
+          options?.activeEnumOptionIdsByField?.get(spec.field.id),
+        );
       });
       return { key, metrics: metricValues(group.metrics, `${path}.metrics`) };
     });

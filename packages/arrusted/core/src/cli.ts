@@ -21,7 +21,7 @@ function readOwnVersion(): string {
       if (parsed.version) return parsed.version;
     }
   }
-  return "0.1.0-alpha.1";
+  return "0.1.0-alpha.2";
 }
 
 function detectGitProvenance(cwd: string): { sourceCommit: string; sourceDirty: boolean } {
@@ -58,9 +58,9 @@ export async function runCoreCli(argv: string[] = process.argv.slice(2)): Promis
       [
         "Usage:",
         "  arrusted compile [--schema <path>] [--out <dir>] [--catalog <file>]",
-        "  arrusted migrate [apply] [--release <dir>] [--allow-retire] [--rebind-runtime-login]",
+        "  arrusted migrate [apply] [--release <dir>] [--allow-retire]",
         "  arrusted migrate:undo",
-        "  arrusted migrate:rehearse [--release <dir>] [--allow-retire] [--rebind-runtime-login]",
+        "  arrusted migrate:rehearse [--release <dir>] [--allow-retire]",
       ].join("\n"),
     );
     return;
@@ -119,7 +119,6 @@ export async function runCoreCli(argv: string[] = process.argv.slice(2)): Promis
   let releaseDirectory = path.resolve(process.cwd(), ".generated/release");
   let explicitRelease = false;
   let allowRetire = false;
-  let rebindRuntimeLogin = false;
 
   for (let i = 0; i < rest.length; i += 1) {
     const arg = rest[i]!;
@@ -133,8 +132,6 @@ export async function runCoreCli(argv: string[] = process.argv.slice(2)): Promis
     }
     if (arg === "--allow-retire") {
       allowRetire = true;
-    } else if (arg === "--rebind-runtime-login") {
-      rebindRuntimeLogin = true;
     } else if (arg === "--release" && rest[i + 1] && !rest[i + 1]!.startsWith("--")) {
       releaseDirectory = path.resolve(process.cwd(), rest[i + 1]!);
       explicitRelease = true;
@@ -151,7 +148,6 @@ export async function runCoreCli(argv: string[] = process.argv.slice(2)): Promis
 
   if (mode === "undo") {
     if (allowRetire) throw new Error("--allow-retire is not valid with undo.");
-    if (rebindRuntimeLogin) throw new Error("--rebind-runtime-login is not valid with undo.");
     if (explicitRelease) throw new Error("--release is not valid with undo.");
     const result = await undo({ databaseUrl });
     console.log(
@@ -175,7 +171,6 @@ export async function runCoreCli(argv: string[] = process.argv.slice(2)): Promis
     ...(authSchema ? { authSchema } : {}),
     ...(kernelRole ? { kernelRole } : {}),
     ...(allowRetire ? { allowRetire: true } : {}),
-    ...(rebindRuntimeLogin ? { rebindRuntimeLogin: true } : {}),
   };
 
   if (mode === "rehearse") {

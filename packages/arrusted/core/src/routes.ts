@@ -436,6 +436,40 @@ export function createAppRoutes(config: AppRoutesConfig) {
 
     async applyPOST(request: Request): Promise<Response> {
       try {
+        const originHeader = request.headers.get("origin");
+        if (originHeader !== null || request.headers.has("cookie")) {
+          if (!originHeader) {
+            return Response.json(
+              {
+                code: "forbidden",
+                message: "Origin header is required for cookie-authenticated mutations.",
+                details: [],
+              },
+              { status: 403 },
+            );
+          }
+          const allowedOrigins = new Set<string>([new URL(request.url).origin]);
+          for (const candidate of [process.env.BETTER_AUTH_URL, process.env.AUTH_ORIGIN]) {
+            if (!candidate?.trim()) continue;
+            try {
+              allowedOrigins.add(new URL(candidate.trim()).origin);
+            } catch {
+              // Ignore malformed optional env origin; request.url origin still applies.
+            }
+          }
+          let parsedOrigin: string | undefined;
+          try {
+            parsedOrigin = new URL(originHeader).origin;
+          } catch {
+            parsedOrigin = undefined;
+          }
+          if (!parsedOrigin || !allowedOrigins.has(parsedOrigin)) {
+            return Response.json(
+              { code: "forbidden", message: "Cross-origin mutation rejected.", details: [] },
+              { status: 403 },
+            );
+          }
+        }
         const { actorId, customerId } = await config.session(request.headers);
         if (customerId !== config.runtime.customerId) {
           return Response.json(
@@ -445,11 +479,27 @@ export function createAppRoutes(config: AppRoutesConfig) {
         }
         const body = (await request.json()) as {
           idempotency_key?: unknown;
+          mode?: unknown;
           schema_revision_id?: unknown;
           change_type_id?: unknown;
           notes?: unknown;
           writes?: unknown;
         };
+        if (
+          body &&
+          typeof body === "object" &&
+          body.mode !== undefined &&
+          body.mode !== "mainline"
+        ) {
+          return Response.json(
+            {
+              code: "unsupported_capability",
+              message: "Only mode='mainline' is supported in @arrusted/core 0.1.",
+              details: [],
+            },
+            { status: 400 },
+          );
+        }
         if (
           !body ||
           typeof body !== "object" ||

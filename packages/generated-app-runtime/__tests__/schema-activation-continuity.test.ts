@@ -321,8 +321,9 @@ test("sibling additive successor continuity allows an installed prior revision a
 
   const queryInputs: Record<string, unknown>[] = [];
   const versionId = "20000000-0000-4000-8000-000000000002";
+  let enumRowValue = "won";
 
-  const makeClient = (def: DataDefinition) =>
+  const makeClient = <const T extends DataDefinition>(def: T) =>
     createDataClient(def, {
       scope,
       authorize: async () => {},
@@ -342,6 +343,14 @@ test("sibling additive successor continuity allows an installed prior revision a
                   message: "Schema drift detected",
                 });
               }
+              if (Array.isArray(input.group_by)) {
+                return {
+                  as_of: asOf,
+                  units: [null],
+                  groups: [{ key: [enumRowValue], metrics: ["1"] }],
+                  total: { metrics: ["1"] },
+                };
+              }
               if (Array.isArray(input.select) && input.select.includes("$effectiveStart")) {
                 return [
                   {
@@ -352,6 +361,17 @@ test("sibling additive successor continuity allows an installed prior revision a
                     effective_end: null,
                     metadata: {},
                     values: { label: { type: "text", value: "Kept" } },
+                  },
+                ];
+              }
+              if (Array.isArray(input.select) && input.select.includes("status")) {
+                return [
+                  {
+                    record_id: recordId,
+                    values: {
+                      label: { type: "text", value: "Kept" },
+                      status: { type: "enum", value: enumRowValue },
+                    },
                   },
                 ];
               }
@@ -414,7 +434,7 @@ test("sibling additive successor continuity allows an installed prior revision a
     staleOps.item!.create({ label: "Stale write" }, { effectiveStart: asOf, idempotencyKey: "k2" }),
   ).rejects.toThrow("does not match active artifact");
 
-  // 3. Installed prior v3 client fails closed if active schema retired/added enum options or changed many-relation target_model
+  // 3. Installed prior v3 client allows additive enum options, fails closed if active schema retired enum options or changed many-relation target_model
   const enumAndManyV1Def = {
     formatVersion: 1,
     schemaVersion: "v3",
@@ -480,7 +500,7 @@ test("sibling additive successor continuity allows an installed prior revision a
     "Schema drift",
   );
 
-  // Newly added enum option unknown to v3 decoder -> rejected
+  // Newly added enum option ('won') is additive -> sibling v3 client continues reading cleanly!
   active = {
     ...active,
     schema: {
@@ -506,9 +526,17 @@ test("sibling additive successor continuity allows an installed prior revision a
       ],
     },
   };
-  await expect(enumOps.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow(
-    "Schema drift",
+  await expect(enumOps.item!.list({ asOf, select: ["id", "label", "status"] })).resolves.toEqual([
+    { id: recordId, label: "Kept", status: "won" },
+  ]);
+  await expect(enumOps.item!.countBy({ asOf, groupBy: "status" })).resolves.toEqual([
+    { value: "won", count: "1" },
+  ]);
+  enumRowValue = "undeclared_bogus";
+  await expect(enumOps.item!.list({ asOf, select: ["id", "label", "status"] })).rejects.toThrow(
+    "declared enum option",
   );
+  enumRowValue = "won";
 
   // Many-relation target_model changed -> rejected
   active = {
@@ -621,9 +649,9 @@ test("sibling additive successor continuity allows an installed prior revision a
       ],
     } as never,
   };
-  await expect(customOps.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow(
-    "Schema drift",
-  );
+  await expect(customOps.item!.list({ asOf, select: ["id", "label"] })).resolves.toEqual([
+    { id: recordId, label: "Kept" },
+  ]);
   active = {
     ...active,
     schema: {

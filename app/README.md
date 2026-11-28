@@ -76,8 +76,9 @@ keys for repeat imports and copy/fill updates; blank/omitted fields stay unchang
 Without keys, rerunning creates new records. The owner connection stays out of
 the running app's environment.
 
-Public signup is enabled in this example. Set `APP_ALLOW_SIGN_UP=false` after
-onboarding if the instance should accept only existing accounts. There is no
+Public signup is closed by default (`APP_ALLOW_SIGN_UP=true` in `.env.example`
+enables it for local onboarding; omit it or set `APP_ALLOW_SIGN_UP=false` after
+onboarding so the instance accepts only existing accounts). There is no
 email delivery, invitation UI, or password-reset sender configured in this spike.
 The example currently uses tenant isolation without a declared fine-grained
 schema policy; it does not claim per-field or per-role restrictions.

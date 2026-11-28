@@ -2,8 +2,19 @@ import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, existsSync, readFileSync } from "node:fs";
 import { migrationLock } from "./migration-lock";
-import { chmod, mkdir, mkdtemp, open, readFile, realpath, rm, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import {
+  chmod,
+  lstat,
+  mkdir,
+  mkdtemp,
+  open,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { basename, dirname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
@@ -438,6 +449,92 @@ DO $$ DECLARE t text; binding record; result jsonb; has_principal boolean; has_f
 END $$;
 DROP SCHEMA autograph_undo_auth;`;
 
+function gitignoreCoversSubdir(content: string, subdir: string): boolean {
+  let covered = false;
+  for (const rawLine of content.split(/\r?\n/u)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    if (line.startsWith("!")) {
+      const neg = line.slice(1).replace(/^\/+/u, "").replace(/\/+$/u, "");
+      if (
+        neg === subdir ||
+        neg.startsWith(`${subdir}/`) ||
+        neg.includes("*") ||
+        neg.includes("?") ||
+        neg.includes("[")
+      ) {
+        covered = false;
+      }
+      continue;
+    }
+    const pat = line.replace(/^\/+/u, "");
+    if (
+      pat === "*" ||
+      pat === "**" ||
+      pat === "*/" ||
+      pat === subdir ||
+      pat === `${subdir}/` ||
+      pat === `${subdir}/**`
+    ) {
+      covered = true;
+    }
+  }
+  return covered;
+}
+
+async function ensureLocalGitignore(localDir: string, subdir: string): Promise<void> {
+  const gitignorePath = join(localDir, ".gitignore");
+  const existing = await lstat(gitignorePath).catch((err: NodeJS.ErrnoException) => {
+    if (err?.code === "ENOENT") return null;
+    throw err;
+  });
+  if (!existing) {
+    let created = false;
+    await writeFile(gitignorePath, "*\n", { encoding: "utf8", mode: 0o600, flag: "wx" })
+      .then(() => {
+        created = true;
+      })
+      .catch((err: NodeJS.ErrnoException) => {
+        if (err?.code !== "EEXIST") throw err;
+      });
+    if (created) {
+      const verified = await lstat(gitignorePath);
+      if (verified.isSymbolicLink()) {
+        throw new Error(`Refusing to write .gitignore through symbolic link: ${gitignorePath}`);
+      }
+      return;
+    }
+  }
+  const stat = await lstat(gitignorePath);
+  if (stat.isSymbolicLink()) {
+    throw new Error(`Refusing to write .gitignore through symbolic link: ${gitignorePath}`);
+  }
+  if (!stat.isFile()) {
+    throw new Error(`Refusing to write non-regular .gitignore file: ${gitignorePath}`);
+  }
+  const content = await readFile(gitignorePath, "utf8");
+  if (gitignoreCoversSubdir(content, subdir)) {
+    return;
+  }
+  const prefix = content.length === 0 || content.endsWith("\n") ? content : `${content}\n`;
+  const tmpPath = join(localDir, `.gitignore-${randomUUID()}.tmp`);
+  try {
+    await writeFile(tmpPath, `${prefix}${subdir}/\n`, {
+      encoding: "utf8",
+      mode: stat.mode & 0o777 || 0o600,
+      flag: "wx",
+    });
+    const rechecked = await lstat(gitignorePath);
+    if (rechecked.isSymbolicLink() || !rechecked.isFile()) {
+      throw new Error(`Refusing to overwrite non-regular .gitignore file: ${gitignorePath}`);
+    }
+    await rename(tmpPath, gitignorePath);
+  } catch (error) {
+    await rm(tmpPath, { force: true });
+    throw error;
+  }
+}
+
 export class PgDumpRestorePoints implements RestorePoints {
   readonly directory: string;
   constructor(options: { directory?: string } = {}) {
@@ -461,8 +558,45 @@ export class PgDumpRestorePoints implements RestorePoints {
       ["--no-psqlrc", "--no-password", "--set=ON_ERROR_STOP=1", "--command", publicOnly],
       databaseUrl,
     );
+    const parentLocal = dirname(this.directory);
+    const isUnderDotLocal = basename(parentLocal) === ".local";
+    if (isUnderDotLocal) {
+      const existingLocal = await lstat(parentLocal).catch((err: NodeJS.ErrnoException) => {
+        if (err?.code === "ENOENT") return null;
+        throw err;
+      });
+      if (existingLocal?.isSymbolicLink()) {
+        throw new Error(`Refusing to create restore points through symbolic link: ${parentLocal}`);
+      }
+      if (existingLocal && !existingLocal.isDirectory()) {
+        throw new Error(`Restore points .local path must be a directory: ${parentLocal}`);
+      }
+    }
+    const existingDir = await lstat(this.directory).catch((err: NodeJS.ErrnoException) => {
+      if (err?.code === "ENOENT") return null;
+      throw err;
+    });
+    if (existingDir?.isSymbolicLink()) {
+      throw new Error(`Refusing to create restore points through symbolic link: ${this.directory}`);
+    }
+    if (existingDir && !existingDir.isDirectory()) {
+      throw new Error(`Restore points path must be a directory: ${this.directory}`);
+    }
     await mkdir(this.directory, { recursive: true, mode: 0o700 });
+    if (isUnderDotLocal) {
+      const verifiedLocal = await lstat(parentLocal);
+      if (verifiedLocal.isSymbolicLink() || !verifiedLocal.isDirectory()) {
+        throw new Error(`Restore points .local path must be a real directory: ${parentLocal}`);
+      }
+    }
+    const verifiedDir = await lstat(this.directory);
+    if (verifiedDir.isSymbolicLink() || !verifiedDir.isDirectory()) {
+      throw new Error(`Restore points path must be a real directory: ${this.directory}`);
+    }
     await chmod(this.directory, 0o700);
+    if (isUnderDotLocal) {
+      await ensureLocalGitignore(parentLocal, "restore-points");
+    }
     const directory = join(await realpath(this.directory), id);
     await mkdir(directory, { mode: 0o700 }); // Exclusive: an existing restore point is never overwritten.
     const path = join(directory, "public.dump");

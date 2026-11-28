@@ -1,6 +1,6 @@
 {
   "name": "@arrusted/ui",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "private": false,
   "license": "MIT",
   "repository": {
@@ -63,7 +63,7 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "ag-grid-enterprise": "^33.3.0",
+    "ag-grid-enterprise": "33.3.0",
     "react": ">=19.0.0 <20.0.0",
     "react-dom": ">=19.0.0 <20.0.0"
   },

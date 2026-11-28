@@ -160,36 +160,117 @@ describe("@arrusted/auth server & people helpers", () => {
     expect(nonMemberQueries.some((q) => q.sql.includes('delete from "session"'))).toBe(false);
   });
 
-  test("writeGeneratedPasswordFile writes 0600 credential files, refuses symlinks, and CLI rejects conflicting flags", async () => {
-    const dir = mkdtempSync(path.join(tmpdir(), "arrusted-auth-cred-"));
+  test("writeGeneratedPasswordFile scopes filenames by authSchema, writes .local/.gitignore, allows symlinked cwd parents, refuses symlinks inside .local, and CLI rejects --password/--password-file", async () => {
+    const outer = mkdtempSync(path.join(tmpdir(), "arrusted-auth-cred-"));
     try {
+      const realProjectRoot = path.join(outer, "real-project");
+      mkdirSync(realProjectRoot, { recursive: true });
+      const symlinkedCwd = path.join(outer, "linked-project");
+      symlinkSync(realProjectRoot, symlinkedCwd);
+
+      // Default schema ('public') writes public--<email>.txt and creates .local/.gitignore
       const defaultPath = writeGeneratedPasswordFile(
         "Alice@Sunlight.test",
         "SecretPass123!",
         undefined,
-        dir,
+        symlinkedCwd,
       );
-      expect(defaultPath).toBe(path.join(dir, ".local/credentials/alice@sunlight.test.txt"));
+      expect(defaultPath).toBe(
+        path.join(symlinkedCwd, ".local/credentials/public--alice@sunlight.test.txt"),
+      );
       expect(readFileSync(defaultPath, "utf8")).toBe("SecretPass123!\n");
       expect(statSync(defaultPath).mode & 0o777).toBe(0o600);
       expect(statSync(path.dirname(defaultPath)).mode & 0o777).toBe(0o700);
+      expect(readFileSync(path.join(symlinkedCwd, ".local/.gitignore"), "utf8")).toBe("*\n");
 
-      const customPath = writeGeneratedPasswordFile(
-        "bob@sunlight.test",
-        "CustomSecret456!",
-        "secrets/bob.pwd",
-        dir,
+      // Multi-app provisioning from the same directory keeps distinct credential files per authSchema
+      const crmPath = writeGeneratedPasswordFile(
+        "alice@sunlight.test",
+        "CrmSecret111!",
+        "auth_crm",
+        symlinkedCwd,
       );
-      expect(customPath).toBe(path.join(dir, "secrets/bob.pwd"));
-      expect(readFileSync(customPath, "utf8")).toBe("CustomSecret456!\n");
-      expect(statSync(customPath).mode & 0o777).toBe(0o600);
+      const companyDataPath = writeGeneratedPasswordFile(
+        "alice@sunlight.test",
+        "CompanyDataSecret222!",
+        "auth_company_data",
+        symlinkedCwd,
+      );
+      expect(crmPath).toBe(
+        path.join(symlinkedCwd, ".local/credentials/auth_crm--alice@sunlight.test.txt"),
+      );
+      expect(companyDataPath).toBe(
+        path.join(symlinkedCwd, ".local/credentials/auth_company_data--alice@sunlight.test.txt"),
+      );
+      expect(readFileSync(crmPath, "utf8")).toBe("CrmSecret111!\n");
+      expect(readFileSync(companyDataPath, "utf8")).toBe("CompanyDataSecret222!\n");
+      expect(readFileSync(defaultPath, "utf8")).toBe("SecretPass123!\n");
 
-      const victimFile = path.join(dir, "victim.txt");
+      // Symlinked target file inside .local/credentials is refused without touching victim
+      const victimFile = path.join(outer, "victim.txt");
       writeFileSync(victimFile, "preserve-me");
-      const linkTarget = path.join(dir, "secrets/link.pwd");
+      const linkTarget = path.join(
+        symlinkedCwd,
+        ".local/credentials/auth_crm--eve@sunlight.test.txt",
+      );
       symlinkSync(victimFile, linkTarget);
       expect(() =>
-        writeGeneratedPasswordFile("eve@sunlight.test", "ShouldNotWrite", "secrets/link.pwd", dir),
+        writeGeneratedPasswordFile("eve@sunlight.test", "ShouldNotWrite", "auth_crm", symlinkedCwd),
+      ).toThrow(/symbolic link/);
+      expect(readFileSync(victimFile, "utf8")).toBe("preserve-me");
+
+      // Symlinked .local directory beneath cwd is also refused
+      const symlinkLocalProject = path.join(outer, "bad-local-project");
+      mkdirSync(symlinkLocalProject, { recursive: true });
+      const outsideDir = path.join(outer, "outside-local");
+      mkdirSync(outsideDir, { recursive: true });
+      symlinkSync(outsideDir, path.join(symlinkLocalProject, ".local"));
+      expect(() =>
+        writeGeneratedPasswordFile(
+          "mallory@sunlight.test",
+          "ShouldNotEscape",
+          "auth_crm",
+          symlinkLocalProject,
+        ),
+      ).toThrow(/symbolic link/);
+
+      // Pre-existing .local/.gitignore without credentials/ coverage (or negating credentials/) appends credentials/ idempotently
+      const customGitignoreProject = path.join(outer, "custom-gitignore-project");
+      mkdirSync(path.join(customGitignoreProject, ".local"), { recursive: true });
+      writeFileSync(
+        path.join(customGitignoreProject, ".local/.gitignore"),
+        "# custom rules\nrestore-points/\n*\n!credentials/\n",
+      );
+      writeGeneratedPasswordFile(
+        "alice@sunlight.test",
+        "CustomIgnorePass1!",
+        "auth_crm",
+        customGitignoreProject,
+      );
+      expect(readFileSync(path.join(customGitignoreProject, ".local/.gitignore"), "utf8")).toBe(
+        "# custom rules\nrestore-points/\n*\n!credentials/\ncredentials/\n",
+      );
+      writeGeneratedPasswordFile(
+        "bob@sunlight.test",
+        "CustomIgnorePass2!",
+        "auth_crm",
+        customGitignoreProject,
+      );
+      expect(readFileSync(path.join(customGitignoreProject, ".local/.gitignore"), "utf8")).toBe(
+        "# custom rules\nrestore-points/\n*\n!credentials/\ncredentials/\n",
+      );
+
+      // Symlinked .local/.gitignore is refused without modifying victim
+      const symlinkGitignoreProject = path.join(outer, "bad-gitignore-project");
+      mkdirSync(path.join(symlinkGitignoreProject, ".local"), { recursive: true });
+      symlinkSync(victimFile, path.join(symlinkGitignoreProject, ".local/.gitignore"));
+      expect(() =>
+        writeGeneratedPasswordFile(
+          "mallory@sunlight.test",
+          "ShouldNotTouchGitignoreTarget",
+          "auth_crm",
+          symlinkGitignoreProject,
+        ),
       ).toThrow(/symbolic link/);
       expect(readFileSync(victimFile, "utf8")).toBe("preserve-me");
 
@@ -197,38 +278,19 @@ describe("@arrusted/auth server & people helpers", () => {
       const plusPath = writeGeneratedPasswordFile(
         "a+b@sunlight.test",
         "PlusPass123!",
-        undefined,
-        dir,
+        "auth_crm",
+        symlinkedCwd,
       );
       const underscorePath = writeGeneratedPasswordFile(
         "a_b@sunlight.test",
         "UnderscorePass456!",
-        undefined,
-        dir,
+        "auth_crm",
+        symlinkedCwd,
       );
       expect(encodeEmailForCredentialFilename("a+b@sunlight.test")).toBe("a%2bb@sunlight.test");
       expect(plusPath).not.toBe(underscorePath);
       expect(readFileSync(plusPath, "utf8")).toBe("PlusPass123!\n");
       expect(readFileSync(underscorePath, "utf8")).toBe("UnderscorePass456!\n");
-
-      // Symlinked ancestor outside cwd is also refused
-      const outsideRoot = mkdtempSync(path.join(tmpdir(), "arrusted-auth-outside-"));
-      try {
-        const realOutside = path.join(outsideRoot, "real");
-        mkdirSync(path.join(realOutside, "nested"), { recursive: true });
-        const symlinkAncestor = path.join(outsideRoot, "link");
-        symlinkSync(realOutside, symlinkAncestor);
-        expect(() =>
-          writeGeneratedPasswordFile(
-            "mallory@sunlight.test",
-            "ShouldNotEscape",
-            path.join(symlinkAncestor, "nested/mallory.pwd"),
-            dir,
-          ),
-        ).toThrow(/symbolic link/);
-      } finally {
-        rmSync(outsideRoot, { recursive: true, force: true });
-      }
 
       // Failed onGeneratedPassword rolls back addPerson before COMMIT so a retry succeeds cleanly
       const { pool: rollbackPool, queries: rollbackQueries } = createFakePool();
@@ -247,20 +309,13 @@ describe("@arrusted/auth server & people helpers", () => {
       expect(rollbackQueries.some((q) => q.sql === "ROLLBACK")).toBe(true);
 
       await expect(
-        runAuthCli([
-          "people",
-          "add",
-          "alice@sunlight.test",
-          "--password",
-          "Password1234!",
-          "--password-file",
-          "out.txt",
-          "--org",
-          "sunlight",
-        ]),
-      ).rejects.toThrow(/--password and --password-file cannot be combined/);
+        runAuthCli(["people", "add", "alice@sunlight.test", "--password", "Password1234!"]),
+      ).rejects.toThrow(/Unknown option: --password/);
+      await expect(
+        runAuthCli(["people", "add", "alice@sunlight.test", "--password-file", "out.txt"]),
+      ).rejects.toThrow(/Unknown option: --password-file/);
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      rmSync(outer, { recursive: true, force: true });
     }
   });
 });

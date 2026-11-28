@@ -360,7 +360,7 @@ suite(
         peerDependencies?: Record<string, string>;
         optionalDependencies?: Record<string, string>;
       };
-      expect(manifest.version).toBe("0.1.0-alpha.1");
+      expect(manifest.version).toBe("0.1.0-alpha.2");
       expect(manifest.license).toBe(
         manifest.name.startsWith("@arrusted/cli-") ? "MIT AND Apache-2.0" : "MIT",
       );
@@ -386,8 +386,8 @@ suite(
 
       if (manifest.name === "@arrusted/core") {
         expect(manifest.optionalDependencies).toEqual({
-          "@arrusted/cli-darwin-arm64": "0.1.0-alpha.1",
-          "@arrusted/cli-linux-x64": "0.1.0-alpha.1",
+          "@arrusted/cli-darwin-arm64": "0.1.0-alpha.2",
+          "@arrusted/cli-linux-x64": "0.1.0-alpha.2",
         });
       }
       if (manifest.name.startsWith("@arrusted/cli-")) {
@@ -396,12 +396,12 @@ suite(
         expect(archiveEntries).toContain("package/THIRD_PARTY_NOTICES.md");
       }
       if (manifest.name === "@arrusted/auth") {
-        expect(manifest.peerDependencies?.["@arrusted/core"]).toBe(">=0.1.0-alpha.1 <0.2.0");
+        expect(manifest.peerDependencies?.["@arrusted/core"]).toBe(">=0.1.0-alpha.2 <0.2.0");
         expect(manifest.dependencies).toBeUndefined();
       }
       if (manifest.name === "@arrusted/ui") {
         expect(manifest.dependencies).not.toHaveProperty("ag-grid-enterprise");
-        expect(manifest.peerDependencies?.["ag-grid-enterprise"]).toBeTruthy();
+        expect(manifest.peerDependencies?.["ag-grid-enterprise"]).toBe("33.3.0");
       }
     }
     expect(tarballByPkg[hostCliPkgName]).toBeTruthy();
@@ -471,10 +471,8 @@ suite(
     expect(existsSync(path.join(consumerDir, "node_modules", otherCliPkgName))).toBe(false);
 
     // Initialize git commit in consumerDir so provenance + undo commit checks work realistically
-    writeFileSync(
-      path.join(consumerDir, ".gitignore"),
-      "node_modules/\n.generated/\n.next/\n.local/\n",
-    );
+    // (note: .local/ is intentionally omitted here to prove migrate & people add auto-create .local/.gitignore!)
+    writeFileSync(path.join(consumerDir, ".gitignore"), "node_modules/\n.generated/\n.next/\n");
     runClean(path.join(isolatedBinDir, "git"), ["init"], { cwd: consumerDir });
     runClean(path.join(isolatedBinDir, "git"), ["config", "user.email", "dev@sunlight.test"], {
       cwd: consumerDir,
@@ -695,7 +693,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     const buildMeta = JSON.parse(
       readFileSync(path.join(consumerDir, ".generated/build.json"), "utf8"),
     ) as { packageVersion?: string };
-    expect(buildMeta.packageVersion).toBe("0.1.0-alpha.1");
+    expect(buildMeta.packageVersion).toBe("0.1.0-alpha.2");
 
     const migrationEnv = {
       MIGRATION_DATABASE_URL: ownerDatabaseUrl,
@@ -711,6 +709,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       { cwd: consumerDir, env: migrationEnv },
     );
     expect(migrateV1Out).toContain("Migration applied.");
+    expect(readFileSync(path.join(consumerDir, ".local/.gitignore"), "utf8")).toBe("*\n");
 
     // 5. Typecheck + Next.js production build (analytics="basic", NO ag-grid-enterprise!)
     runClean(path.join(consumerDir, "node_modules/.bin/tsc"), ["--noEmit"], {
@@ -755,7 +754,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       });
       expect(openSignUpRes.ok).toBe(false);
 
-      // Provision Alice via `arrusted-auth people add`
+      // Provision Alice via `arrusted-auth people add` (secret written to 0600 auth_crm--alice@sunlight.test.txt)
       const addOut = runClean(
         path.join(consumerDir, "node_modules/.bin/arrusted-auth"),
         [
@@ -764,8 +763,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           "alice@sunlight.test",
           "--name",
           "Alice Sunlight",
-          "--password",
-          "Password1234!",
           "--org",
           "sunlight",
           "--schema",
@@ -776,9 +773,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           env: { AUTH_DATABASE_URL: crmDatabaseUrl },
         },
       );
-      expect(addOut).toContain("Added alice@sunlight.test");
+      const aliceCredPath = path.join(
+        consumerDir,
+        ".local/credentials/auth_crm--alice@sunlight.test.txt",
+      );
+      expect(addOut).toContain(`Temporary password written to ${aliceCredPath}`);
+      const alicePassword = readFileSync(aliceCredPath, "utf8").trim();
+      expect(alicePassword.length).toBeGreaterThanOrEqual(16);
+      expect(addOut).not.toContain(alicePassword);
+      expect(statSync(aliceCredPath).mode & 0o777).toBe(0o600);
 
-      // Provision Bob without --password: secret is written to a 0600 file and never echoed to stdout
+      // Provision Bob: secret is written to a 0600 file and never echoed to stdout
       const bobAddOut = runClean(
         path.join(consumerDir, "node_modules/.bin/arrusted-auth"),
         [
@@ -797,7 +802,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           env: { AUTH_DATABASE_URL: crmDatabaseUrl },
         },
       );
-      const bobCredPath = path.join(consumerDir, ".local/credentials/bob@sunlight.test.txt");
+      const bobCredPath = path.join(
+        consumerDir,
+        ".local/credentials/auth_crm--bob@sunlight.test.txt",
+      );
       expect(bobAddOut).toContain(`Temporary password written to ${bobCredPath}`);
       const bobPassword = readFileSync(bobCredPath, "utf8").trim();
       expect(bobPassword.length).toBeGreaterThanOrEqual(16);
@@ -813,13 +821,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       });
       expect(bobSignInRes.status).toBe(200);
 
+      // Verify .local/.gitignore excludes restore-points & credentials from git status
+      const gitPorcelain = runClean(path.join(isolatedBinDir, "git"), ["status", "--porcelain"], {
+        cwd: consumerDir,
+      });
+      expect(gitPorcelain).not.toContain(".local");
+
       // Sign in as Alice
       const signInRes = await fetch(`${origin}/api/auth/sign-in/email`, {
         method: "POST",
         headers: { "content-type": "application/json", origin },
         body: JSON.stringify({
           email: "alice@sunlight.test",
-          password: "Password1234!",
+          password: alicePassword,
         }),
       });
       expect(signInRes.status).toBe(200);
@@ -847,6 +861,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         headers: {
           "content-type": "application/json",
           cookie: rawSetCookie,
+          origin,
         },
         body: JSON.stringify({
           app_id: "sunlight",
@@ -912,17 +927,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     // 7. Re-add Alice, evolve schema additively (v2), migrate, then undo back to v1!
     runClean(
       path.join(consumerDir, "node_modules/.bin/arrusted-auth"),
-      [
-        "people",
-        "add",
-        "alice@sunlight.test",
-        "--password",
-        "Password1234!",
-        "--org",
-        "sunlight",
-        "--schema",
-        "auth_crm",
-      ],
+      ["people", "add", "alice@sunlight.test", "--org", "sunlight", "--schema", "auth_crm"],
       { cwd: consumerDir, env: { AUTH_DATABASE_URL: crmDatabaseUrl } },
     );
 
