@@ -12,13 +12,36 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { verifyCheckedRelease } from "./release-verification";
 
 const runtimeDir = path.dirname(fileURLToPath(import.meta.url));
 const defaultRepoRoot = path.resolve(runtimeDir, "../..");
+const moduleRequire = createRequire(import.meta.url);
 const formatVersion = 1;
+
+function resolveBundledOrRepoAsset(bundledName: string, repoRelativePath: string): string {
+  const bundled = path.resolve(runtimeDir, "../assets", bundledName);
+  if (existsSync(bundled)) return bundled;
+  return path.join(defaultRepoRoot, repoRelativePath);
+}
+
+export function resolvePlatformCliBinary(
+  binaryName: "schema-compiler" | "cue",
+): string | undefined {
+  const pkgName = `@arrusted/cli-${process.platform}-${process.arch}/package.json`;
+  try {
+    const pkgJsonPath = moduleRequire.resolve(pkgName);
+    const exeName = process.platform === "win32" ? `${binaryName}.exe` : binaryName;
+    const candidate = path.join(path.dirname(pkgJsonPath), "bin", exeName);
+    if (existsSync(candidate)) return candidate;
+  } catch {
+    // Optional platform binary package is not installed; fall back to env/monorepo/PATH.
+  }
+  return undefined;
+}
 
 const releaseMembers = [
   "app-artifact.json",
@@ -72,6 +95,8 @@ export type CompileSchemaOptions = {
   nextApp?: boolean;
   /** Optional explicit path to the prebuilt schema-compiler binary. */
   compilerBinary?: string;
+  /** Optional explicit path to the prebuilt cue binary. */
+  cueBinary?: string;
   /** Optional explicit path to app-manifest.cue. */
   appManifestCuePath?: string;
   /** Optional explicit path to app-selection.cue. */
@@ -122,45 +147,70 @@ function generatedDataServerText(nextApp: boolean, runtimePkg: string): string {
 
 let monorepoCompilerReady = false;
 
-function resolveCompilerInvocation(explicitBinary?: string): {
+function resolveCompilerInvocation(
+  explicitBinary?: string,
+  explicitCueBinary?: string,
+): {
   executable: string;
   prefixArgs: string[];
   cwd: string;
   env: NodeJS.ProcessEnv;
 } {
+  const configuredCue = explicitCueBinary?.trim() || process.env.ARRUSTED_CUE_BIN?.trim();
+  if (configuredCue) {
+    const resolvedCue = path.resolve(configuredCue);
+    const cueBase = path.basename(resolvedCue);
+    if (!existsSync(resolvedCue) || (cueBase !== "cue" && cueBase !== "cue.exe")) {
+      throw new Error(`Configured cue binary must exist and be named 'cue': ${resolvedCue}`);
+    }
+  }
+  const cueBin = configuredCue || resolvePlatformCliBinary("cue");
+  const baseEnv: NodeJS.ProcessEnv = cueBin
+    ? {
+        ...process.env,
+        PATH: `${path.dirname(path.resolve(cueBin))}${path.delimiter}${process.env.PATH ?? ""}`,
+      }
+    : process.env;
   const envBinary = process.env.ARRUSTED_SCHEMA_COMPILER_BIN?.trim();
   if (explicitBinary || envBinary) {
     const resolved = path.resolve((explicitBinary ?? envBinary)!);
     if (!existsSync(resolved)) {
       throw new Error(`Configured schema-compiler binary does not exist: ${resolved}`);
     }
-    return { executable: resolved, prefixArgs: [], cwd: process.cwd(), env: process.env };
+    return { executable: resolved, prefixArgs: [], cwd: process.cwd(), env: baseEnv };
+  }
+  const platformCompiler = resolvePlatformCliBinary("schema-compiler");
+  if (platformCompiler) {
+    return { executable: platformCompiler, prefixArgs: [], cwd: process.cwd(), env: baseEnv };
   }
   const cargoToml = path.join(defaultRepoRoot, "Cargo.toml");
-  const debugBin = path.join(defaultRepoRoot, "target/debug/schema-compiler");
-  const cargoEnv = { ...process.env, CARGO_TARGET_DIR: path.join(defaultRepoRoot, "target") };
-  if (existsSync(cargoToml) && !monorepoCompilerReady) {
-    const build = spawnSync("cargo", ["build", "--quiet", "-p", "schema-compiler"], {
-      cwd: defaultRepoRoot,
-      encoding: "utf8",
-      env: cargoEnv,
-    });
-    if (build.status !== 0) {
-      throw new Error(
-        `Failed to build schema-compiler: ${build.stderr?.trim() || build.error?.message || "unknown error"}`,
-      );
+  if (existsSync(cargoToml)) {
+    const debugBin = path.join(defaultRepoRoot, "target/debug/schema-compiler");
+    const cargoEnv = { ...baseEnv, CARGO_TARGET_DIR: path.join(defaultRepoRoot, "target") };
+    if (!monorepoCompilerReady) {
+      const build = spawnSync("cargo", ["build", "--quiet", "-p", "schema-compiler"], {
+        cwd: defaultRepoRoot,
+        encoding: "utf8",
+        env: cargoEnv,
+      });
+      if (build.status !== 0) {
+        throw new Error(
+          `Failed to build schema-compiler: ${build.stderr?.trim() || build.error?.message || "unknown error"}`,
+        );
+      }
+      monorepoCompilerReady = true;
     }
-    monorepoCompilerReady = true;
+    if (existsSync(debugBin)) {
+      return { executable: debugBin, prefixArgs: [], cwd: process.cwd(), env: baseEnv };
+    }
+    return {
+      executable: "cargo",
+      prefixArgs: ["run", "--quiet", "-p", "schema-compiler", "--"],
+      cwd: defaultRepoRoot,
+      env: cargoEnv,
+    };
   }
-  if (existsSync(debugBin)) {
-    return { executable: debugBin, prefixArgs: [], cwd: process.cwd(), env: process.env };
-  }
-  return {
-    executable: "cargo",
-    prefixArgs: ["run", "--quiet", "-p", "schema-compiler", "--"],
-    cwd: defaultRepoRoot,
-    env: cargoEnv,
-  };
+  return { executable: "schema-compiler", prefixArgs: [], cwd: process.cwd(), env: baseEnv };
 }
 
 function runCompiler(
@@ -315,6 +365,15 @@ function buildCueToSqlSourceMap(input: {
   };
 }
 
+/** Rewrite only emitted runtime import specifiers so model labels/literals remain untouched. */
+export function rewriteRuntimeImports(typescript: string, runtimePkg: string): string {
+  if (runtimePkg === "@autograph/generated-app-runtime") return typescript;
+  return typescript.replace(
+    /^((?:import|export)(?:\s+type)?\s+(?:\{[^;]*?\}|\*\s+as\s+\w+|\*)\s+from\s+)"@autograph\/generated-app-runtime\/([^"\r\n]+)";$/gmu,
+    `$1"${runtimePkg}/$2";`,
+  );
+}
+
 /** Pure current-state CUE -> SQL + TypeScript codegen with portable build identity. */
 export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResult {
   const outDir = path.resolve(options.outDir);
@@ -327,35 +386,50 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
   const { files: cueFiles, primaryCue } = collectCueInputs(options.schemaPath);
   const appManifestCue = path.resolve(
     options.appManifestCuePath ??
-      path.join(defaultRepoRoot, "packages/schema-compiler/cue/app-manifest.cue"),
+      resolveBundledOrRepoAsset(
+        "app-manifest.cue",
+        "packages/schema-compiler/cue/app-manifest.cue",
+      ),
   );
   const authSchemaSql = path.resolve(
-    options.authSchemaSqlPath ?? path.join(defaultRepoRoot, "packages/auth/schema.sql"),
+    options.authSchemaSqlPath ??
+      resolveBundledOrRepoAsset("schema.sql", "packages/auth/schema.sql"),
   );
   const membershipSql = path.resolve(
     options.membershipSqlPath ??
-      path.join(defaultRepoRoot, "packages/auth/single-organization-membership.sql"),
+      resolveBundledOrRepoAsset(
+        "single-organization-membership.sql",
+        "packages/auth/single-organization-membership.sql",
+      ),
   );
   let resolvedSelectionCue: string | undefined;
   let resolvedCatalogPath: string | undefined;
   if (options.catalogPath !== undefined) {
     const selectionCue = path.resolve(
       options.appSelectionCuePath ??
-        path.join(defaultRepoRoot, "packages/schema-compiler/cue/app-selection.cue"),
+        resolveBundledOrRepoAsset(
+          "app-selection.cue",
+          "packages/schema-compiler/cue/app-selection.cue",
+        ),
     );
     if (existsSync(selectionCue)) {
       resolvedSelectionCue = selectionCue;
     }
     resolvedCatalogPath = path.resolve(options.catalogPath);
   }
-  const invocation = resolveCompilerInvocation(options.compilerBinary);
+  const invocation = resolveCompilerInvocation(options.compilerBinary, options.cueBinary);
+  const pkgJsonCandidate = path.join(runtimeDir, "package.json");
+  const parentPkgJsonCandidate = path.resolve(runtimeDir, "../package.json");
+  const resolvedPkgJson = existsSync(pkgJsonCandidate)
+    ? pkgJsonCandidate
+    : existsSync(parentPkgJsonCandidate)
+      ? parentPkgJsonCandidate
+      : undefined;
   const packageVersion =
     options.packageVersion ??
-    (
-      JSON.parse(readFileSync(path.join(runtimeDir, "package.json"), "utf8")) as {
-        version?: string;
-      }
-    ).version ??
+    (resolvedPkgJson
+      ? (JSON.parse(readFileSync(resolvedPkgJson, "utf8")) as { version?: string }).version
+      : undefined) ??
     "0.0.0";
   const runtimePkg = options.runtimeModuleSpecifier ?? "@autograph/generated-app-runtime";
   const nextApp = options.nextApp ?? true;
@@ -542,7 +616,8 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
       documentation: string;
     };
     writeJson(path.join(stagedRelease, "operation-manifest.json"), dataPlane.manifest);
-    writeFileSync(path.join(stagedRelease, "data-operations.ts"), dataPlane.typescript);
+    const rewrittenTypescript = rewriteRuntimeImports(dataPlane.typescript, runtimePkg);
+    writeFileSync(path.join(stagedRelease, "data-operations.ts"), rewrittenTypescript);
     writeFileSync(path.join(stagedRelease, "data-operations.md"), dataPlane.documentation);
     writeFileSync(
       path.join(stagedRelease, "data-server.ts"),

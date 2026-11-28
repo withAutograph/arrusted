@@ -73,6 +73,20 @@ COMMIT`) rather than caching session-level `SET` state, so `AUTH_SCHEMA`
 - `migrate:undo` restores `public` from the pre-migration restore point while
   preserving all marked `auth_*` schemas and re-syncing post-backup sign-ups and
   membership revocations into `public.kernel_actor_membership`.
+- Standalone external Next.js consumers install `@arrusted/core`,
+  `@arrusted/auth`, and `@arrusted/ui` (`0.1.0-alpha.1`, MIT): `arrusted compile`
+  rewrites generated `data-operations.ts` imports to `@arrusted/core/*` and stamps
+  `build-<buildHash>` schema versions (incorporating `packageVersion`) using
+  bundled CUE/SQL assets and `@arrusted/cli-<platform>-<arch>` (or
+  `ARRUSTED_SCHEMA_COMPILER_BIN` / `ARRUSTED_CUE_BIN`); `arrusted migrate`, `arrusted migrate:undo`, and
+  `arrusted migrate:rehearse` drive database provisioning and rollback;
+  `@arrusted/core/routes` (`createAppRoutes`) exposes `/api/schema/active`,
+  `/api/records`, and `/api/apply` over policy-enforced `createDataClient` and
+  human mainline change-sets; `@arrusted/core/next` (`nextAppConfig`) configures
+  Next.js 16 tracing and external packages; and `@arrusted/auth` (`createAppAuth`
+  with `allowSignUp: false` by default, plus `arrusted-auth people add|remove`)
+  provisions isolated per-app Better Auth memberships without OAuth/infra/email
+  provider bloat.
 
 Default inputs also include the existing domain catalog and CUE selection
 contracts. Additional schema files can extend the manifest using those catalog

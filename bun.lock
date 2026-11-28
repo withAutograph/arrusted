@@ -12,16 +12,16 @@
         "@better-auth/api-key": "catalog:",
         "@better-auth/oauth-provider": "catalog:",
         "@better-auth/passkey": "catalog:",
-        "@heroicons/react": "2.2.0",
+        "@heroicons/react": "catalog:",
         "@libpg-query/parser": "catalog:",
         "@tanstack/query-core": "5.102.8",
         "@tanstack/react-query": "catalog:",
         "ag-charts-community": "14.1.0",
         "ag-charts-enterprise": "14.1.0",
         "ag-charts-react": "14.1.0",
-        "ag-grid-community": "33.3.0",
-        "ag-grid-enterprise": "33.3.0",
-        "ag-grid-react": "33.3.0",
+        "ag-grid-community": "catalog:",
+        "ag-grid-enterprise": "catalog:",
+        "ag-grid-react": "catalog:",
         "ai": "catalog:",
         "better-auth": "catalog:",
         "clsx": "catalog:",
@@ -111,6 +111,101 @@
       "peerDependencies": {
         "react": ">=19.0.0 <20.0.0",
       },
+    },
+    "packages/arrusted/auth": {
+      "name": "@arrusted/auth",
+      "version": "0.1.0-alpha.1",
+      "bin": {
+        "arrusted-auth": "./bin/arrusted-auth.mjs",
+      },
+      "dependencies": {
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@arrusted/core": "workspace:*",
+        "@autograph/typescript-config": "workspace:*",
+        "@autograph/vite-config": "workspace:*",
+        "@types/node": "catalog:",
+        "@types/pg": "catalog:",
+        "@types/react": "catalog:",
+        "better-auth": "catalog:",
+        "pg": "catalog:",
+        "typescript": "catalog:",
+        "vite-plus": "catalog:",
+        "vitest": "catalog:",
+      },
+      "peerDependencies": {
+        "@arrusted/core": ">=0.1.0-alpha.1 <0.2.0",
+        "better-auth": "^1.7.28",
+        "pg": "^8.0.0",
+        "react": ">=19.0.0 <20.0.0",
+      },
+      "optionalPeers": [
+        "react",
+      ],
+    },
+    "packages/arrusted/core": {
+      "name": "@arrusted/core",
+      "version": "0.1.0-alpha.1",
+      "bin": {
+        "arrusted": "./bin/arrusted.mjs",
+      },
+      "dependencies": {
+        "@libpg-query/parser": "catalog:",
+        "pg": "catalog:",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@autograph/typescript-config": "workspace:*",
+        "@autograph/vite-config": "workspace:*",
+        "@types/node": "catalog:",
+        "@types/pg": "catalog:",
+        "@types/react": "catalog:",
+        "typescript": "catalog:",
+        "vite-plus": "catalog:",
+        "vitest": "catalog:",
+      },
+      "peerDependencies": {
+        "next": ">=16.0.0 <17.0.0",
+        "react": ">=19.0.0 <20.0.0",
+      },
+      "optionalPeers": [
+        "next",
+        "react",
+      ],
+    },
+    "packages/arrusted/ui": {
+      "name": "@arrusted/ui",
+      "version": "0.1.0-alpha.1",
+      "dependencies": {
+        "@heroicons/react": "catalog:",
+        "ag-grid-community": "catalog:",
+        "ag-grid-react": "catalog:",
+        "react-day-picker": "catalog:",
+      },
+      "devDependencies": {
+        "@autograph/typescript-config": "workspace:*",
+        "@autograph/vite-config": "workspace:*",
+        "@testing-library/react": "catalog:",
+        "@types/node": "catalog:",
+        "@types/react": "catalog:",
+        "@types/react-dom": "catalog:",
+        "ag-grid-enterprise": "catalog:",
+        "jsdom": "catalog:",
+        "react": "catalog:",
+        "react-dom": "catalog:",
+        "typescript": "catalog:",
+        "vite-plus": "catalog:",
+        "vitest": "catalog:",
+      },
+      "peerDependencies": {
+        "ag-grid-enterprise": "^33.3.0",
+        "react": ">=19.0.0 <20.0.0",
+        "react-dom": ">=19.0.0 <20.0.0",
+      },
+      "optionalPeers": [
+        "ag-grid-enterprise",
+      ],
     },
     "packages/auth": {
       "name": "@autograph/auth",
@@ -474,6 +569,7 @@
     "@better-auth/memory-adapter": "1.7.28",
     "@better-auth/oauth-provider": "1.7.28",
     "@better-auth/passkey": "1.7.28",
+    "@heroicons/react": "2.2.0",
     "@libpg-query/parser": "17.6.10",
     "@modelcontextprotocol/client": "2.3.1",
     "@modelcontextprotocol/ext-apps": "2.0.3",
@@ -491,6 +587,9 @@
     "@types/react-dom": "19.3.0",
     "@vercel/oidc": "3.8.6",
     "@vitejs/plugin-react": "6.1.1",
+    "ag-grid-community": "33.3.0",
+    "ag-grid-enterprise": "33.3.0",
+    "ag-grid-react": "33.3.0",
     "ai": "7.0.95",
     "autoprefixer": "10.5.5",
     "babel-plugin-react-compiler": "1.0.0",
@@ -534,6 +633,12 @@
     "@ai-sdk/provider-utils": ["@ai-sdk/provider-utils@5.0.37", "", { "dependencies": { "@ai-sdk/provider": "4.0.11", "@standard-schema/spec": "^1.1.0", "@workflow/serde": "4.1.0", "eventsource-parser": "^3.0.8", "undici": "^7.29.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-WzLQPWtpLpunKBanq/TX8+rbBz7JdKpl8Io4nl/g+bLvePbxMlMuxLrxT8JzquxJmgWKbW4nfFrQ5mnX4A8mpw=="],
 
     "@alloc/quick-lru": ["@alloc/quick-lru@5.3.0", "", {}, "sha512-U4+70Pc5ZS9osnCBCE5Jha/ciHM+Yp+CNMNC/7HvYbNRk1Ldd+f7qO65W5qfhu/TCv+/ozljlXXe9Nj8419DMA=="],
+
+    "@arrusted/auth": ["@arrusted/auth@workspace:packages/arrusted/auth"],
+
+    "@arrusted/core": ["@arrusted/core@workspace:packages/arrusted/core"],
+
+    "@arrusted/ui": ["@arrusted/ui@workspace:packages/arrusted/ui"],
 
     "@asamuzakjp/css-color": ["@asamuzakjp/css-color@6.0.7", "", { "dependencies": { "@csstools/css-calc": "^3.3.0", "@csstools/css-color-parser": "^4.1.10", "@csstools/css-parser-algorithms": "^4.0.0", "@csstools/css-tokenizer": "^4.0.0", "lru-cache": "^11.5.2" } }, "sha512-vC/bk1Lz7Tn/EfU9/apOTBk80/8dyGyWMowPoV1tJ52muDGsDqt2HPT2klrFUiY60MQmQv9q8yIht15JnBgDGw=="],
 

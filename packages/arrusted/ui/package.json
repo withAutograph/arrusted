@@ -1,0 +1,70 @@
+{
+  "name": "@arrusted/ui",
+  "version": "0.1.0-alpha.1",
+  "private": false,
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.tsx",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./grid-basic": {
+      "source": "./src/grid-basic.ts",
+      "types": "./dist/grid-basic.d.ts",
+      "import": "./dist/grid-basic.js",
+      "default": "./dist/grid-basic.js"
+    },
+    "./grid-advanced": {
+      "source": "./src/grid-advanced.ts",
+      "types": "./dist/grid-advanced.d.ts",
+      "import": "./dist/grid-advanced.js",
+      "default": "./dist/grid-advanced.js"
+    },
+    "./styles.css": {
+      "source": "./src/styles.css",
+      "default": "./dist/styles.css"
+    }
+  },
+  "scripts": {
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "vp test --config vite.config.ts --run",
+    "build": "bun scripts/build.ts"
+  },
+  "dependencies": {
+    "@heroicons/react": "catalog:",
+    "ag-grid-community": "catalog:",
+    "ag-grid-react": "catalog:",
+    "react-day-picker": "catalog:"
+  },
+  "devDependencies": {
+    "@autograph/typescript-config": "workspace:*",
+    "@autograph/vite-config": "workspace:*",
+    "@testing-library/react": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "ag-grid-enterprise": "catalog:",
+    "jsdom": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "ag-grid-enterprise": "^33.3.0",
+    "react": ">=19.0.0 <20.0.0",
+    "react-dom": ">=19.0.0 <20.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ag-grid-enterprise": {
+      "optional": true
+    }
+  }
+}

@@ -8,6 +8,7 @@ export default defineConfig({
       "app/scripts/schema-changes.test.ts",
       "app/scripts/records-import.test.ts",
       "app/scripts/multi-app-shared-db.test.ts",
+      "app/scripts/clean-machine.test.ts",
     ],
     fileParallelism: false,
     testTimeout: 120000,

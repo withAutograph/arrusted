@@ -1,10 +1,11 @@
 import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { createReadStream, readFileSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync } from "node:fs";
 import { migrationLock } from "./migration-lock";
 import { chmod, mkdir, mkdtemp, open, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+import { fileURLToPath } from "node:url";
 
 export type PgDumpRestorePoint = {
   kind: "pg_dump";
@@ -58,6 +59,7 @@ export function connection(databaseUrl: string) {
   };
   // Do not inherit PGHOST, PGSERVICE, PGOPTIONS or credentials for another target.
   const env: NodeJS.ProcessEnv = {
+    NODE_ENV: process.env.NODE_ENV ?? "production",
     PATH: process.env.PATH,
     TMPDIR: process.env.TMPDIR,
     PGHOST: url.hostname.replace(/^\[|\]$/g, ""),
@@ -90,9 +92,13 @@ function checkId(id: string) {
 }
 
 async function run(program: string, args: string[], databaseUrl?: string): Promise<void> {
-  const env = databaseUrl
+  const env: NodeJS.ProcessEnv = databaseUrl
     ? connection(databaseUrl).env
-    : { PATH: process.env.PATH, TMPDIR: process.env.TMPDIR };
+    : {
+        NODE_ENV: process.env.NODE_ENV ?? "production",
+        PATH: process.env.PATH,
+        TMPDIR: process.env.TMPDIR,
+      };
   await new Promise<void>((done, reject) => {
     const child = spawn(program, args, { env, stdio: ["ignore", "ignore", "pipe"] });
     // SQL errors can contain row values or credentials; never surface subprocess output.
@@ -173,13 +179,21 @@ function restoredGuard(expectedRestoredHash: string | null) {
 
 // Auth is an independent lifetime: exclude its objects from backups and preserve
 // the live tables (including indexes, constraints, ACLs and row identities) on undo.
-const authTables = [
-  ...readFileSync(new URL("../../packages/auth/schema.sql", import.meta.url), "utf8").matchAll(
-    /create table "([^"]+)"/g,
-  ),
-].map((match) => match[1]!);
-const authNames = authTables.map(literal).join(",");
-const preserveAuth = `
+const restorePointsModuleDir = dirname(fileURLToPath(import.meta.url));
+let cachedAuthTables: string[] | undefined;
+
+function getAuthTables(): string[] {
+  if (cachedAuthTables) return cachedAuthTables;
+  const bundledAuthSchemaPath = resolve(restorePointsModuleDir, "../assets/schema.sql");
+  const repoAuthSchemaPath = resolve(restorePointsModuleDir, "../../packages/auth/schema.sql");
+  const targetPath = existsSync(bundledAuthSchemaPath) ? bundledAuthSchemaPath : repoAuthSchemaPath;
+  cachedAuthTables = [...readFileSync(targetPath, "utf8").matchAll(/create table "([^"]+)"/g)].map(
+    (match) => match[1]!,
+  );
+  return cachedAuthTables;
+}
+
+const buildPreserveAuthSql = () => `
 CREATE SCHEMA autograph_undo_auth;
 CREATE OR REPLACE FUNCTION pg_temp.autograph_decode_tgargs(raw bytea)
 RETURNS text[] LANGUAGE plpgsql IMMUTABLE AS $tgargs$
@@ -282,7 +296,7 @@ DO $$ DECLARE t text; BEGIN
       SELECT principal_name, app_id, customer_id, actor_id, active, actor_kind, fence_generation, bound_at
       FROM public.kernel_actor_access';
   END IF;
-  FOR t IN SELECT unnest(ARRAY[${authNames}]) LOOP
+  FOR t IN SELECT unnest(ARRAY[${getAuthTables().map(literal).join(",")}]) LOOP
     IF to_regclass(format('public.%I', t)) IS NOT NULL THEN
       EXECUTE format('ALTER TABLE public.%I SET SCHEMA autograph_undo_auth', t);
     END IF;
@@ -427,9 +441,10 @@ DROP SCHEMA autograph_undo_auth;`;
 export class PgDumpRestorePoints implements RestorePoints {
   readonly directory: string;
   constructor(options: { directory?: string } = {}) {
-    this.directory = resolve(
-      options.directory ?? new URL("../.local/restore-points", import.meta.url).pathname,
-    );
+    const defaultDir = existsSync(resolve(restorePointsModuleDir, "../../packages/auth/schema.sql"))
+      ? resolve(restorePointsModuleDir, "../.local/restore-points")
+      : resolve(process.cwd(), ".local/restore-points");
+    this.directory = resolve(options.directory ?? defaultDir);
   }
 
   async create({
@@ -462,7 +477,7 @@ export class PgDumpRestorePoints implements RestorePoints {
           "--format=custom",
           "--schema=public",
           "--strict-names",
-          ...authTables.map((name) => `--exclude-table=public."${name}"`),
+          ...getAuthTables().map((name) => `--exclude-table=public."${name}"`),
           "--file",
           path,
         ],
@@ -594,7 +609,7 @@ export class PgDumpRestorePoints implements RestorePoints {
           "--set=ON_ERROR_STOP=1",
           "--single-transaction",
           "--command",
-          `${restoreGuard(expectedAppliedId)}\n${publicOnly}\n${preserveAuth}\nDROP SCHEMA IF EXISTS public CASCADE;`,
+          `${restoreGuard(expectedAppliedId)}\n${publicOnly}\n${buildPreserveAuthSql()}\nDROP SCHEMA IF EXISTS public CASCADE;`,
           "--file",
           schema,
           // pg_dump emits public's ACL as a delta from its initial privileges.
