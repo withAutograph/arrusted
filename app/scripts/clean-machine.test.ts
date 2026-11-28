@@ -286,14 +286,18 @@ beforeAll(async () => {
       }
     }
   } else {
-    stageCliPackage({
+    const stagedPkgDir = stageCliPackage({
       repoRoot,
       target: hostCliTarget,
       compilerBinary: resolveRepoSchemaCompiler(repoRoot),
       cueBinary: whichBinary("cue"),
     });
-    for (const pkg of [`cli-${hostCliTarget}`, "core", "auth", "ui"] as const) {
-      packArrustedPackage({ repoRoot, packageName: pkg, outDir: tarballDir });
+    try {
+      for (const pkg of [`cli-${hostCliTarget}`, "core", "auth", "ui"] as const) {
+        packArrustedPackage({ repoRoot, packageName: pkg, outDir: tarballDir });
+      }
+    } finally {
+      rmSync(path.join(stagedPkgDir, "bin"), { recursive: true, force: true });
     }
   }
 

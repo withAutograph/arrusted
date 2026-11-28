@@ -169,27 +169,20 @@ export function stripWorkspaceManifestForPublish(
 }
 
 export function resolveRepoSchemaCompiler(repoRoot = defaultRepoRoot): string {
-  const candidates = [
-    process.env.CARGO_TARGET_DIR
-      ? path.join(process.env.CARGO_TARGET_DIR, "release/schema-compiler")
-      : undefined,
-    process.env.CARGO_TARGET_DIR
-      ? path.join(process.env.CARGO_TARGET_DIR, "debug/schema-compiler")
-      : undefined,
-    path.join(repoRoot, "target/release/schema-compiler"),
-    path.join(repoRoot, "target/debug/schema-compiler"),
-  ].filter((item): item is string => Boolean(item));
-
-  const existing = candidates.find((candidate) => existsSync(candidate));
-  if (existing) return existing;
-
-  execFileSync("cargo", ["build", "-p", "schema-compiler"], {
+  execFileSync("cargo", ["build", "--quiet", "-p", "schema-compiler"], {
     cwd: repoRoot,
     stdio: "inherit",
   });
+  const candidates = [
+    process.env.CARGO_TARGET_DIR
+      ? path.join(process.env.CARGO_TARGET_DIR, "debug/schema-compiler")
+      : undefined,
+    path.join(repoRoot, "target/debug/schema-compiler"),
+  ].filter((item): item is string => Boolean(item));
+
   const built = candidates.find((candidate) => existsSync(candidate));
   if (!built) {
-    throw new Error("Unable to locate built schema-compiler binary after cargo build.");
+    throw new Error("Unable to locate built debug/schema-compiler binary after cargo build.");
   }
   return built;
 }
@@ -323,43 +316,52 @@ if (import.meta.main) {
   }
 
   const stageTarget = parseCliFlag(args, "--stage-cli") as SupportedCliTarget | undefined;
-  if (stageTarget) {
-    if (stageTarget !== "darwin-arm64" && stageTarget !== "linux-x64") {
-      throw new Error(`Unsupported --stage-cli target: ${stageTarget}`);
+  const stagedBinDirs: string[] = [];
+  try {
+    if (stageTarget) {
+      if (stageTarget !== "darwin-arm64" && stageTarget !== "linux-x64") {
+        throw new Error(`Unsupported --stage-cli target: ${stageTarget}`);
+      }
+      const compilerBinary = parseCliFlag(args, "--compiler-bin");
+      const cueBinary = parseCliFlag(args, "--cue-bin");
+      if (!compilerBinary || !cueBinary) {
+        throw new Error("--stage-cli requires both --compiler-bin and --cue-bin.");
+      }
+      const stagedPkgDir = stageCliPackage({ target: stageTarget, compilerBinary, cueBinary });
+      stagedBinDirs.push(path.join(stagedPkgDir, "bin"));
+    } else if (args.includes("--stage-host-cli")) {
+      const hostTarget = detectHostCliTarget();
+      if (!hostTarget) {
+        throw new Error(
+          `Unsupported host platform for --stage-host-cli: ${process.platform}-${process.arch}`,
+        );
+      }
+      const cueBinary = execFileSync("which", ["cue"], { encoding: "utf8" }).trim();
+      const compilerBinary = resolveRepoSchemaCompiler(defaultRepoRoot);
+      const stagedPkgDir = stageCliPackage({ target: hostTarget, compilerBinary, cueBinary });
+      stagedBinDirs.push(path.join(stagedPkgDir, "bin"));
     }
-    const compilerBinary = parseCliFlag(args, "--compiler-bin");
-    const cueBinary = parseCliFlag(args, "--cue-bin");
-    if (!compilerBinary || !cueBinary) {
-      throw new Error("--stage-cli requires both --compiler-bin and --cue-bin.");
+
+    const rawPackages = parseCliFlag(args, "--packages");
+    const defaultPackages: ArrustedPackageId[] = ["core", "auth", "ui"];
+    if (args.includes("--stage-host-cli")) {
+      const hostTarget = detectHostCliTarget();
+      if (hostTarget) defaultPackages.unshift(`cli-${hostTarget}`);
+    } else if (stageTarget) {
+      defaultPackages.unshift(`cli-${stageTarget}`);
     }
-    stageCliPackage({ target: stageTarget, compilerBinary, cueBinary });
-  } else if (args.includes("--stage-host-cli")) {
-    const hostTarget = detectHostCliTarget();
-    if (!hostTarget) {
-      throw new Error(
-        `Unsupported host platform for --stage-host-cli: ${process.platform}-${process.arch}`,
-      );
+
+    const selected = rawPackages
+      ? (rawPackages.split(",").map((entry) => entry.trim()) as ArrustedPackageId[])
+      : defaultPackages;
+
+    for (const packageName of selected) {
+      const packed = packArrustedPackage({ packageName, outDir });
+      console.log(`Packed ${packed.name}@${packed.version} -> ${packed.tarballPath}`);
     }
-    const cueBinary = execFileSync("which", ["cue"], { encoding: "utf8" }).trim();
-    const compilerBinary = resolveRepoSchemaCompiler(defaultRepoRoot);
-    stageCliPackage({ target: hostTarget, compilerBinary, cueBinary });
-  }
-
-  const rawPackages = parseCliFlag(args, "--packages");
-  const defaultPackages: ArrustedPackageId[] = ["core", "auth", "ui"];
-  if (args.includes("--stage-host-cli")) {
-    const hostTarget = detectHostCliTarget();
-    if (hostTarget) defaultPackages.unshift(`cli-${hostTarget}`);
-  } else if (stageTarget) {
-    defaultPackages.unshift(`cli-${stageTarget}`);
-  }
-
-  const selected = rawPackages
-    ? (rawPackages.split(",").map((entry) => entry.trim()) as ArrustedPackageId[])
-    : defaultPackages;
-
-  for (const packageName of selected) {
-    const packed = packArrustedPackage({ packageName, outDir });
-    console.log(`Packed ${packed.name}@${packed.version} -> ${packed.tarballPath}`);
+  } finally {
+    for (const binDir of stagedBinDirs) {
+      rmSync(binDir, { recursive: true, force: true });
+    }
   }
 }

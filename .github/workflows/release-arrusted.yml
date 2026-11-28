@@ -19,6 +19,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: release-arrusted-${{ inputs.publish && 'publish' || github.run_id }}
+  cancel-in-progress: false
+
 env:
   MISE_ENV: ci
   CARGO_TARGET_DIR: ${{ github.workspace }}/.cargo-target
@@ -90,7 +94,7 @@ jobs:
       PGPASSWORD: postgres
     services:
       postgres:
-        image: postgres:17
+        image: ${{ vars.CI_POSTGRES_IMAGE || 'public.ecr.aws/docker/library/postgres:17' }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -199,11 +203,17 @@ jobs:
               ls -la dist-npm/release >&2
               exit 1
             fi
-            pkg_version="$(tar -xOf "${matches[0]}" package/package.json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s).version))')"
+            pkg_meta="$(tar -xOf "${matches[0]}" package/package.json | mise exec --no-deps -- node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const m=JSON.parse(s);process.stdout.write(`${m.name}\t${m.version}`)})')"
+            pkg_name="${pkg_meta%%$'\t'*}"
+            pkg_version="${pkg_meta#*$'\t'}"
             if [[ "${DIST_TAG}" == "latest" && "${pkg_version}" == *-* ]]; then
               echo "Refusing to publish prerelease version ${pkg_version} under latest tag" >&2
               exit 1
             fi
-            echo "Publishing ${matches[0]} (${pkg_version}) with --tag ${DIST_TAG}"
-            mise exec -- npm publish "${matches[0]}" --tag "${DIST_TAG}" --access public --provenance
+            if mise exec --no-deps -- npm view "${pkg_name}@${pkg_version}" version >/dev/null 2>&1; then
+              echo "Skipping already-published ${pkg_name}@${pkg_version}"
+              continue
+            fi
+            echo "Publishing ${matches[0]} (${pkg_name}@${pkg_version}) with --tag ${DIST_TAG}"
+            mise exec --no-deps -- npm publish "${matches[0]}" --tag "${DIST_TAG}" --access public --provenance
           done
