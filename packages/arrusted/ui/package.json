@@ -3,6 +3,11 @@
   "version": "0.1.0-alpha.1",
   "private": false,
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/withAutograph/arrusted-development.git",
+    "directory": "packages/arrusted/ui"
+  },
   "files": [
     "dist"
   ],

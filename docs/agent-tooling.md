@@ -176,6 +176,14 @@ GHCR namespace so CI service containers do not depend on anonymous public
 registry quotas. It needs only `packages: write` and changes no code or
 provider deployment state.
 
+`Release (@arrusted packages)` (`release-arrusted.yml`) is an explicitly
+dispatched (`workflow_dispatch`) package-release workflow outside the automatic
+`Check`/`CI`/`CD` pull-request topology. It builds `@arrusted/cli-darwin-arm64`
+and `@arrusted/cli-linux-x64`, packs `@arrusted/{core,auth,ui}` with workspace
+`source` export conditions stripped, verifies the tarballs end-to-end against
+PostgreSQL 17 via `clean-machine.test.ts`, and publishes to public npm only when
+`publish=true` is explicitly selected.
+
 CI Postgres service containers use the `CI_POSTGRES_IMAGE` repository variable
 (set here to the public mirror `ghcr.io/withautograph/postgres:17`) and fall
 back to `public.ecr.aws/docker/library/postgres:17` when it is unset, as in

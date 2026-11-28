@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Stage and pack @arrusted/* npm tarballs with workspace source conditions stripped"
+set -euo pipefail
+
+cd "$MISE_MONOREPO_ROOT"
+exec mise run repository:exec -- pack-arrusted-packages.ts "$@"
