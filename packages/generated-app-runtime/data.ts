@@ -937,7 +937,7 @@ export function createDataClient<const D extends DataDefinition>(
           activeField.type !== field.type ||
           activeField.lifecycle === "retired" ||
           activeField.archived_at != null ||
-          (activeField.required === true && !field.required) ||
+          Boolean(activeField.required) !== Boolean(field.required) ||
           (field.target_model ?? null) !== (activeField.target_model ?? null)
         )
           return false;
@@ -1009,12 +1009,7 @@ export function createDataClient<const D extends DataDefinition>(
       return false;
     }
   };
-  result.workSessions = createWorkSessionClient(context, definition.schemaVersion, async (db) => {
-    await db.lockSchemaActivation?.();
-    const active = decodeActiveRevision(await db.call("kernel_read_active_schema_revision", {}));
-    if (active.schemaVersion === definition.schemaVersion) return definition.schemaVersion;
-    return (await isVerifiedAdditiveSuccessor(db, active)) ? active.schemaVersion : undefined;
-  });
+  result.workSessions = createWorkSessionClient(context, definition.schemaVersion);
   const activeSchemaForOperation = async (db: DataSession) => {
     const hasActivationLock = db.lockSchemaActivation !== undefined;
     const canUsePredecessor =

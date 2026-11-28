@@ -360,42 +360,6 @@ test("sibling additive successor continuity allows an installed prior revision a
             if (operation === "kernel_apply_change_set") {
               return { id: 1, schema_revision_id: active.schema_revision_id };
             }
-            if (operation === "kernel_work_session") {
-              if (input.schema_version !== active.schema.version) {
-                if (
-                  input.operation !== "get" &&
-                  input.operation !== "list" &&
-                  input.operation !== "entries"
-                ) {
-                  // Simulate protectedHttpRequest durable mutationQueue poisoning if a work-session mutation ever sends a stale schema_version!
-                  throw new Error("poisoned_http_mutation_queue");
-                }
-                const { KernelFailure } = await import("../../kernel-client/postgres");
-                throw new KernelFailure({
-                  code: "schema_drift",
-                  message: "Schema drift detected",
-                });
-              }
-              if (input.operation === "create") {
-                return { revision: 1, session_id: String(input.session_id) };
-              }
-              if (input.operation === "get") {
-                return {
-                  id: String(input.session_id),
-                  owner_id: "authorized-actor",
-                  title: "Additive Session",
-                  as_of: asOf,
-                  scope: null,
-                  layout: null,
-                  pinned: false,
-                  status: "open",
-                  revision: 7,
-                  rules: {},
-                  threads: {},
-                };
-              }
-              return [];
-            }
             throw new Error(`unexpected ${operation}`);
           },
         }),
@@ -440,24 +404,6 @@ test("sibling additive successor continuity allows an installed prior revision a
       { effectiveStart: asOf, idempotencyKey: "k1" },
     ),
   ).resolves.toEqual({ id: 1, schema_revision_id: "4" });
-  await expect(v1Ops.workSessions.request({ operation: "list" })).resolves.toEqual([]);
-  await expect(
-    v1Ops.workSessions.request({
-      operation: "get",
-      session_id: recordId,
-      overlay: false,
-    }),
-  ).resolves.toMatchObject({ id: recordId, revision: 7 });
-  await expect(
-    v1Ops.workSessions.request({
-      operation: "create",
-      expected_revision: 0,
-      request_id: "req-ws-1",
-      session_id: recordId,
-      title: "Additive Session",
-      as_of: asOf,
-    }),
-  ).resolves.toEqual({ revision: 1, session_id: recordId });
 
   // 2. Uninstalled / fabricated schemaVersion ("stale") is rejected on both list() and create()
   const staleOps = makeClient({ ...v1Def, schemaVersion: "stale" });
@@ -585,6 +531,35 @@ test("sibling additive successor continuity allows an installed prior revision a
             } as never,
           ],
           many_relations: [{ id: "tags", target_model: "other_model", lifecycle: "active" }],
+        } as never,
+      ],
+    },
+  };
+  await expect(enumOps.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow(
+    "Schema drift",
+  );
+
+  // Loosening a required field to optional (required: true -> false) -> rejected
+  active = {
+    ...active,
+    schema: {
+      ...active.schema,
+      models: [
+        {
+          id: "item",
+          fields: [
+            { id: "label", type: "text", required: false },
+            {
+              id: "status",
+              type: "enum",
+              required: false,
+              option_set: [
+                { id: "open", lifecycle: "active" },
+                { id: "closed", lifecycle: "active" },
+              ],
+            } as never,
+          ],
+          many_relations: [{ id: "tags", target_model: "tag", lifecycle: "active" }],
         } as never,
       ],
     },

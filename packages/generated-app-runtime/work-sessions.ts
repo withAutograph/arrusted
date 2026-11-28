@@ -1,8 +1,7 @@
 import { z } from "zod";
 import { responseFieldValue, responseAppliedChangeSet, responseUuid } from "./response-decoder";
-import { KernelFailure } from "../kernel-client/postgres";
 import type { AppliedChangeSet, DerivedExpr, FieldValue } from "../contracts";
-import type { DataContext, DataSession } from "./data";
+import type { DataContext } from "./data";
 
 /** Working state is platform storage; field IDs and tagged values use the kernel vocabulary. */
 export type WorkReference = { sessionId: string };
@@ -331,7 +330,6 @@ export function workSessionCapability(input: WorkSessionRequest): string {
 export function createWorkSessionClient(
   context: DataContext,
   schemaVersion: string,
-  resolveAdditiveSchemaVersion?: (db: DataSession) => Promise<string | undefined>,
 ): WorkSessionClient {
   return {
     async request<const R extends WorkSessionRequest>(input: R): Promise<WorkSessionResult<R>> {
@@ -360,44 +358,11 @@ export function createWorkSessionClient(
           "contract_validation_failed: work session revision and request identity required",
         );
       await context.authorize(workSessionCapability(input));
-      const isReadOnlyWorkOp =
-        input.operation === "get" || input.operation === "list" || input.operation === "entries";
       return context.transaction(async (db) => {
-        let result: unknown;
-        if (!isReadOnlyWorkOp && resolveAdditiveSchemaVersion !== undefined) {
-          // Resolve effective schema_version via read-only kernel calls BEFORE invoking
-          // kernel_work_session so HTTP-admission / mutationQueue never records a stale drift attempt.
-          const resolvedVersion = (await resolveAdditiveSchemaVersion(db)) ?? schemaVersion;
-          result = await db.call("kernel_work_session", {
-            ...input,
-            schema_version: resolvedVersion,
-          });
-        } else {
-          try {
-            result = await db.call("kernel_work_session", {
-              ...input,
-              schema_version: schemaVersion,
-            });
-          } catch (error) {
-            if (
-              resolveAdditiveSchemaVersion !== undefined &&
-              error instanceof KernelFailure &&
-              error.envelope.code === "schema_drift"
-            ) {
-              const activeVersion = await resolveAdditiveSchemaVersion(db);
-              if (activeVersion !== undefined) {
-                result = await db.call("kernel_work_session", {
-                  ...input,
-                  schema_version: activeVersion,
-                });
-              } else {
-                throw error;
-              }
-            } else {
-              throw error;
-            }
-          }
-        }
+        const result = await db.call("kernel_work_session", {
+          ...input,
+          schema_version: schemaVersion,
+        });
         // Callers receive the decoded response, never the raw kernel JSON.
         return decodeWorkResult(input, result) as WorkSessionResult<R>;
       });

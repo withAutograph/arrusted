@@ -30,6 +30,7 @@ const rolePassword = "local-runtime-password-at-least-32-characters";
 const adminUrl = new URL(databaseURL ?? "postgres://postgres@127.0.0.1:5432/postgres");
 if (adminUrl.hostname === "localhost") adminUrl.hostname = "127.0.0.1";
 const admin = new Pool({ connectionString: adminUrl.toString() });
+admin.on("error", () => {});
 
 const ownerUrl = new URL(adminUrl.toString());
 ownerUrl.pathname = `/${database}`;
@@ -46,6 +47,7 @@ const crmDatabaseUrl = makeRuntimeUrl(crmRole);
 const companyDataDatabaseUrl = makeRuntimeUrl(companyDataRole);
 
 const ownerPool = new Pool({ connectionString: ownerConnectionString });
+ownerPool.on("error", () => {});
 const restorePoints = new PgDumpRestorePoints({ directory: path.join(scratchDir, "backups") });
 let createdPrimaryDb = false;
 let createdRehearsalDb = false;
@@ -508,6 +510,7 @@ suite(
       connectionString: companyDataDatabaseUrl,
       max: 2,
     });
+    cdAuthPool.on("error", () => {});
     const crmRawPool = new ResilientPool({ connectionString: crmDatabaseUrl, max: 2 });
     const cdRawPool = new ResilientPool({ connectionString: companyDataDatabaseUrl, max: 2 });
 

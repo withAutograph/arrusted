@@ -2,11 +2,7 @@ import { createHash } from "node:crypto";
 import { Client, Pool } from "pg";
 import { createPostgresDataContext } from "@autograph/generated-app-runtime/postgres";
 import type { PostgresDataContext } from "@autograph/generated-app-runtime/postgres";
-import type {
-  DataContext,
-  DataDefinition,
-  WorkSessionClient,
-} from "@autograph/generated-app-runtime/data";
+import type { DataContext, DataDefinition } from "@autograph/generated-app-runtime/data";
 import { createWorkSessionClient } from "@autograph/generated-app-runtime/data";
 import {
   PRINCIPAL_HEADER,
@@ -397,8 +393,6 @@ export async function workSessionEventsResponse(input: {
   runtime: VerifiedDataRuntime;
   sessionId: string;
   signal: AbortSignal;
-  /** Optional additive-aware work-session client (falls back to strict schemaVersion). */
-  workSessions?: WorkSessionClient;
   /** Tests substitute the listening connection. */
   connect?: (runtime: VerifiedDataRuntime) => Promise<WorkSessionListener>;
 }): Promise<Response> {
@@ -458,9 +452,7 @@ export async function workSessionEventsResponse(input: {
   try {
     // Listen before reading, so no revision committed after the read is missed.
     await listener.query("listen kernel_work_session; listen kernel_canonical");
-    const session = await (
-      input.workSessions ?? createWorkSessionClient(input.context, input.schemaVersion)
-    ).request({
+    const session = await createWorkSessionClient(input.context, input.schemaVersion).request({
       operation: "get",
       session_id: input.sessionId,
       overlay: false,
