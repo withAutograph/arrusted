@@ -43,6 +43,7 @@ debug-*.log
 /.config/codex-marketplace/vercel/
 
 # Single-deployment starter: generated releases and local database restore points
+.local/
 /app/.generated/
 /app/.local/
 /app/.next/

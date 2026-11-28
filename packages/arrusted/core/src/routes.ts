@@ -241,16 +241,21 @@ function errorResponse(error: unknown): Response {
   }
   if (error && typeof error === "object" && "status" in error) {
     const errRecord = error as Record<string, unknown>;
-    const status = typeof errRecord.status === "number" ? errRecord.status : 401;
-    const code =
-      typeof errRecord.code === "string"
-        ? errRecord.code
-        : status === 403
-          ? "forbidden"
-          : "auth_required";
-    const message = error instanceof Error ? error.message : "Authentication required";
-    const envelope: ErrorEnvelope = { code, message, details: [] };
-    return Response.json(envelope, { status });
+    if (
+      (errRecord.status === 401 || errRecord.status === 403) &&
+      (errRecord.code === "auth_required" || errRecord.code === "app_access_required")
+    ) {
+      const status = errRecord.status;
+      const code = errRecord.code;
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : status === 403
+            ? "An active membership is required."
+            : "Authentication required";
+      const envelope: ErrorEnvelope = { code, message, details: [] };
+      return Response.json(envelope, { status });
+    }
   }
   if (error instanceof SyntaxError) {
     const envelope: ErrorEnvelope = {

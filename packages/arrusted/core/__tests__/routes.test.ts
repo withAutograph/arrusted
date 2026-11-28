@@ -536,6 +536,28 @@ describe("createAppRoutes & gridSchema", () => {
     expect(faultRes.status).toBe(500);
     const faultJson = (await faultRes.json()) as { code: string; message: string };
     expect(faultJson).toEqual({ code: "internal_error", message: "Request failed", details: [] });
+
+    const statusLeakRoutes = createAppRoutes({
+      runtime: makeRuntime(),
+      definition: defWithCustom,
+      role: "crm_user",
+      grants: mixedGrants,
+      session: async () => {
+        throw Object.assign(new Error("Upstream pgbouncer internal detail"), {
+          status: 502,
+          code: "upstream_error",
+        });
+      },
+    });
+    const statusLeakRes = await statusLeakRoutes.schemaActiveGET(
+      new Request("http://localhost/api/schema/active"),
+    );
+    expect(statusLeakRes.status).toBe(500);
+    expect(await statusLeakRes.json()).toEqual({
+      code: "internal_error",
+      message: "Request failed",
+      details: [],
+    });
   });
 
   test("recordsGET paginates >50 rows in 100-row pages within one requestTransaction", async () => {

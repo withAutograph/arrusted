@@ -1,5 +1,13 @@
 import { createHash, randomUUID } from "node:crypto";
-import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { createInterface } from "node:readline";
@@ -266,6 +274,8 @@ test("installs an optional text field online and retries interrupted activation 
   const onlineRuntimeRole = `protected_online_runtime_${token}`;
   const runtimePassword = randomUUID();
   const fixtureApp = path.join(root, "apps", onlineAppId);
+  const createdAppsRoot = !existsSync(path.dirname(fixtureApp));
+  mkdirSync(path.dirname(fixtureApp), { recursive: true });
   const v1 = "worker-online-v1";
   const v2 = "worker-online-v2";
   const field = "review_note";
@@ -561,6 +571,13 @@ manifest: #AppManifest & {
       }
     } finally {
       rmSync(fixtureApp, { recursive: true, force: true });
+      if (createdAppsRoot) {
+        try {
+          rmdirSync(path.dirname(fixtureApp));
+        } catch {
+          // Ignore if concurrent fixture directories still exist under apps/.
+        }
+      }
     }
   }
 

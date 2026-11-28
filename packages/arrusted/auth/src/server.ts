@@ -151,6 +151,7 @@ export type AddPersonInput = {
   email: string;
   name?: string;
   password?: string;
+  onGeneratedPassword?: (password: string, email: string) => void | Promise<void>;
 };
 
 export type AddPersonResult = {
@@ -240,6 +241,10 @@ export async function addPerson(input: AddPersonInput): Promise<AddPersonResult>
          values ($1, $2, $3, 'member', now())`,
         [randomUUID(), organizationId, userId],
       );
+    }
+
+    if (generatedPassword !== undefined) {
+      await input.onGeneratedPassword?.(generatedPassword, email);
     }
 
     await client.query("COMMIT");

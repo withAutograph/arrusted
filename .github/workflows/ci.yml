@@ -153,6 +153,7 @@ jobs:
           install_args: bun node rust cue hk actionlint fnox conda:postgresql
       - run: mise exec -- bun install --frozen-lockfile
       - run: mise run check:package-manifests
+      - run: mise exec -- vp test --run .config/mise/scripts/repository/pack-arrusted-packages.test.ts
       - run: mise run test:auth-tenant-migration
       - run: KERNEL_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres mise exec -- vp test --config app/vite.config.ts --run
 

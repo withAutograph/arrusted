@@ -9,7 +9,9 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import net from "node:net";
@@ -26,13 +28,19 @@ import {
 } from "../../.config/mise/scripts/repository/pack-arrusted-packages";
 
 const databaseURL = process.env.KERNEL_TEST_DATABASE_URL;
+const detectedHostCliTarget = detectHostCliTarget();
 if (process.env.CI && !databaseURL) {
   throw new Error("KERNEL_TEST_DATABASE_URL is required in CI to exercise clean-machine.test.ts.");
 }
-const suite = databaseURL ? test : test.skip;
+if (process.env.CI && !detectedHostCliTarget) {
+  throw new Error(
+    `Unsupported host platform for clean-machine CLI verification: ${process.platform}-${process.arch}`,
+  );
+}
+const suite = databaseURL && detectedHostCliTarget ? test : test.skip;
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const scratchRoot = mkdtempSync(path.join(tmpdir(), "arrusted-clean-machine-"));
+const scratchRoot = realpathSync(mkdtempSync(path.join(tmpdir(), "arrusted-clean-machine-")));
 const tarballDir = path.join(scratchRoot, "tarballs");
 const isolatedBinDir = path.join(scratchRoot, "isolated-bin");
 const consumerDir = path.join(scratchRoot, "sunlight-crm-consumer");
@@ -63,15 +71,7 @@ function whichBinary(name: string): string {
   return execFileSync("which", [name], { encoding: "utf8" }).trim();
 }
 
-const hostCliTarget: SupportedCliTarget = (() => {
-  const detected = detectHostCliTarget();
-  if (!detected) {
-    throw new Error(
-      `Unsupported host platform for clean-machine CLI verification: ${process.platform}-${process.arch}`,
-    );
-  }
-  return detected;
-})();
+const hostCliTarget: SupportedCliTarget = detectedHostCliTarget ?? "darwin-arm64";
 const otherCliTarget: SupportedCliTarget =
   hostCliTarget === "darwin-arm64" ? "linux-x64" : "darwin-arm64";
 
@@ -264,7 +264,7 @@ export default function CrmGridPage() {
 }
 
 beforeAll(async () => {
-  if (!databaseURL) return;
+  if (!databaseURL || !detectedHostCliTarget) return;
   mkdirSync(tarballDir, { recursive: true });
   mkdirSync(isolatedBinDir, { recursive: true });
   mkdirSync(consumerDir, { recursive: true });
@@ -471,7 +471,10 @@ suite(
     expect(existsSync(path.join(consumerDir, "node_modules", otherCliPkgName))).toBe(false);
 
     // Initialize git commit in consumerDir so provenance + undo commit checks work realistically
-    writeFileSync(path.join(consumerDir, ".gitignore"), "node_modules/\n.generated/\n.next/\n");
+    writeFileSync(
+      path.join(consumerDir, ".gitignore"),
+      "node_modules/\n.generated/\n.next/\n.local/\n",
+    );
     runClean(path.join(isolatedBinDir, "git"), ["init"], { cwd: consumerDir });
     runClean(path.join(isolatedBinDir, "git"), ["config", "user.email", "dev@sunlight.test"], {
       cwd: consumerDir,
@@ -774,6 +777,41 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         },
       );
       expect(addOut).toContain("Added alice@sunlight.test");
+
+      // Provision Bob without --password: secret is written to a 0600 file and never echoed to stdout
+      const bobAddOut = runClean(
+        path.join(consumerDir, "node_modules/.bin/arrusted-auth"),
+        [
+          "people",
+          "add",
+          "bob@sunlight.test",
+          "--name",
+          "Bob Sunlight",
+          "--org",
+          "sunlight",
+          "--schema",
+          "auth_crm",
+        ],
+        {
+          cwd: consumerDir,
+          env: { AUTH_DATABASE_URL: crmDatabaseUrl },
+        },
+      );
+      const bobCredPath = path.join(consumerDir, ".local/credentials/bob@sunlight.test.txt");
+      expect(bobAddOut).toContain(`Temporary password written to ${bobCredPath}`);
+      const bobPassword = readFileSync(bobCredPath, "utf8").trim();
+      expect(bobPassword.length).toBeGreaterThanOrEqual(16);
+      expect(bobAddOut).not.toContain(bobPassword);
+      expect(statSync(bobCredPath).mode & 0o777).toBe(0o600);
+      const bobSignInRes = await fetch(`${origin}/api/auth/sign-in/email`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin },
+        body: JSON.stringify({
+          email: "bob@sunlight.test",
+          password: bobPassword,
+        }),
+      });
+      expect(bobSignInRes.status).toBe(200);
 
       // Sign in as Alice
       const signInRes = await fetch(`${origin}/api/auth/sign-in/email`, {
