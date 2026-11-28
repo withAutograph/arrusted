@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { parse } from "@libpg-query/parser";
 import { Pool, type PoolClient } from "pg";
+import { ResilientPool } from "./pool";
 import type { PostgresDataContext, PostgresDataContextInput } from "./postgres";
 import { checkedReleaseDirectory, verifyCheckedRelease } from "./release";
 
@@ -45,7 +46,7 @@ export function createGeneratedAppRuntime(
     return manifest;
   };
   release();
-  const pool = new Pool({ connectionString: databaseUrl, max: 4 });
+  const pool = new ResilientPool({ connectionString: databaseUrl, max: 4 });
   return {
     appId,
     customerId,

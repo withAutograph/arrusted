@@ -259,3 +259,409 @@ test.each([
     "kernel_read_active_schema_revision",
   ]);
 });
+
+test("sibling additive successor continuity allows an installed prior revision across additive changes and rejects fabricated or non-additive revisions", async () => {
+  const v1Def = {
+    formatVersion: 1,
+    schemaVersion: "v3",
+    models: [
+      {
+        id: "item",
+        name: "item",
+        fields: [
+          oldField,
+          {
+            id: "legacy_archived",
+            name: "legacyArchived",
+            type: "text",
+            lifecycle: "retired",
+            required: false,
+            readOnly: false,
+          },
+        ],
+        relations: [],
+      },
+    ],
+  } as const satisfies DataDefinition;
+
+  let active = {
+    schema_revision_id: "4",
+    effective_hash: "b".repeat(64),
+    schema: {
+      app_id: scope.appId,
+      customer_id: scope.customerId,
+      version: "v4",
+      models: [
+        {
+          id: "item",
+          fields: [
+            { id: "label", type: "text", required: true },
+            { id: "note", type: "text", required: false },
+          ],
+        },
+      ],
+    },
+  };
+  let releases: unknown[] = [
+    {
+      schema_revision_id: 3,
+      effective_revision: "v3",
+      base_revision: "v3",
+      release_id: "v3",
+      timestamps: { ready_at: "2026-11-13T00:00:00Z" },
+    },
+    {
+      schema_revision_id: 4,
+      effective_revision: "v4",
+      base_revision: "v4",
+      release_id: "v4",
+      timestamps: { ready_at: "2026-11-13T01:00:00Z" },
+    },
+  ];
+
+  const queryInputs: Record<string, unknown>[] = [];
+  const versionId = "20000000-0000-4000-8000-000000000002";
+
+  const makeClient = (def: DataDefinition) =>
+    createDataClient(def, {
+      scope,
+      authorize: async () => {},
+      transaction: (run) =>
+        run({
+          actorId: "authorized-actor",
+          sourceKind: "human",
+          call: async (operation, input) => {
+            if (operation === "kernel_read_active_schema_revision") return structuredClone(active);
+            if (operation === "kernel_read_runtime_release_observability") return { releases };
+            if (operation === "kernel_data_query") {
+              queryInputs.push(structuredClone(input));
+              if (input.schema_version !== active.schema.version) {
+                const { KernelFailure } = await import("../../kernel-client/postgres");
+                throw new KernelFailure({
+                  code: "schema_drift",
+                  message: "Schema drift detected",
+                });
+              }
+              if (Array.isArray(input.select) && input.select.includes("$effectiveStart")) {
+                return [
+                  {
+                    record_id: recordId,
+                    version_id: versionId,
+                    external_key: null,
+                    effective_start: asOf,
+                    effective_end: null,
+                    metadata: {},
+                    values: { label: { type: "text", value: "Kept" } },
+                  },
+                ];
+              }
+              return [{ record_id: recordId, values: { label: { type: "text", value: "Kept" } } }];
+            }
+            if (operation === "kernel_apply_change_set") {
+              return { id: 1, schema_revision_id: active.schema_revision_id };
+            }
+            throw new Error(`unexpected ${operation}`);
+          },
+        }),
+    });
+
+  // 1. Installed prior v3 client reads (both selected AND unselected full ModelRecord!) & writes seamlessly when v4 is additive
+  const v1Ops = makeClient(v1Def);
+  await expect(v1Ops.item!.list({ asOf, select: ["id", "label"] })).resolves.toEqual([
+    { id: recordId, label: "Kept" },
+  ]);
+  queryInputs.length = 0;
+  const fullRecords = await v1Ops.item!.list({ asOf });
+  expect(queryInputs[1]?.select).toEqual([
+    "$id",
+    "$externalKey",
+    "$version",
+    "$effectiveStart",
+    "$effectiveEnd",
+    "$metadata",
+    "label",
+  ]);
+  expect(fullRecords).toMatchObject([
+    {
+      id: recordId,
+      externalKey: null,
+      effectiveStart: asOf,
+      effectiveEnd: null,
+      label: "Kept",
+    },
+  ]);
+  // Full record returned by unselected additive retry carries provenance branding for update()!
+  await expect(
+    v1Ops.item!.update(
+      fullRecords[0]!,
+      { label: "Updated via branded full record" },
+      { effectiveStart: asOf, idempotencyKey: "k-full-update" },
+    ),
+  ).resolves.toEqual({ id: 1, schema_revision_id: "4" });
+  await expect(
+    v1Ops.item!.create(
+      { label: "Written from v3" },
+      { effectiveStart: asOf, idempotencyKey: "k1" },
+    ),
+  ).resolves.toEqual({ id: 1, schema_revision_id: "4" });
+
+  // 2. Uninstalled / fabricated schemaVersion ("stale") is rejected on both list() and create()
+  const staleOps = makeClient({ ...v1Def, schemaVersion: "stale" });
+  await expect(staleOps.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow(
+    "Schema drift",
+  );
+  await expect(
+    staleOps.item!.create({ label: "Stale write" }, { effectiveStart: asOf, idempotencyKey: "k2" }),
+  ).rejects.toThrow("does not match active artifact");
+
+  // 3. Installed prior v3 client fails closed if active schema retired/added enum options or changed many-relation target_model
+  const enumAndManyV1Def = {
+    formatVersion: 1,
+    schemaVersion: "v3",
+    models: [
+      {
+        id: "item",
+        name: "item",
+        fields: [
+          oldField,
+          {
+            id: "status",
+            name: "status",
+            type: "enum",
+            required: false,
+            readOnly: false,
+            option_set: [
+              { id: "open", lifecycle: "active" },
+              { id: "closed", lifecycle: "active" },
+            ],
+          },
+          {
+            id: "tags",
+            name: "tags",
+            type: "relation_list",
+            storage: "many",
+            target_model: "tag",
+            required: false,
+            readOnly: false,
+          },
+        ],
+        relations: [],
+      },
+    ],
+  } as const satisfies DataDefinition;
+  const enumOps = makeClient(enumAndManyV1Def);
+
+  // Retired enum option -> rejected
+  active = {
+    ...active,
+    schema: {
+      ...active.schema,
+      models: [
+        {
+          id: "item",
+          fields: [
+            { id: "label", type: "text", required: true },
+            {
+              id: "status",
+              type: "enum",
+              required: false,
+              option_set: [
+                { id: "open", lifecycle: "active" },
+                { id: "closed", lifecycle: "retired" },
+              ],
+            } as never,
+          ],
+          many_relations: [{ id: "tags", target_model: "tag", lifecycle: "active" }],
+        } as never,
+      ],
+    },
+  };
+  await expect(enumOps.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow(
+    "Schema drift",
+  );
+
+  // Newly added enum option unknown to v3 decoder -> rejected
+  active = {
+    ...active,
+    schema: {
+      ...active.schema,
+      models: [
+        {
+          id: "item",
+          fields: [
+            { id: "label", type: "text", required: true },
+            {
+              id: "status",
+              type: "enum",
+              required: false,
+              option_set: [
+                { id: "open", lifecycle: "active" },
+                { id: "closed", lifecycle: "active" },
+                { id: "won", lifecycle: "active" },
+              ],
+            } as never,
+          ],
+          many_relations: [{ id: "tags", target_model: "tag", lifecycle: "active" }],
+        } as never,
+      ],
+    },
+  };
+  await expect(enumOps.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow(
+    "Schema drift",
+  );
+
+  // Many-relation target_model changed -> rejected
+  active = {
+    ...active,
+    schema: {
+      ...active.schema,
+      models: [
+        {
+          id: "item",
+          fields: [
+            { id: "label", type: "text", required: true },
+            {
+              id: "status",
+              type: "enum",
+              required: false,
+              option_set: [
+                { id: "open", lifecycle: "active" },
+                { id: "closed", lifecycle: "active" },
+              ],
+            } as never,
+          ],
+          many_relations: [{ id: "tags", target_model: "other_model", lifecycle: "active" }],
+        } as never,
+      ],
+    },
+  };
+  await expect(enumOps.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow(
+    "Schema drift",
+  );
+
+  // Loosening a required field to optional (required: true -> false) -> rejected
+  active = {
+    ...active,
+    schema: {
+      ...active.schema,
+      models: [
+        {
+          id: "item",
+          fields: [
+            { id: "label", type: "text", required: false },
+            {
+              id: "status",
+              type: "enum",
+              required: false,
+              option_set: [
+                { id: "open", lifecycle: "active" },
+                { id: "closed", lifecycle: "active" },
+              ],
+            } as never,
+          ],
+          many_relations: [{ id: "tags", target_model: "tag", lifecycle: "active" }],
+        } as never,
+      ],
+    },
+  };
+  await expect(enumOps.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow(
+    "Schema drift",
+  );
+
+  // Custom enum option_set and custom relation target_model_id changes in activeSchema.custom_fields -> rejected
+  const customV1Def = {
+    formatVersion: 1,
+    schemaVersion: "v3",
+    models: [
+      {
+        id: "item",
+        name: "item",
+        fields: [
+          oldField,
+          {
+            id: "tier",
+            name: "customTier",
+            type: "enum",
+            storage: "custom",
+            required: false,
+            readOnly: false,
+            option_set: [{ id: "gold", lifecycle: "active" }],
+          },
+          {
+            id: "owner",
+            name: "customOwner",
+            type: "relation",
+            storage: "custom",
+            target_model: "person",
+            required: false,
+            readOnly: false,
+          },
+        ],
+        relations: [],
+      },
+    ],
+  } as const satisfies DataDefinition;
+  const customOps = makeClient(customV1Def);
+  active = {
+    ...active,
+    schema: {
+      ...active.schema,
+      models: [{ id: "item", fields: [{ id: "label", type: "text", required: true }] }],
+      custom_fields: [
+        {
+          model_id: "item",
+          field_id: "tier",
+          type: "enum",
+          option_set: [
+            { id: "gold", lifecycle: "active" },
+            { id: "platinum", lifecycle: "active" },
+          ],
+        },
+        { model_id: "item", field_id: "owner", type: "relation", target_model_id: "person" },
+      ],
+    } as never,
+  };
+  await expect(customOps.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow(
+    "Schema drift",
+  );
+  active = {
+    ...active,
+    schema: {
+      ...active.schema,
+      models: [{ id: "item", fields: [{ id: "label", type: "text", required: true }] }],
+      custom_fields: [
+        {
+          model_id: "item",
+          field_id: "tier",
+          type: "enum",
+          option_set: [{ id: "gold", lifecycle: "active" }],
+        },
+        { model_id: "item", field_id: "owner", type: "relation", target_model_id: "team" },
+      ],
+    } as never,
+  };
+  await expect(customOps.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow(
+    "Schema drift",
+  );
+
+  // 4. Installed prior v3 client fails closed if active schema retired a field or added a required field
+  active = {
+    ...active,
+    schema: {
+      ...active.schema,
+      models: [
+        {
+          id: "item",
+          fields: [
+            { id: "label", type: "text", required: true, lifecycle: "retired" } as never,
+            { id: "note", type: "text", required: false },
+          ],
+        },
+      ],
+    },
+  };
+  await expect(v1Ops.item!.list({ asOf, select: ["id", "label"] })).rejects.toThrow("Schema drift");
+  await expect(
+    v1Ops.item!.create({ label: "Retired write" }, { effectiveStart: asOf, idempotencyKey: "k3" }),
+  ).rejects.toThrow("does not match active artifact");
+});

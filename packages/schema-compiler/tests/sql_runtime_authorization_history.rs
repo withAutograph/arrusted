@@ -280,6 +280,12 @@ fn policy_enabled_history_requires_history_grant_and_current_membership_for_ever
         )?;
         assert_eq!(field_grant_denied["ok"], false, "{field_grant_denied}");
         assert_eq!(field_grant_denied["error"]["code"], "authorization_denied");
+        // A bound actor missing a field grant is told so, not that its tenant
+        // binding failed.
+        assert_eq!(
+            field_grant_denied["error"]["details"][0]["code"], "grant_not_authorized",
+            "{field_grant_denied}"
+        );
 
         client
             .batch_execute("reset session authorization")

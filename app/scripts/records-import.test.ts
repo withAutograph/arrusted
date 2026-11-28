@@ -6,6 +6,7 @@ import path from "node:path";
 import { Pool } from "pg";
 import { compileApp, repositoryRoot } from "./compile";
 import { migrate, runtimeRoles } from "./migrate";
+import { importRecords } from "./records-import";
 import { PgDumpRestorePoints } from "./restore-points";
 
 const databaseURL = process.env.KERNEL_TEST_DATABASE_URL;
@@ -22,9 +23,19 @@ mkdirSync(path.join(repositoryRoot, "app/.local"), { recursive: true });
 const directory = mkdtempSync(path.join(repositoryRoot, "app/.local/import-test-"));
 const releaseDirectory = path.join(directory, ".generated/release");
 let created = false;
-const run = (table: string, csv: string, key: string | false = "key") => {
+const run = (
+  table: string,
+  csv: string,
+  key: string | false = "key",
+  extraEnv: Record<string, string> = {},
+) => {
   const file = path.join(directory, "records.csv");
   writeFileSync(file, csv);
+  const {
+    APP_DATABASE_URL: _ambientAppUrl,
+    AUTH_SCHEMA: _ambientAuthSchema,
+    ...cleanEnv
+  } = process.env;
   return spawnSync(
     "bun",
     [
@@ -35,7 +46,7 @@ const run = (table: string, csv: string, key: string | false = "key") => {
     ],
     {
       cwd: directory,
-      env: { ...process.env, MIGRATION_DATABASE_URL: url.href },
+      env: { ...cleanEnv, MIGRATION_DATABASE_URL: url.href, ...extraEnv },
       encoding: "utf8",
     },
   );
@@ -161,5 +172,39 @@ suite(
     expect((await pool.query("select count(*)::int count from contact_record")).rows[0].count).toBe(
       50,
     );
+
+    // Scoped auth_* + APP_DATABASE_URL import succeeds, while mismatched APP_DATABASE_URL target fails closed!
+    const scopedUrl = new URL(url);
+    scopedUrl.username = `${database}_scoped_rt`;
+    scopedUrl.password = "test-runtime-password-at-least-32-characters";
+    if (!scopedUrl.searchParams.has("sslmode")) scopedUrl.searchParams.set("sslmode", "disable");
+    await migrate({
+      databaseUrl: url.href,
+      releaseDirectory,
+      ...runtimeRoles(url.href, scopedUrl.href),
+      authSchema: "auth_scoped",
+      restorePoints: new PgDumpRestorePoints({ directory: path.join(directory, "backups") }),
+    });
+    await pool.query(`insert into auth_scoped."user" (id,name,email,"emailVerified") values ('scoped_builder','Scoped Builder','scoped@test.invalid',true);
+      insert into auth_scoped.organization (id,name,slug,"createdAt") values ('starter','Scoped CRM','starter',now());
+      insert into auth_scoped.member (id,"organizationId","userId",role,"createdAt") values ('scoped_builder','starter','scoped_builder','member','2026-03-01')`);
+    const scopedCli = run("company", "code,name\nscoped-co,Scoped Co", "code", {
+      APP_DATABASE_URL: scopedUrl.href,
+      AUTH_SCHEMA: "auth_scoped",
+    });
+    expect(scopedCli.stderr).toBe("");
+    expect(scopedCli.status).toBe(0);
+    expect(scopedCli.stdout).toContain("Imported 1 records");
+    await expect(
+      importRecords({
+        databaseUrl: url.href,
+        runtimeDatabaseUrl: `postgres://${scopedUrl.username}:${scopedUrl.password}@127.0.0.1:${url.port || "5432"}/other_database?sslmode=disable`,
+        releaseDirectory,
+        table: "company",
+        csv: "code,name\nwrong-db,Wrong DB",
+        key: "code",
+        authSchema: "auth_scoped",
+      }),
+    ).rejects.toThrow(/APP_DATABASE_URL must target the same PostgreSQL database and endpoint/);
   },
 );

@@ -166,7 +166,7 @@ suite(
     expect((await pool.query("select to_regclass('public.tag_record') as name")).rows[0].name).toBe(
       "tag_record",
     );
-    await migrate(input("rename"));
+    await migrate({ ...input("rename"), allowRetire: true });
     const renamed = await operations("rename", (ops) =>
       ops.note!.list({ asOf: "2026-01-02", select: ["title", "description", "detail"] }),
     );
@@ -180,7 +180,8 @@ suite(
       ]),
     );
     await expect(migrate(input("wrongtype"))).rejects.toThrow(/new field/i);
-    await migrate(input("retire"));
+    await expect(migrate(input("retire"))).rejects.toThrow(/--allow-retire/);
+    await migrate({ ...input("retire"), allowRetire: true });
     const definition = JSON.parse(
       readFileSync(path.join(releases.get("retire")!, "operation-manifest.json"), "utf8"),
     );
@@ -240,7 +241,7 @@ async function killAt(name: string, phase: "restored" | "applied") {
       };
     }
     await migrate({databaseUrl: process.env.TEST_WORKER_DATABASE_URL!, releaseDirectory: ${JSON.stringify(releases.get(name))},
-      sourceCommit: ${JSON.stringify(`source-${name}`)}, restorePoints: restores
+      sourceCommit: ${JSON.stringify(`source-${name}`)}, restorePoints: restores, allowRetire: true
     });`,
   );
   const child = spawn("bun", [worker], {
@@ -283,7 +284,7 @@ suite(
       const before = (await record()).id;
       await killAt(name, phase);
       expect((await record()).id).toBe(before);
-      expect((await migrate(input(name))).applied).toBe(true);
+      expect((await migrate({ ...input(name), allowRetire: true })).applied).toBe(true);
       expect((await migrate(input(name))).applied).toBe(false);
       expect(
         (
@@ -315,7 +316,7 @@ suite(
 suite(
   "Auth membership drives kernel access transactionally without granting runtime owner privileges",
   async () => {
-    await migrate(input("membership"));
+    await migrate({ ...input("membership"), allowRetire: true });
     // A completed schema install must still repair an absent runtime binding.
     await pool.query("drop trigger if exists autograph_member_kernel on public.member");
     await pool.query("delete from kernel_principal_scope where principal_name=$1", [runtimeRole]);

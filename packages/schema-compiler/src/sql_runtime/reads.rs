@@ -207,6 +207,21 @@ begin
     return jsonb_build_object(
       'code', 'unsupported_capability', 'message', details, 'details', '[]'::jsonb
     );
+  elsif error_code = 'authorization_denied' and (
+    details like 'no applicable authorization grant permits %'
+    or details like 'a historical snapshot is not authorized %'
+  ) then
+    -- A bound actor whose role grants don't cover the request: say so rather
+    -- than reporting a tenant binding failure.
+    return jsonb_build_object(
+      'code', 'authorization_denied',
+      'message', 'Read is not authorized by the current grants',
+      'details', jsonb_build_array(jsonb_build_object(
+        'path', 'grants',
+        'code', 'grant_not_authorized',
+        'message', details
+      ))
+    );
   elsif error_code = 'authorization_denied' then
     return jsonb_build_object(
       'code', 'authorization_denied',

@@ -759,9 +759,7 @@ export function createDataClient<const D extends DataDefinition>(
       new Map(model.fields.map((field) => [field.name, field])),
     ]),
   );
-  const result: Record<string, unknown> = {
-    workSessions: createWorkSessionClient(context, definition.schemaVersion),
-  };
+  const result: Record<string, unknown> = {};
   const scope = Object.freeze({ ...context.scope });
   const provenance = (model: string, recordId: string, kind: Provenance["kind"]): Provenance => ({
     definition,
@@ -806,13 +804,220 @@ export function createDataClient<const D extends DataDefinition>(
   const { decodeRecord, decodeAggregate, decodeActiveRevision, decodeReceipt, decodeHistory } =
     decoder;
   const compatibility = definition.predecessorCompatibility;
+  const isAdditiveActiveSchema = (activeSchema: Record<string, unknown>): boolean => {
+    if (
+      activeSchema.app_id !== scope.appId ||
+      activeSchema.customer_id !== scope.customerId ||
+      !Array.isArray(activeSchema.models)
+    )
+      return false;
+    const activeModels = new Map<string, Record<string, unknown>>();
+    for (const candidate of activeSchema.models) {
+      if (
+        candidate &&
+        typeof candidate === "object" &&
+        typeof (candidate as { id?: unknown }).id === "string"
+      ) {
+        activeModels.set((candidate as { id: string }).id, candidate as Record<string, unknown>);
+      }
+    }
+    const isCompatibleEnumOptions = (
+      compiledOptions: NonNullable<DataField["option_set"]>,
+      rawActiveOptions: unknown,
+    ): boolean => {
+      const activeOptions = Array.isArray(rawActiveOptions)
+        ? (rawActiveOptions as Array<{
+            id?: unknown;
+            lifecycle?: unknown;
+            archived_at?: unknown;
+          }>)
+        : [];
+      const activeLiveIds = new Set(
+        activeOptions
+          .filter(
+            (opt) =>
+              typeof opt?.id === "string" && opt.lifecycle !== "retired" && opt.archived_at == null,
+          )
+          .map((opt) => opt.id as string),
+      );
+      for (const opt of compiledOptions) {
+        const optLifecycle = (opt as { lifecycle?: unknown }).lifecycle;
+        if (optLifecycle !== "retired" && !activeLiveIds.has(opt.id)) {
+          return false;
+        }
+      }
+      const compiledAllIds = new Set(compiledOptions.map((opt) => opt.id));
+      for (const liveId of activeLiveIds) {
+        if (!compiledAllIds.has(liveId)) {
+          return false;
+        }
+      }
+      return true;
+    };
+    const activeCustomByModel = new Map<string, Map<string, Record<string, unknown>>>();
+    if (Array.isArray(activeSchema.custom_fields)) {
+      for (const cf of activeSchema.custom_fields) {
+        if (cf && typeof cf === "object") {
+          const rec = cf as Record<string, unknown>;
+          if (rec.lifecycle === "retired" || rec.archived_at != null) continue;
+          const modelId = rec.model_id;
+          const fId = rec.field_id;
+          const fType = rec.type;
+          if (typeof modelId === "string" && typeof fId === "string" && typeof fType === "string") {
+            let map = activeCustomByModel.get(modelId);
+            if (!map) {
+              map = new Map();
+              activeCustomByModel.set(modelId, map);
+            }
+            map.set(fId, rec);
+          }
+        }
+      }
+    }
+    for (const model of definition.models) {
+      const activeModel = activeModels.get(model.id);
+      if (!activeModel || activeModel.lifecycle === "retired" || activeModel.archived_at != null)
+        return false;
+      const activeFields = new Map<string, Record<string, unknown>>();
+      if (Array.isArray(activeModel.fields)) {
+        for (const f of activeModel.fields) {
+          if (f && typeof f === "object" && typeof (f as { id?: unknown }).id === "string") {
+            activeFields.set((f as { id: string }).id, f as Record<string, unknown>);
+          }
+        }
+      }
+      const activeMany = new Map<string, Record<string, unknown>>();
+      if (Array.isArray(activeModel.many_relations)) {
+        for (const rel of activeModel.many_relations) {
+          if (rel && typeof rel === "object") {
+            const relObj = rel as Record<string, unknown>;
+            if (
+              typeof relObj.id === "string" &&
+              relObj.lifecycle !== "retired" &&
+              relObj.archived_at == null
+            ) {
+              activeMany.set(relObj.id, relObj);
+            }
+          }
+        }
+      }
+      for (const field of model.fields) {
+        if (field.lifecycle === "retired") continue;
+        if (field.storage === "many") {
+          const candidateRel = activeMany.get(field.id) ?? activeFields.get(field.id);
+          const validRel =
+            candidateRel !== undefined &&
+            candidateRel.lifecycle !== "retired" &&
+            candidateRel.archived_at == null &&
+            (field.target_model == null || candidateRel.target_model === field.target_model);
+          if (!validRel) return false;
+          continue;
+        }
+        if (field.storage === "custom") {
+          const activeCustom = activeCustomByModel.get(model.id)?.get(field.id);
+          const activeTarget = activeCustom?.target_model_id ?? activeCustom?.target_model ?? null;
+          if (
+            !activeCustom ||
+            activeCustom.type !== field.type ||
+            (field.target_model ?? null) !== activeTarget
+          ) {
+            return false;
+          }
+          if (
+            field.type === "enum" &&
+            !isCompatibleEnumOptions(field.option_set ?? [], activeCustom.option_set)
+          ) {
+            return false;
+          }
+          continue;
+        }
+        const activeField = activeFields.get(field.id);
+        if (
+          !activeField ||
+          activeField.type !== field.type ||
+          activeField.lifecycle === "retired" ||
+          activeField.archived_at != null ||
+          Boolean(activeField.required) !== Boolean(field.required) ||
+          (field.target_model ?? null) !== (activeField.target_model ?? null)
+        )
+          return false;
+        if (
+          field.type === "enum" &&
+          !isCompatibleEnumOptions(field.option_set ?? [], activeField.option_set)
+        ) {
+          return false;
+        }
+      }
+      const knownFieldIds = new Set(model.fields.map((f) => f.id));
+      for (const [fId, activeField] of activeFields) {
+        if (
+          !knownFieldIds.has(fId) &&
+          activeField.required === true &&
+          activeField.lifecycle !== "retired" &&
+          activeField.archived_at == null
+        ) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+  const isVerifiedAdditiveSuccessor = async (
+    db: DataSession,
+    active: { schema_revision_id: string; schemaVersion: string; schema: Record<string, unknown> },
+  ): Promise<boolean> => {
+    if (
+      active.schemaVersion === definition.schemaVersion ||
+      !isAdditiveActiveSchema(active.schema)
+    ) {
+      return false;
+    }
+    try {
+      const obs = await db.call("kernel_read_runtime_release_observability", {});
+      if (
+        !obs ||
+        typeof obs !== "object" ||
+        !Array.isArray((obs as { releases?: unknown }).releases)
+      ) {
+        return false;
+      }
+      const activeId = BigInt(active.schema_revision_id);
+      return (obs as { releases: unknown[] }).releases.some((entry) => {
+        if (!entry || typeof entry !== "object") return false;
+        const row = entry as Record<string, unknown>;
+        const revIdRaw = row.schema_revision_id;
+        if (typeof revIdRaw !== "number" && typeof revIdRaw !== "string") return false;
+        let revId: bigint;
+        try {
+          revId = BigInt(revIdRaw);
+        } catch {
+          return false;
+        }
+        if (revId >= activeId) return false;
+        const timestamps =
+          row.timestamps && typeof row.timestamps === "object"
+            ? (row.timestamps as Record<string, unknown>)
+            : undefined;
+        if (timestamps?.ready_at == null) return false;
+        return (
+          row.effective_revision === definition.schemaVersion ||
+          row.base_revision === definition.schemaVersion ||
+          row.release_id === definition.schemaVersion
+        );
+      });
+    } catch {
+      return false;
+    }
+  };
+  result.workSessions = createWorkSessionClient(context, definition.schemaVersion);
   const activeSchemaForOperation = async (db: DataSession) => {
+    const hasActivationLock = db.lockSchemaActivation !== undefined;
     const canUsePredecessor =
-      compatibility?.kind === "optional-text-addition-v1" && db.lockSchemaActivation !== undefined;
-    if (canUsePredecessor) await db.lockSchemaActivation?.();
+      compatibility?.kind === "optional-text-addition-v1" && hasActivationLock;
+    if (hasActivationLock) await db.lockSchemaActivation?.();
     const active = decodeActiveRevision(await db.call("kernel_read_active_schema_revision", {}));
     if (active.schemaVersion === definition.schemaVersion) {
-      return { active, canUsePredecessor, addedField: undefined };
+      return { active, omitSchemaRevisionId: hasActivationLock, addedField: undefined };
     }
     if (canUsePredecessor) {
       const predecessor = compatibility.predecessors.find(({ schema, artifactSha256 }) => {
@@ -834,9 +1039,16 @@ export function createDataClient<const D extends DataDefinition>(
           writable(field) &&
           !["custom", "many"].includes(field.storage ?? "")
         ) {
-          return { active, canUsePredecessor, addedField: predecessor.field };
+          return { active, omitSchemaRevisionId: true, addedField: predecessor.field };
         }
       }
+    }
+    if (await isVerifiedAdditiveSuccessor(db, active)) {
+      return {
+        active,
+        omitSchemaRevisionId: hasActivationLock,
+        addedField: undefined,
+      };
     }
     invalid("generated schema version does not match active artifact");
   };
@@ -1080,14 +1292,61 @@ export function createDataClient<const D extends DataDefinition>(
           }
         }
       }
-      const response = await db.call("kernel_data_query", queryRequest);
+      let response: unknown;
+      let usedAdditiveFullProjection = false;
+      try {
+        response = await db.call("kernel_data_query", queryRequest);
+      } catch (error) {
+        if (
+          error instanceof KernelFailure &&
+          error.envelope.code === "schema_drift" &&
+          queryRequest.schema_version === definition.schemaVersion
+        ) {
+          const active = decodeActiveRevision(
+            await db.call("kernel_read_active_schema_revision", {}),
+          );
+          if (await isVerifiedAdditiveSuccessor(db, active)) {
+            const additiveFullSelect =
+              kind === "list" && queryRequest.select === undefined
+                ? [
+                    ...new Set([
+                      "$id",
+                      "$externalKey",
+                      "$version",
+                      "$effectiveStart",
+                      "$effectiveEnd",
+                      "$metadata",
+                      ...model.fields
+                        .filter((field) => field.lifecycle !== "retired")
+                        .map((field) => field.id),
+                    ]),
+                  ]
+                : undefined;
+            usedAdditiveFullProjection = additiveFullSelect !== undefined;
+            response = await db.call("kernel_data_query", {
+              ...queryRequest,
+              schema_version: active.schemaVersion,
+              ...(additiveFullSelect === undefined ? {} : { select: additiveFullSelect }),
+            });
+          } else {
+            throw error;
+          }
+        } else {
+          throw error;
+        }
+      }
       if (kind === "list") {
         if (!Array.isArray(response))
           responseFailure("kernel_data_query", "response", "record array");
         return response.map((record) =>
           decodeRecord(
             model,
-            record,
+            usedAdditiveFullProjection &&
+              record !== null &&
+              typeof record === "object" &&
+              !Array.isArray(record)
+              ? { values: {}, custom_fields: [], many_relations: {}, ...record }
+              : record,
             select?.map((field) => field.name),
           ),
         );
@@ -1147,7 +1406,7 @@ export function createDataClient<const D extends DataDefinition>(
     const capabilities = new Set(intents.map((intent) => `${intent.model}.${intent.kind}`));
     await Promise.all([...capabilities].map((capability) => context.authorize(capability)));
     return context.transaction(async (db) => {
-      const { active, canUsePredecessor, addedField } = await activeSchemaForOperation(db);
+      const { active, omitSchemaRevisionId, addedField } = await activeSchemaForOperation(db);
       const writes: RowVersionWrite[] = [];
       for (const intent of intents) {
         const model = models.get(intent.model)!;
@@ -1243,7 +1502,7 @@ export function createDataClient<const D extends DataDefinition>(
       const request = {
         // The locked kernel operation binds the actual active revision. Keep the request
         // stable across the additive cutover so exact replays can return their old receipt.
-        ...(canUsePredecessor ? {} : { schema_revision_id: active.schema_revision_id }),
+        ...(omitSchemaRevisionId ? {} : { schema_revision_id: active.schema_revision_id }),
         actor_id: db.actorId,
         source_kind: db.sourceKind,
         idempotency_key: input.idempotencyKey,

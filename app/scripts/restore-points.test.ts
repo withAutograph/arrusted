@@ -281,12 +281,17 @@ describe.skipIf(!process.env.RESTORE_POINTS_TEST_DATABASE_URL)("PostgreSQL resto
         INSERT INTO member (id,"organizationId","userId",role,"createdAt") VALUES ('builder','starter','builder','member',now());`);
       const csv = join(directory, "notes.csv");
       await writeFile(csv, "key,title\nn1,Imported before migration\n");
+      const {
+        APP_DATABASE_URL: _ambientAppUrl,
+        AUTH_SCHEMA: _ambientAuthSchema,
+        ...cleanRestoreEnv
+      } = process.env;
       const imported = spawnSync(
         "bun",
         [join(repositoryRoot, "app/scripts/records-import.ts"), "note", csv, "--key", "key"],
         {
           cwd: directory,
-          env: { ...process.env, MIGRATION_DATABASE_URL: url.href },
+          env: { ...cleanRestoreEnv, MIGRATION_DATABASE_URL: url.href },
           encoding: "utf8",
         },
       );

@@ -3,6 +3,7 @@ import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { organization } from "better-auth/plugins";
 import type { Pool } from "pg";
+import { bindPoolToSearchPath, validSearchPath } from "../generated-app-runtime/pool";
 import { createAgentGrantPlugins, requireGrantContext } from "./agent-grant";
 import { agentGrantIssuer } from "./agent-grant-policy";
 import { canvasFrameOrigins, readCanvasFrameOrigins } from "./canvas-frame";
@@ -11,6 +12,8 @@ import { emptySetAdapter } from "./empty-set-adapter";
 /** One deployment, one organization; OAuth consent remains separate from human sign-in. */
 export function createSingleOrganizationAuth(input: {
   database: Pool;
+  /** Optional PostgreSQL schema owning this app's Better Auth tables (e.g. auth_crm). */
+  authSchema?: string;
   origin: string;
   secret: string;
   appId: string;
@@ -18,6 +21,12 @@ export function createSingleOrganizationAuth(input: {
   name: string;
   allowSignUp: boolean;
 }) {
+  if (input.authSchema !== undefined && !validSearchPath.test(input.authSchema)) {
+    throw new Error(
+      "Auth schema must be 'public' or an 'auth_<app>' identifier (lowercase alphanumeric/underscore).",
+    );
+  }
+  const database = bindPoolToSearchPath(input.database, input.authSchema);
   const origin = new URL(input.origin);
   if (origin.origin !== input.origin || !["http:", "https:"].includes(origin.protocol))
     throw new Error("Auth origin must be an exact HTTP(S) origin.");
@@ -25,7 +34,7 @@ export function createSingleOrganizationAuth(input: {
   const auth = betterAuth({
     appName: input.name,
     baseURL: input.origin,
-    database: input.database,
+    database,
     secret: input.secret,
     trustedOrigins: [
       input.origin,
@@ -42,7 +51,7 @@ export function createSingleOrganizationAuth(input: {
           after: async (user) => {
             // One statement creates the deployment organization on the first signup;
             // concurrent signups join the same row. No browser-supplied scope is accepted.
-            await input.database.query(
+            await database.query(
               `with deployment as (
              insert into "organization" ("id", "name", "slug", "createdAt")
              values ($1, $2, $1, now()) on conflict ("id") do update set "id" = excluded."id"
@@ -77,7 +86,7 @@ export function createSingleOrganizationAuth(input: {
         },
       }),
       ...createAgentGrantPlugins({
-        database: input.database,
+        database,
         publicOrigin: input.origin,
         appIds: [input.appId],
         singleOrganizationId: input.organizationId,
@@ -86,7 +95,7 @@ export function createSingleOrganizationAuth(input: {
     ],
   });
   const requireMember = async (actorId: string) => {
-    const result = await input.database.query(
+    const result = await database.query(
       `select "id" from "member" where "userId" = $1 and "organizationId" = $2 limit 1`,
       [actorId, input.organizationId],
     );
@@ -114,7 +123,7 @@ export function createSingleOrganizationAuth(input: {
       return requireGrantContext(
         { token, kind, appId: input.appId },
         {
-          database: input.database,
+          database,
           issuer: agentGrantIssuer(input.origin),
           singleOrganization: { id: input.organizationId, appId: input.appId },
         },

@@ -8,15 +8,32 @@ import { createLabelIndex, WorkSessionToolInputError } from "@autograph/work-ses
 import { createGeneratedAppRuntime } from "../../packages/generated-app-runtime/server";
 import type { DataDefinition } from "../../packages/generated-app-runtime/data";
 import { verifyCheckedRelease } from "../../packages/generated-app-runtime/release-verification";
+import { validateMatchingRuntimeDatabaseUrl } from "./migrate";
+
+const validAuthSchema = /^(?:public|auth_[a-z0-9_]{1,57})$/;
+const quote = (value: string) => `"${value.replaceAll('"', '""')}"`;
 
 /** Builder-terminal command: the owner connection delegates an ordinary member write. */
 export async function importRecords(input: {
   databaseUrl: string;
+  runtimeDatabaseUrl?: string;
   releaseDirectory: string;
   table: string;
   csv: string;
   key?: string;
+  authSchema?: string;
 }) {
+  const authSchema = input.authSchema?.trim() || "public";
+  if (!validAuthSchema.test(authSchema)) {
+    throw new Error(
+      "Invalid authSchema: expected 'public' or an 'auth_<app>' identifier (lowercase alphanumeric/underscore).",
+    );
+  }
+  const trimmedRuntimeUrl = input.runtimeDatabaseUrl?.trim() || undefined;
+  const effectiveRuntimeUrl = trimmedRuntimeUrl
+    ? validateMatchingRuntimeDatabaseUrl(input.databaseUrl, trimmedRuntimeUrl)
+    : input.databaseUrl;
+  const memberTable = `${quote(authSchema)}.member`;
   verifyCheckedRelease(input.releaseDirectory);
   const definition = JSON.parse(
     readFileSync(path.join(input.releaseDirectory, "operation-manifest.json"), "utf8"),
@@ -48,7 +65,7 @@ export async function importRecords(input: {
   }
   const owner = new Pool({ connectionString: input.databaseUrl, max: 1 });
   const runtime = createGeneratedAppRuntime({
-    databaseUrl: input.databaseUrl,
+    databaseUrl: effectiveRuntimeUrl,
     releaseDirectory: input.releaseDirectory,
     appId: schema.app_id,
     customerId: schema.customer_id,
@@ -56,7 +73,7 @@ export async function importRecords(input: {
   try {
     // The single-organization starter has no owner role; its first signup is the builder.
     const members = await owner.query(
-      'select "userId" from public.member where "organizationId"=$1 order by "createdAt", id limit 1',
+      `select "userId" from ${memberTable} where "organizationId"=$1 order by "createdAt", id limit 1`,
       [schema.customer_id],
     );
     const actorId = members.rows[0]?.userId;
@@ -68,7 +85,7 @@ export async function importRecords(input: {
         sourceKind: "builder-import",
         authorize: async () => {
           const member = await owner.query(
-            'select 1 from public.member where "organizationId"=$1 and "userId"=$2',
+            `select 1 from ${memberTable} where "organizationId"=$1 and "userId"=$2`,
             [schema.customer_id, actorId],
           );
           if (!member.rowCount) throw new Error("The builder is no longer a member.");
@@ -96,10 +113,12 @@ if (import.meta.main) {
       throw new Error("MIGRATION_DATABASE_URL is required (deployment owner connection).");
     const result = await importRecords({
       databaseUrl: process.env.MIGRATION_DATABASE_URL,
+      runtimeDatabaseUrl: process.env.APP_DATABASE_URL?.trim() || undefined,
       releaseDirectory: path.resolve(".generated/release"),
       table,
       csv: readFileSync(file, "utf8"),
       key,
+      authSchema: process.env.AUTH_SCHEMA?.trim() || undefined,
     });
     console.log(`Imported ${result.count} records (change set ${result.changeSetId}).`);
   } catch (error) {

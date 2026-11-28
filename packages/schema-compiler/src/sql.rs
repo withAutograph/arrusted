@@ -3497,6 +3497,22 @@ fn validate_transition(previous: &Schema, next: &Schema) -> Result<(), SqlCompil
                 ));
             }
         }
+        let new_many_relations = new_model
+            .many_relations
+            .iter()
+            .map(|rel| (&rel.id, rel))
+            .collect::<BTreeMap<_, _>>();
+        for old_rel in &old_model.many_relations {
+            if let Some(new_rel) = new_many_relations.get(&old_rel.id) {
+                if old_rel.target_model != new_rel.target_model {
+                    return Err(SqlCompileError::new(
+                        "typed_migration_required",
+                        format!("models.{}.many_relations.{}.target_model", old_model.id, old_rel.id),
+                        "Relation targets are immutable. Add a new many relation, copy values through ordinary record writes, then archive the old relation.",
+                    ));
+                }
+            }
+        }
     }
     Ok(())
 }
@@ -3514,6 +3530,19 @@ fn retired_elements(
         .collect::<BTreeMap<_, _>>();
     for old_model in &previous.schema.models {
         let Some(new_model) = next_models.get(&old_model.id) else {
+            if old_model.lifecycle != SchemaElementLifecycle::Retired {
+                retired.push(RetiredSchemaElement {
+                    kind: RetirementKind::Model,
+                    model: Some(old_model.id.to_string()),
+                    field: None,
+                    element: old_model.id.to_string(),
+                });
+            }
+            continue;
+        };
+        if old_model.lifecycle != SchemaElementLifecycle::Retired
+            && new_model.lifecycle == SchemaElementLifecycle::Retired
+        {
             retired.push(RetiredSchemaElement {
                 kind: RetirementKind::Model,
                 model: Some(old_model.id.to_string()),
@@ -3521,7 +3550,7 @@ fn retired_elements(
                 element: old_model.id.to_string(),
             });
             continue;
-        };
+        }
         let new_fields = new_model
             .fields
             .iter()
@@ -3529,6 +3558,19 @@ fn retired_elements(
             .collect::<BTreeMap<_, _>>();
         for old_field in &old_model.fields {
             let Some(new_field) = new_fields.get(&old_field.id) else {
+                if old_field.lifecycle != SchemaElementLifecycle::Retired {
+                    retired.push(RetiredSchemaElement {
+                        kind: RetirementKind::Field,
+                        model: Some(old_model.id.to_string()),
+                        field: Some(old_field.id.to_string()),
+                        element: old_field.id.to_string(),
+                    });
+                }
+                continue;
+            };
+            if old_field.lifecycle != SchemaElementLifecycle::Retired
+                && new_field.lifecycle == SchemaElementLifecycle::Retired
+            {
                 retired.push(RetiredSchemaElement {
                     kind: RetirementKind::Field,
                     model: Some(old_model.id.to_string()),
@@ -3536,15 +3578,22 @@ fn retired_elements(
                     element: old_field.id.to_string(),
                 });
                 continue;
-            };
+            }
             if old_field.field_type == FieldType::Enum {
                 let new_options = new_field
                     .option_set
                     .iter()
-                    .map(|option| &option.id)
-                    .collect::<BTreeSet<_>>();
+                    .map(|option| (&option.id, option))
+                    .collect::<BTreeMap<_, _>>();
                 for option in &old_field.option_set {
-                    if !new_options.contains(&option.id) {
+                    if option.lifecycle == SchemaElementLifecycle::Retired {
+                        continue;
+                    }
+                    let option_retired = match new_options.get(&option.id) {
+                        None => true,
+                        Some(next_opt) => next_opt.lifecycle == SchemaElementLifecycle::Retired,
+                    };
+                    if option_retired {
                         retired.push(RetiredSchemaElement {
                             kind: RetirementKind::EnumOption,
                             model: Some(old_model.id.to_string()),
@@ -3553,6 +3602,28 @@ fn retired_elements(
                         });
                     }
                 }
+            }
+        }
+        let new_many_relations = new_model
+            .many_relations
+            .iter()
+            .map(|rel| (&rel.id, rel))
+            .collect::<BTreeMap<_, _>>();
+        for old_rel in &old_model.many_relations {
+            if old_rel.lifecycle == SchemaElementLifecycle::Retired {
+                continue;
+            }
+            let rel_retired = match new_many_relations.get(&old_rel.id) {
+                None => true,
+                Some(next_rel) => next_rel.lifecycle == SchemaElementLifecycle::Retired,
+            };
+            if rel_retired {
+                retired.push(RetiredSchemaElement {
+                    kind: RetirementKind::Field,
+                    model: Some(old_model.id.to_string()),
+                    field: Some(old_rel.id.to_string()),
+                    element: old_rel.id.to_string(),
+                });
             }
         }
     }
@@ -3589,11 +3660,12 @@ fn retire_custom_fields(
         .iter()
         .map(|field| (&field.id, field))
         .collect::<BTreeMap<_, _>>();
-    for field in previous.iter().filter(|field| field.archived_at.is_none()) {
-        if next_fields
-            .get(&field.id)
-            .is_none_or(|next| next.archived_at.is_some())
-        {
+    for field in previous.iter().filter(|field| {
+        field.archived_at.is_none() && field.lifecycle != SchemaElementLifecycle::Retired
+    }) {
+        if next_fields.get(&field.id).is_none_or(|next| {
+            next.archived_at.is_some() || next.lifecycle == SchemaElementLifecycle::Retired
+        }) {
             retired.push(RetiredSchemaElement {
                 kind: RetirementKind::CustomField,
                 model: Some(field.model_id.to_string()),
@@ -3788,6 +3860,12 @@ fn push_required_check(
     let statement = format!(
         "alter table {quoted_table} add constraint {quoted_name} check ({expression}) not valid"
     );
+    let add = format!(
+        "if not exists (select 1 from pg_constraint where conrelid = to_regclass({}) and conname = {}) then\n    execute {};\n  end if",
+        quote_literal(table),
+        quote_literal(name),
+        quote_literal(&statement)
+    );
     let sql = format!(
         r#"do $kernel$
     declare failing_rows text;
@@ -3802,7 +3880,6 @@ fn push_required_check(
       end;
     end $kernel$"#,
         name_literal = quote_literal(name),
-        add = format!("if not exists (select 1 from pg_constraint where conrelid = to_regclass({}) and conname = {}) then\n    execute {};\n  end if", quote_literal(table), quote_literal(name), quote_literal(&statement))
     );
     push_artifact(
         artifacts,
