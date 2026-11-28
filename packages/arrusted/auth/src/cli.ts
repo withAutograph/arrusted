@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
   existsSync,
@@ -12,7 +12,12 @@ import path from "node:path";
 import { ResilientPool } from "@arrusted/core/pool";
 import { addPerson, removePerson } from "./server";
 
+const DARWIN_SYSTEM_ROOT_SYMLINKS = new Set(["/var", "/tmp", "/etc"]);
+
 function assertNotSymbolicLink(targetPath: string, label: string): void {
+  if (process.platform === "darwin" && DARWIN_SYSTEM_ROOT_SYMLINKS.has(targetPath)) {
+    return;
+  }
   if (!existsSync(targetPath)) {
     const dangling = lstatSync(targetPath, { throwIfNoEntry: false });
     if (dangling?.isSymbolicLink()) {
@@ -30,33 +35,57 @@ function assertNotSymbolicLink(targetPath: string, label: string): void {
   }
 }
 
+function assertNoSymlinkAncestors(dirPath: string): void {
+  const resolved = path.resolve(dirPath);
+  const parsed = path.parse(resolved);
+  const remainder = resolved.slice(parsed.root.length);
+  let cursor = parsed.root;
+  for (const segment of remainder.split(path.sep)) {
+    if (!segment) continue;
+    cursor = path.join(cursor, segment);
+    assertNotSymbolicLink(cursor, "credentials path ancestor");
+  }
+}
+
+export function encodeEmailForCredentialFilename(email: string): string {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return "user";
+  let encoded = "";
+  for (const byte of Buffer.from(normalized, "utf8")) {
+    const ch = String.fromCharCode(byte);
+    if (/^[a-z0-9._@-]$/u.test(ch)) {
+      encoded += ch;
+    } else {
+      encoded += `%${byte.toString(16).padStart(2, "0")}`;
+    }
+  }
+  if (encoded.length > 180) {
+    const digest = createHash("sha256").update(normalized).digest("hex").slice(0, 16);
+    return `${encoded.slice(0, 140)}-${digest}`;
+  }
+  return encoded;
+}
+
 export function writeGeneratedPasswordFile(
   email: string,
   secret: string,
   explicitPath?: string,
   cwd: string = process.cwd(),
 ): string {
-  const safeStem =
-    email
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9._@-]+/gu, "_") || "user";
+  const safeStem = encodeEmailForCredentialFilename(email);
   const targetPath = explicitPath
     ? path.resolve(cwd, explicitPath)
     : path.resolve(cwd, ".local/credentials", `${safeStem}.txt`);
   const parentDir = path.dirname(targetPath);
 
-  const relToCwd = path.relative(path.resolve(cwd), parentDir);
-  if (relToCwd && !relToCwd.startsWith("..") && !path.isAbsolute(relToCwd)) {
-    let cursor = path.resolve(cwd);
-    for (const segment of relToCwd.split(path.sep)) {
-      if (!segment || segment === ".") continue;
-      cursor = path.join(cursor, segment);
-      assertNotSymbolicLink(cursor, "credentials path segment");
-    }
+  assertNoSymlinkAncestors(parentDir);
+  if (!explicitPath) {
+    const localRoot = path.resolve(cwd, ".local");
+    mkdirSync(localRoot, { recursive: true, mode: 0o700 });
   }
-  assertNotSymbolicLink(parentDir, "credentials directory");
   mkdirSync(parentDir, { recursive: true, mode: 0o700 });
+  assertNoSymlinkAncestors(parentDir);
+
   const parentStat = lstatSync(parentDir);
   if (parentStat.isSymbolicLink() || !parentStat.isDirectory()) {
     throw new Error(`Credentials parent path must be a real directory: ${parentDir}`);
@@ -155,6 +184,7 @@ export async function runAuthCli(argv: string[] = process.argv.slice(2)): Promis
   const pool = new ResilientPool({ connectionString: databaseUrl, max: 1 });
   try {
     if (action === "add") {
+      let writtenPath: string | undefined;
       const added = await addPerson({
         database: pool,
         ...(authSchema ? { authSchema } : {}),
@@ -162,13 +192,11 @@ export async function runAuthCli(argv: string[] = process.argv.slice(2)): Promis
         email: emailArg,
         ...(name ? { name } : {}),
         ...(password ? { password } : {}),
+        onGeneratedPassword: (generatedPassword, resolvedEmail) => {
+          writtenPath = writeGeneratedPasswordFile(resolvedEmail, generatedPassword, passwordFile);
+        },
       });
-      if (added.generatedPassword) {
-        const writtenPath = writeGeneratedPasswordFile(
-          added.email,
-          added.generatedPassword,
-          passwordFile,
-        );
+      if (writtenPath) {
         console.log(
           `Added ${added.email} (${added.userId}) to ${added.organizationId}. Temporary password written to ${writtenPath}`,
         );

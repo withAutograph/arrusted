@@ -1,9 +1,21 @@
-import { mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, test } from "vite-plus/test";
 import type { Pool, PoolClient } from "pg";
-import { runAuthCli, writeGeneratedPasswordFile } from "../src/cli";
+import {
+  encodeEmailForCredentialFilename,
+  runAuthCli,
+  writeGeneratedPasswordFile,
+} from "../src/cli";
 import { addPerson, createAppAuth, removePerson } from "../src/server";
 
 function createFakePool(options?: { existingAccountId?: string; deleteMemberCount?: number }) {
@@ -180,6 +192,59 @@ describe("@arrusted/auth server & people helpers", () => {
         writeGeneratedPasswordFile("eve@sunlight.test", "ShouldNotWrite", "secrets/link.pwd", dir),
       ).toThrow(/symbolic link/);
       expect(readFileSync(victimFile, "utf8")).toBe("preserve-me");
+
+      // Distinct valid emails (+ vs _) map to distinct files without overwriting one another
+      const plusPath = writeGeneratedPasswordFile(
+        "a+b@sunlight.test",
+        "PlusPass123!",
+        undefined,
+        dir,
+      );
+      const underscorePath = writeGeneratedPasswordFile(
+        "a_b@sunlight.test",
+        "UnderscorePass456!",
+        undefined,
+        dir,
+      );
+      expect(encodeEmailForCredentialFilename("a+b@sunlight.test")).toBe("a%2bb@sunlight.test");
+      expect(plusPath).not.toBe(underscorePath);
+      expect(readFileSync(plusPath, "utf8")).toBe("PlusPass123!\n");
+      expect(readFileSync(underscorePath, "utf8")).toBe("UnderscorePass456!\n");
+
+      // Symlinked ancestor outside cwd is also refused
+      const outsideRoot = mkdtempSync(path.join(tmpdir(), "arrusted-auth-outside-"));
+      try {
+        const realOutside = path.join(outsideRoot, "real");
+        mkdirSync(path.join(realOutside, "nested"), { recursive: true });
+        const symlinkAncestor = path.join(outsideRoot, "link");
+        symlinkSync(realOutside, symlinkAncestor);
+        expect(() =>
+          writeGeneratedPasswordFile(
+            "mallory@sunlight.test",
+            "ShouldNotEscape",
+            path.join(symlinkAncestor, "nested/mallory.pwd"),
+            dir,
+          ),
+        ).toThrow(/symbolic link/);
+      } finally {
+        rmSync(outsideRoot, { recursive: true, force: true });
+      }
+
+      // Failed onGeneratedPassword rolls back addPerson before COMMIT so a retry succeeds cleanly
+      const { pool: rollbackPool, queries: rollbackQueries } = createFakePool();
+      await expect(
+        addPerson({
+          database: rollbackPool,
+          authSchema: "auth_crm",
+          organizationId: "sunlight",
+          email: "retry@sunlight.test",
+          onGeneratedPassword: () => {
+            throw new Error("disk write failed");
+          },
+        }),
+      ).rejects.toThrow(/disk write failed/);
+      expect(rollbackQueries.some((q) => q.sql === "COMMIT")).toBe(false);
+      expect(rollbackQueries.some((q) => q.sql === "ROLLBACK")).toBe(true);
 
       await expect(
         runAuthCli([

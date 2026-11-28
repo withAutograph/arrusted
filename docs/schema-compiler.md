@@ -71,7 +71,9 @@ COMMIT`) rather than caching session-level `SET` state, so `AUTH_SCHEMA`
   staging, `revert`, recent-activity feeds, change-set diff/comparison, and
   actor/notes disclosure in `history` are deferred to `0.2`. For
   `@arrusted/ui`, `EditableRowVersionGrid` with `analytics="advanced"` requires
-  `NEXT_PUBLIC_AG_GRID_LICENSE_KEY` in production builds (`NODE_ENV=production`).
+  an AG Grid Enterprise license key via `NEXT_PUBLIC_AG_GRID_LICENSE_KEY` or
+  `bootstrapAdvancedGrid({ licenseKey })` in production builds
+  (`NODE_ENV=production`).
 - Schema transitions are additive by default: `migrate` refuses any candidate
   that removes or explicitly retires (`lifecycle: "retired"`) existing models,
   fields, many-relations, enum options, custom fields, or change types from the

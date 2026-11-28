@@ -225,7 +225,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 The MIT License (MIT)
 
-Copyright (c) 2021 - present Thomas Pelletier
+go-toml v2
+Copyright (c) 2021 - 2023 Thomas Pelletier
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

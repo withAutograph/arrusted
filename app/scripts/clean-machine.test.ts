@@ -9,6 +9,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -39,7 +40,7 @@ if (process.env.CI && !detectedHostCliTarget) {
 const suite = databaseURL && detectedHostCliTarget ? test : test.skip;
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const scratchRoot = mkdtempSync(path.join(tmpdir(), "arrusted-clean-machine-"));
+const scratchRoot = realpathSync(mkdtempSync(path.join(tmpdir(), "arrusted-clean-machine-")));
 const tarballDir = path.join(scratchRoot, "tarballs");
 const isolatedBinDir = path.join(scratchRoot, "isolated-bin");
 const consumerDir = path.join(scratchRoot, "sunlight-crm-consumer");
