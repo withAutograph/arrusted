@@ -2,9 +2,11 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, test } from "vite-plus/test";
+import { rewriteRuntimeImports } from "../../../generated-app-runtime/compile-schema";
 import type { DataDefinition } from "../../../generated-app-runtime/data";
 import { KernelFailure } from "../../../generated-app-runtime/postgres";
 import type { GeneratedAppRuntime } from "../../../generated-app-runtime/server";
+import { runCoreCli } from "../src/cli";
 import { nextAppConfig } from "../src/next";
 import { createAppRoutes, gridSchema, toVisibleRecord } from "../src/routes";
 
@@ -187,6 +189,15 @@ describe("createAppRoutes & gridSchema", () => {
     expect(recordsBody).toHaveLength(1);
     expect(calls[0]?.input.select).toEqual(["$id", "$version", "name", "domain"]);
 
+    const nullWriteRes = await routes.applyPOST(
+      new Request("http://localhost/api/apply", {
+        method: "POST",
+        headers: { "x-test-user": "alice", "content-type": "application/json" },
+        body: JSON.stringify({ idempotency_key: "idem-null", writes: [null] }),
+      }),
+    );
+    expect(nullWriteRes.status).toBe(400);
+
     const applyRes = await routes.applyPOST(
       new Request("http://localhost/api/apply", {
         method: "POST",
@@ -277,6 +288,8 @@ describe("createAppRoutes & gridSchema", () => {
 
   test("policy-enabled schemas fail closed when role, grants, or $id grant are missing or empty", async () => {
     const emptyRelease = mkdtempSync(path.join(tmpdir(), "routes-missing-artifact-"));
+    const prevEnvRole = process.env.APP_KERNEL_ROLE;
+    delete process.env.APP_KERNEL_ROLE;
     try {
       const runtime: GeneratedAppRuntime = {
         appId: "sunlight",
@@ -387,6 +400,8 @@ describe("createAppRoutes & gridSchema", () => {
         ).status,
       ).toBe(403);
     } finally {
+      if (prevEnvRole === undefined) delete process.env.APP_KERNEL_ROLE;
+      else process.env.APP_KERNEL_ROLE = prevEnvRole;
       rmSync(emptyRelease, { recursive: true, force: true });
     }
   });
@@ -606,5 +621,38 @@ describe("createAppRoutes & gridSchema", () => {
       "/*": ["./.generated/release/**/*", "./custom-assets/**/*"],
       "/api/export": ["./templates/**/*"],
     });
+  });
+
+  test("rewriteRuntimeImports rewrites only emitted runtime import specifiers and preserves model labels", () => {
+    const emitted = [
+      "import {",
+      "  createDataClient,",
+      "  type DataDefinition,",
+      '} from "@autograph/generated-app-runtime/data";',
+      'import { createArtifactHelpers } from "@autograph/generated-app-runtime/artifact-helpers";',
+      '/** Model label mentioning "@autograph/generated-app-runtime/data" */',
+      'export const definition = { label: "@autograph/generated-app-runtime/data" } as const;',
+    ].join("\n");
+    const rewritten = rewriteRuntimeImports(emitted, "@arrusted/core");
+    expect(rewritten).toContain('from "@arrusted/core/data";');
+    expect(rewritten).toContain('from "@arrusted/core/artifact-helpers";');
+    expect(rewritten).toContain('label: "@autograph/generated-app-runtime/data"');
+    expect(rewritten).toContain('mentioning "@autograph/generated-app-runtime/data"');
+  });
+
+  test("runCoreCli migrate:undo rejects explicit --release while allowing plain undo invocation", async () => {
+    const prevDbUrl = process.env.MIGRATION_DATABASE_URL;
+    process.env.MIGRATION_DATABASE_URL = "not-a-postgres-url";
+    try {
+      await expect(runCoreCli(["migrate:undo", "--release", "./other"])).rejects.toThrow(
+        "--release is not valid with undo.",
+      );
+      await expect(runCoreCli(["migrate:undo"])).rejects.not.toThrow(
+        "--release is not valid with undo.",
+      );
+    } finally {
+      if (prevDbUrl === undefined) delete process.env.MIGRATION_DATABASE_URL;
+      else process.env.MIGRATION_DATABASE_URL = prevDbUrl;
+    }
   });
 });

@@ -177,6 +177,9 @@ export async function addPerson(input: AddPersonInput): Promise<AddPersonResult>
   if (input.password !== undefined && input.password.length < 8) {
     throw new Error("Password must contain at least 8 characters.");
   }
+  if (input.password !== undefined && input.password.length > 128) {
+    throw new Error("Password must contain at most 128 characters.");
+  }
   const explicitName = input.name?.trim();
   const displayName = explicitName || email.split("@")[0]!;
   const orgName = input.organizationName?.trim() || organizationId;

@@ -1253,13 +1253,14 @@ export async function rehearse(
     }
     mergedLogins.set(login.role, login.password);
   }
+  const releaseDirectory = input.releaseDirectory ?? defaultReleaseDirectory();
   await migrate({
     ...input,
     ...roles,
+    releaseDirectory,
     authRole: input.authRole ?? roles.authRole,
     runtimeLogins: [...mergedLogins.entries()].map(([role, password]) => ({ role, password })),
   });
-  const releaseDirectory = input.releaseDirectory ?? defaultReleaseDirectory();
   const artifact = JSON.parse(
     readFileSync(path.join(releaseDirectory, "app-artifact.json"), "utf8"),
   ) as Artifact;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { AgGridReact } from "ag-grid-react";
 import type {
   CellClickedEvent,
@@ -88,17 +88,21 @@ export function TieredEditableRowVersionGrid(props: TieredEditableRowVersionGrid
     if (columns.length > 0) gridApiRef.current?.refreshCells({ force: true, columns });
   }, [analytics, surfaceProps.columnDefs]);
 
+  const communityColumns = useMemo(
+    () =>
+      surfaceProps.columnDefs.map((col) => ({
+        ...col,
+        enableRowGroup: false,
+        rowGroup: false,
+        pivot: false,
+        aggFunc: undefined,
+      })) as ColDef<VisibleRecord | MetaRowMarker>[],
+    [surfaceProps.columnDefs],
+  );
+
   if (analytics === "advanced") {
     return <EditableRowVersionGrid {...surfaceProps} />;
   }
-
-  const communityColumns = surfaceProps.columnDefs.map((col) => ({
-    ...col,
-    enableRowGroup: false,
-    rowGroup: false,
-    pivot: false,
-    aggFunc: undefined,
-  })) as ColDef<VisibleRecord | MetaRowMarker>[];
 
   return (
     <div

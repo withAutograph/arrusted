@@ -365,6 +365,15 @@ function buildCueToSqlSourceMap(input: {
   };
 }
 
+/** Rewrite only emitted runtime import specifiers so model labels/literals remain untouched. */
+export function rewriteRuntimeImports(typescript: string, runtimePkg: string): string {
+  if (runtimePkg === "@autograph/generated-app-runtime") return typescript;
+  return typescript.replace(
+    /^((?:import|export)(?:\s+type)?\s+(?:\{[^;]*?\}|\*\s+as\s+\w+|\*)\s+from\s+)"@autograph\/generated-app-runtime\/([^"\r\n]+)";$/gmu,
+    `$1"${runtimePkg}/$2";`,
+  );
+}
+
 /** Pure current-state CUE -> SQL + TypeScript codegen with portable build identity. */
 export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResult {
   const outDir = path.resolve(options.outDir);
@@ -607,10 +616,7 @@ export function compileSchema(options: CompileSchemaOptions): CompiledSchemaResu
       documentation: string;
     };
     writeJson(path.join(stagedRelease, "operation-manifest.json"), dataPlane.manifest);
-    const rewrittenTypescript =
-      runtimePkg === "@autograph/generated-app-runtime"
-        ? dataPlane.typescript
-        : dataPlane.typescript.replaceAll('"@autograph/generated-app-runtime/', `"${runtimePkg}/`);
+    const rewrittenTypescript = rewriteRuntimeImports(dataPlane.typescript, runtimePkg);
     writeFileSync(path.join(stagedRelease, "data-operations.ts"), rewrittenTypescript);
     writeFileSync(path.join(stagedRelease, "data-operations.md"), dataPlane.documentation);
     writeFileSync(

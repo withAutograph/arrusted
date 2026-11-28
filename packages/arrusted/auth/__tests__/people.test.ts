@@ -104,6 +104,18 @@ describe("@arrusted/auth server & people helpers", () => {
       password: "NewPassword123!",
     });
     expect(queriesExplicitReset.some((q) => q.sql.includes('update "account"'))).toBe(true);
+
+    const { pool: poolTooLong, queries: queriesTooLong } = createFakePool();
+    await expect(
+      addPerson({
+        database: poolTooLong,
+        authSchema: "auth_crm",
+        organizationId: "sunlight",
+        email: "alice@sunlight.test",
+        password: "a".repeat(129),
+      }),
+    ).rejects.toThrow(/at most 128 characters/);
+    expect(queriesTooLong).toHaveLength(0);
   });
 
   test("removePerson deletes member and active sessions inside authSchema", async () => {

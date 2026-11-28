@@ -451,7 +451,8 @@ export function createAppRoutes(config: AppRoutesConfig) {
           typeof body.idempotency_key !== "string" ||
           !body.idempotency_key.trim() ||
           !Array.isArray(body.writes) ||
-          body.writes.length === 0
+          body.writes.length === 0 ||
+          body.writes.some((write) => !write || typeof write !== "object" || Array.isArray(write))
         ) {
           return Response.json(
             {

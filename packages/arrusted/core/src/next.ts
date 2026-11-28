@@ -4,7 +4,10 @@ import path from "node:path";
 import type { NextConfig } from "next";
 
 export type NextAppConfigOptions = {
-  /** Exact HTTP(S) public origin added to experimental.serverActions.allowedOrigins. */
+  /**
+   * Exact HTTP(S) public origin whose parsed host (including any non-default port)
+   * is added to experimental.serverActions.allowedOrigins; Next.js does not enforce the URL scheme.
+   */
   trustedPublicOrigin?: string;
 };
 

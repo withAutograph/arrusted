@@ -59,7 +59,7 @@ export async function runCoreCli(argv: string[] = process.argv.slice(2)): Promis
         "Usage:",
         "  arrusted compile [--schema <path>] [--out <dir>] [--catalog <file>]",
         "  arrusted migrate [apply] [--release <dir>] [--allow-retire] [--rebind-runtime-login]",
-        "  arrusted migrate:undo [--release <dir>]",
+        "  arrusted migrate:undo",
         "  arrusted migrate:rehearse [--release <dir>] [--allow-retire] [--rebind-runtime-login]",
       ].join("\n"),
     );
@@ -117,6 +117,7 @@ export async function runCoreCli(argv: string[] = process.argv.slice(2)): Promis
   let mode: "apply" | "undo" | "rehearse" =
     normalizedCmd === "undo" ? "undo" : normalizedCmd === "rehearse" ? "rehearse" : "apply";
   let releaseDirectory = path.resolve(process.cwd(), ".generated/release");
+  let explicitRelease = false;
   let allowRetire = false;
   let rebindRuntimeLogin = false;
 
@@ -136,6 +137,7 @@ export async function runCoreCli(argv: string[] = process.argv.slice(2)): Promis
       rebindRuntimeLogin = true;
     } else if (arg === "--release" && rest[i + 1] && !rest[i + 1]!.startsWith("--")) {
       releaseDirectory = path.resolve(process.cwd(), rest[i + 1]!);
+      explicitRelease = true;
       i += 1;
     } else {
       throw new Error(`Unknown migration option: ${arg}`);
@@ -150,7 +152,8 @@ export async function runCoreCli(argv: string[] = process.argv.slice(2)): Promis
   if (mode === "undo") {
     if (allowRetire) throw new Error("--allow-retire is not valid with undo.");
     if (rebindRuntimeLogin) throw new Error("--rebind-runtime-login is not valid with undo.");
-    const result = await undo({ databaseUrl, releaseDirectory });
+    if (explicitRelease) throw new Error("--release is not valid with undo.");
+    const result = await undo({ databaseUrl });
     console.log(
       `Database and applied-schema record restored (source commit ${result.sourceCommit}).`,
     );
